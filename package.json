@@ -1,0 +1,13 @@
+{
+  "name": "arknights-endfield-gacha-simulator",
+  "version": "1.0.0",
+  "description": "Giả lập gacha Arknights: Endfield",
+  "main": "js/app.js",
+  "scripts": {
+    "build": "esbuild js/app.js --bundle --outfile=js/bundle.js --format=iife",
+    "watch": "esbuild js/app.js --bundle --outfile=js/bundle.js --format=iife --watch"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.1"
+  }
+}

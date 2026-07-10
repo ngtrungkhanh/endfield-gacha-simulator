@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arknights: Endfield Gacha Simulator</title>
+    <!-- Global Error Handler -->
+    <script>
+        window.onerror = function(message, source, lineno, colno, error) {
+            const errorDiv = document.createElement('div');
+            errorDiv.style.position = 'fixed';
+            errorDiv.style.top = '0';
+            errorDiv.style.left = '0';
+            errorDiv.style.width = '100%';
+            errorDiv.style.backgroundColor = '#e63946';
+            errorDiv.style.color = '#ffffff';
+            errorDiv.style.padding = '15px';
+            errorDiv.style.zIndex = '99999';
+            errorDiv.style.fontFamily = 'monospace';
+            errorDiv.style.fontSize = '14px';
+            errorDiv.style.lineHeight = '1.4';
+            errorDiv.style.boxShadow = '0 4px 6px rgba(0,0,0,0.3)';
+            errorDiv.innerHTML = '<strong>Javascript Error:</strong> ' + message + '<br>File: ' + source + ':' + lineno + ':' + colno;
+            document.body.appendChild(errorDiv);
+            return false;
+        };
+    </script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- Chart.js qua CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Style CSS -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="glass-panel">
+            <div class="logo-section">
+                <h1>A9E Gacha Simulator</h1>
+                <span>Giả lập gacha Arknights: Endfield</span>
+            </div>
+            <nav class="tabs-navigation">
+                <button class="tab-btn active" id="btn-tab-interactive" data-tab="interactive-tab">Interactive Pull</button>
+                <button class="tab-btn" id="btn-tab-simulator" data-tab="simulator-tab">Strategy Simulator</button>
+            </nav>
+        </header>
+
+        <!-- TAB 1: INTERACTIVE PULL -->
+        <main class="tab-content active" id="interactive-tab">
+            <div class="interactive-layout">
+                <!-- Banner & Stats Side (Left) -->
+                <div class="banner-side-container" style="display: flex; flex-direction: column; gap: 24px;">
+                    <!-- Banner View -->
+                    <div class="banner-container glass-panel">
+                        <div class="banner-header" style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%;">
+                            <div style="flex-grow: 1;">
+                                <span class="banner-tag">Chartered Headhunting</span>
+                                <h2 class="banner-title" id="active-banner-title" style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                                    <span>Mùa Hoa Nở Rộ (Featured: Endfield Operator)</span>
+                                    <button class="btn-secondary" id="btn-switch-banner" style="padding: 4px 10px; font-size: 11px; font-weight: 600; cursor: pointer; border-radius: 4px; border: 1px solid var(--orange-primary); color: var(--orange-primary); background: rgba(255,107,0,0.05); text-transform: uppercase;">Đổi Banner</button>
+                                </h2>
+                                <p class="banner-subtitle" id="active-banner-subtitle">Tỉ lệ 6★: 0.8% | Bảo hiểm: Soft pity 65+, Hard pity 80 | Bảo hiểm Featured: 120</p>
+                            </div>
+                            <div class="banner-pity-widgets">
+                                <div class="pity-widget">
+                                    <div class="val" id="widget-pity6">0</div>
+                                    <div class="lbl">Pity 6★</div>
+                                </div>
+                                <div class="pity-widget">
+                                    <div class="val" id="widget-pity5">0</div>
+                                    <div class="lbl">Pity 5★</div>
+                                </div>
+                                <div class="pity-widget">
+                                    <div class="val" id="widget-pity-featured">0/120</div>
+                                    <div class="lbl">Bảo hiểm 120</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Pull Results Area -->
+                        <div class="pull-reveal-board" id="pull-reveal-board">
+                            <span class="no-pulls-yet">Nhấn nút bên dưới để thực hiện quay gacha...</span>
+                        </div>
+
+                        <!-- Footer controls -->
+                        <div class="banner-footer">
+                            <div class="wallet-view">
+                                <div class="wallet-item">
+                                    Vé nhân vật: <span class="amount" id="wallet-char-tickets">120</span>
+                                </div>
+                                <div class="wallet-item">
+                                    Vé vũ khí (Arsenal): <span class="amount" id="wallet-weapon-tickets">0</span>
+                                </div>
+                            </div>
+                            <div class="pull-btns">
+                                <button class="btn-secondary" id="btn-char-pull1">Quay x1</button>
+                                <button class="btn-primary" id="btn-char-pull10">Quay x10</button>
+                                <button class="btn-secondary" id="btn-weapon-issue" style="border-color: var(--star-6); color: var(--star-6);">Quay Issue Vũ Khí (x10)</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Interactive Stats Panel -->
+                    <div class="interactive-stats-panel glass-panel" style="padding: 20px;">
+                        <h3 class="panel-title" style="margin-bottom: 16px;">Thống kê đợt quay hiện tại</h3>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
+                            <!-- Char Stats -->
+                            <div style="background: rgba(255,255,255,0.02); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color);">
+                                <h4 style="font-size: 13px; color: var(--text-white); margin-bottom: 8px; border-bottom: 1px solid var(--border-color); padding-bottom: 4px; font-weight: 700;">Nhân vật</h4>
+                                <div style="font-size: 12px; color: var(--text-secondary); display: flex; flex-direction: column; gap: 6px;">
+                                    <div>Tổng lượt quay: <span id="stat-char-total" style="color: var(--text-white); font-weight: 700;">0</span> (Urgent: <span id="stat-char-urgent" style="color: var(--text-white);">0</span>)</div>
+                                    <div>Số 6★ trúng: <span id="stat-char-6star" style="color: var(--star-6); font-weight: 700;">0</span> (<span id="stat-char-6star-rate" style="font-weight: 600; color: var(--text-primary);">0.0%</span>)</div>
+                                    <div style="padding-left: 8px; font-size: 11px;">- Limited (New): <span id="stat-char-6star-lim-new" style="color: var(--text-white); font-weight: 600;">0</span></div>
+                                    <div style="padding-left: 8px; font-size: 11px;">- Limited Dupe: <span id="stat-char-6star-lim-dupe" style="color: var(--text-white); font-weight: 600;">0</span></div>
+                                    <div style="padding-left: 8px; font-size: 11px;">- Lệch Limited: <span id="stat-char-6star-lech-lim" style="color: var(--text-white); font-weight: 600;">0</span></div>
+                                    <div>Số 5★ trúng: <span id="stat-char-5star" style="color: var(--star-5); font-weight: 700;">0</span> (<span id="stat-char-5star-rate" style="font-weight: 600; color: var(--text-primary);">0.0%</span>)</div>
+                                    <div>Số pull trung bình / 6★: <span id="stat-char-avg-pull" style="color: var(--orange-primary); font-weight: 700;">--</span></div>
+                                </div>
+                            </div>
+                            <!-- Weapon Stats -->
+                            <div style="background: rgba(255,255,255,0.02); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color);">
+                                <h4 style="font-size: 13px; color: var(--text-white); margin-bottom: 8px; border-bottom: 1px solid var(--border-color); padding-bottom: 4px; font-weight: 700;">Vũ khí</h4>
+                                <div style="font-size: 12px; color: var(--text-secondary); display: flex; flex-direction: column; gap: 6px;">
+                                    <div>Tổng vé đã tích: <span id="stat-weap-tickets" style="color: var(--text-white); font-weight: 700;">0</span></div>
+                                    <div>Số Issue (x10) đã quay: <span id="stat-weap-issues" style="color: var(--text-white); font-weight: 700;">0</span></div>
+                                    <div>Số vũ khí 6★ trúng: <span id="stat-weap-6star" style="color: var(--star-6); font-weight: 700;">0</span></div>
+                                    <div>Hộp chọn vũ khí (Mốc 10): <span id="stat-weap-selectors" style="color: var(--star-6); font-weight: 700;">0</span></div>
+                                </div>
+                            </div>
+                            <!-- Luck Rating -->
+                            <div style="background: rgba(255,255,255,0.02); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;">
+                                <div style="font-size: 11px; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;">Đánh giá nhân phẩm</div>
+                                <div id="stat-luck-badge" style="font-size: 14px; font-weight: 800; color: var(--text-secondary); margin-top: 8px; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: rgba(255,255,255,0.02);">
+                                    Chưa xác định
+                                </div>
+                                <div id="stat-luck-desc" style="font-size: 10px; color: var(--text-secondary); margin-top: 6px; text-align: center; max-width: 170px; line-height: 1.3;">
+                                    Quay tối thiểu 20 lần để hệ thống đánh giá nhân phẩm.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sidebar Log & Info (Right) -->
+                <aside class="sidebar-panel glass-panel">
+                    <h3 class="panel-title">Tủ đồ kết quả</h3>
+                    <div class="inventory-list" id="inventory-list">
+                        <!-- Items dynamically added here -->
+                        <div style="color: var(--text-secondary); font-style: italic; text-align: center; margin-top: 50px;">Chưa có vật phẩm nào được quay...</div>
+                    </div>
+                    
+                    <button class="btn-reset" id="btn-reset-interactive">Reset tiến trình</button>
+
+                    <!-- Reference Docs link -->
+                    <div class="ref-links-box">
+                        <h4>Tài liệu liên quan</h4>
+                        <a href="file:///C:/Users/DELL/.gemini/antigravity/brain/ad3ec152-e6d1-4d19-8563-3cb25d5a5eae/gacha_rules_and_data.md" target="_blank">📄 Luật Gacha & Số liệu Bookkeeping</a>
+                        <a href="file:///C:/Users/DELL/.gemini/antigravity/brain/ad3ec152-e6d1-4d19-8563-3cb25d5a5eae/implementation_plan.md" target="_blank">📄 Kế hoạch triển khai</a>
+                    </div>
+                </aside>
+            </div>
+        </main>
+
+        <!-- TAB 2: STRATEGY SIMULATOR -->
+        <main class="tab-content" id="simulator-tab">
+            <div class="simulator-layout">
+                <!-- Control Panel (Left Column) -->
+                <aside class="control-panel glass-panel">
+                    <h3 class="panel-title">Cấu hình giả lập</h3>
+
+                    <!-- Simulation Mode Select -->
+                    <div class="form-group">
+                        <label for="select-sim-mode">Chế độ giả lập:</label>
+                        <select id="select-sim-mode" style="background: var(--bg-darker); border: 1px solid var(--border-color); color: var(--text-primary); padding: 10px; border-radius: 8px; outline: none; font-family: 'Outfit'; font-weight: 600; cursor: pointer;">
+                            <option value="banners" selected>Theo chu kỳ Banner</option>
+                            <option value="pulls">Theo tổng số Pulls</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Num Players (yy times) -->
+                    <!-- Num Players (yy times) -->
+                    <div class="form-group">
+                        <label for="input-players">Số người chơi (Số lần test):</label>
+                        <input type="number" id="input-players" min="100" max="100000" step="100" value="10000">
+                    </div>
+
+                    <!-- Mode Banners Inputs -->
+                    <div id="container-mode-banners" style="display: flex; flex-direction: column; gap: 20px;">
+                        <!-- Num Banners -->
+                        <div class="form-group">
+                            <label for="input-banners">Số mùa banner:</label>
+                            <input type="number" id="input-banners" min="1" max="100" step="1" value="10">
+                        </div>
+
+                        <!-- Starting Tickets -->
+                        <div class="form-group">
+                            <label for="input-start-tickets">Vé tích lũy ban đầu:</label>
+                            <input type="number" id="input-start-tickets" min="0" max="2000" step="10" value="80">
+                        </div>
+                    </div>
+
+                    <!-- Mode Pulls Inputs (Hidden by default) -->
+                    <div id="container-mode-pulls" style="display: none; flex-direction: column; gap: 20px;">
+                        <!-- Total Pulls -->
+                        <div class="form-group">
+                            <label for="input-total-pulls">Tổng số pull nhân vật:</label>
+                            <input type="number" id="input-total-pulls" min="100" max="10000" step="50" value="500">
+                        </div>
+                    </div>
+
+                    <!-- F2P Base Config -->
+                    <div class="toggle-group">
+                        <h4>Tài nguyên F2P Cơ bản (mỗi banner)</h4>
+                        
+                        <!-- Base Char Pulls -->
+                        <div class="form-group">
+                            <label for="input-base-char">Vé nhân vật F2P gốc:</label>
+                            <input type="number" id="input-base-char" min="5" max="250" step="1" value="36">
+                        </div>
+
+                        <!-- Base Weapon Tickets -->
+                        <div class="form-group">
+                            <label for="input-base-weapon">Vé vũ khí F2P gốc:</label>
+                            <input type="number" id="input-base-weapon" min="0" max="5000" step="50" value="600">
+                        </div>
+                    </div>
+
+                    <!-- paid options -->
+                    <div class="toggle-group">
+                        <h4>Gói dịch vụ (Paid options)</h4>
+                        
+                        <!-- Monthly Pass -->
+                        <label class="toggle-label">
+                            <div>
+                                <strong>Monthly Pass (Thẻ tháng)</strong>
+                                <div class="toggle-desc">+9 pulls / banner</div>
+                            </div>
+                            <div class="switch">
+                                <input type="checkbox" id="toggle-monthly" checked>
+                                <span class="slider"></span>
+                            </div>
+                        </label>
+
+                        <!-- Protocol Pass -->
+                        <label class="toggle-label">
+                            <div>
+                                <strong>Protocol Pass (BP cao cấp)</strong>
+                                <div class="toggle-desc">+5 pulls & +1.2k vé vũ khí / banner</div>
+                            </div>
+                            <div class="switch">
+                                <input type="checkbox" id="toggle-bp" checked>
+                                <span class="slider"></span>
+                            </div>
+                        </label>
+                    </div>
+
+                    <!-- Calculated Income Info -->
+                    <div style="background: rgba(255,255,255,0.02); padding: 12px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 12px; display: flex; flex-direction: column; gap: 4px;">
+                        <div>Vé nhân vật/banner: <span id="info-version-income" style="color: var(--orange-primary); font-weight: 700;">~159 vé</span></div>
+                        <div>Vé vũ khí cố định/banner: <span id="info-weapon-income" style="color: var(--star-6); font-weight: 700;">~2,200 vé</span></div>
+                    </div>
+
+                    <button class="btn-primary" id="btn-run-simulation">Chạy giả lập</button>
+                </aside>
+
+                <!-- Results & Visualizations (Right Column) -->
+                <div class="dashboard-content">
+                    <!-- Stats Cards Grid -->
+                    <div class="stats-cards-grid">
+                        <!-- Avg Featured Chars -->
+                        <div class="stat-card featured-card glass-panel">
+                            <span class="label">Nhân vật Featured trúng</span>
+                            <span class="value" id="card-avg-featured">--</span>
+                        </div>
+                        <!-- Avg Pulls per Featured -->
+                        <div class="stat-card efficiency-card glass-panel">
+                            <span class="label">Hiệu suất (Pull/Featured)</span>
+                            <span class="value" id="card-avg-efficiency">--</span>
+                        </div>
+                        <!-- Avg Weapons 6* -->
+                        <div class="stat-card weapon-card glass-panel">
+                            <span class="label">Vũ khí 6★ trúng (Gacha)</span>
+                            <span class="value" id="card-avg-weapons">--</span>
+                        </div>
+                    </div>
+
+                    <!-- Comparison Table -->
+                    <div class="table-panel glass-panel">
+                        <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 12px; color: var(--text-white);" id="table-comparison-title">Bảng so sánh chi tiết các chiến thuật</h3>
+                        <table class="comparison-table">
+                            <thead>
+                                <tr>
+                                    <th>Chiến thuật</th>
+                                    <th>Tổng Pull</th>
+                                    <th>Vé Dư</th>
+                                    <th>Tổng 6★ Nhân Vật</th>
+                                    <th>Featured Nhân Vật</th>
+                                    <th>Limited (New/Dupe)</th>
+                                    <th>Lệch Limited</th>
+                                    <th>Lệch Standard</th>
+                                    <th>Hiệu suất Pull</th>
+                                    <th>Hên / Đen</th>
+                                    <th>Vũ khí 6★ Featured</th>
+                                    <th>Tổng Vũ khí 6★</th>
+                                    <th>Tỉ lệ sở hữu</th>
+                                </tr>
+                            </thead>
+                            <tbody id="comparison-table-body">
+                                <tr>
+                                    <td colspan="13" style="text-align: center; color: var(--text-secondary); font-style: italic; padding: 30px;">
+                                        Nhấn nút "Chạy giả lập" để xem kết quả so sánh...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Strategy Explanation Panel -->
+                    <div class="table-panel glass-panel" style="padding: 20px;">
+                        <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 16px; color: var(--orange-primary);">Giải thích các Chiến thuật Gacha</h3>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; font-size: 13px; line-height: 1.6; color: var(--text-secondary);">
+                            <div>
+                                <p style="margin-bottom: 12px;"><strong style="color: var(--text-white);">1. Tích luỹ an toàn (Save & Commit):</strong> Chỉ tiến hành quay nhân vật khi tích lũy đủ >= 120 vé (mốc chắc chắn ra). Khi quay sẽ quay đến khi ra Featured thì dừng lại. Vũ khí cũng chỉ quay khi tích đủ 8 Issues (15,840 vé) để đảm bảo 100% trúng vũ khí rate-up.</p>
+                                <p><strong style="color: var(--text-white);">2. Mốc 60 mỗi banner (Pull 60):</strong> Mỗi banner đều quay đúng 60 lượt (để lấy vé Headhunting Dossier x10 cho banner sau). Nếu ra nhân vật sớm vẫn tiếp tục quay đến mốc 60. Vũ khí tự động quay sạch Arsenal Tickets hiện có nếu trúng nhân vật.</p>
+                            </div>
+                            <div>
+                                <p style="margin-bottom: 12px;"><strong style="color: var(--text-white);">3. Chiến thuật 60+ (60 Plus):</strong> Mỗi banner quay mốc 60. Nếu tại mốc 60 chưa ra Featured và số vé tích lũy còn lại trong túi lớn hơn hoặc bằng 80, sẽ tiếp tục quay lên 120 để chạm bảo hiểm (giúp bảo toàn 60 roll cho banner sau). Vũ khí quay nếu trúng nhân vật.</p>
+                                <p><strong style="color: var(--text-white);">4. Quay theo Meta (Roll Meta):</strong> Lựa chọn 30% số lượng banner làm banner Meta. Cố gắng tích lũy đủ 120 vé trước khi banner Meta bắt đầu. Các banner không Meta chỉ quay tối đa 60 vé nếu số dư túi đảm bảo đủ 120 vé cho banner Meta tiếp theo, ngược lại sẽ skip để tích lũy. Vũ khí chỉ quay ở banner Meta.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Charts Grid -->
+                    <div class="charts-grid">
+                        <div class="chart-panel glass-panel">
+                            <canvas id="chart-distribution"></canvas>
+                        </div>
+                        <div class="chart-panel glass-panel">
+                            <canvas id="chart-efficiency"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Javascript entry module -->
+    <script src="js/bundle.js"></script>
+</body>
+</html>
