@@ -15029,7 +15029,7 @@
     roll_meta: {
       id: "roll_meta",
       name: "Roll Meta",
-      desc: "Nh\xE2n v\u1EADt: 30% s\u1ED1 banner l\xE0 Meta (quay t\u1ED1i \u0111a 120 roll). Banner th\u01B0\u1EDDng ch\u1EC9 commit khi v\u1EABn b\u1EA3o to\xE0n ng\xE2n s\xE1ch cho Meta k\u1EBF ti\u1EBFp; Dossier h\u1EBFt h\u1EA1n v\xE0 t\u1ED1i \u01B0u m\u1ED1c 30 v\u1EABn lu\xF4n \xE1p d\u1EE5ng. V\u0169 kh\xED: Ch\u1EC9 quay \u1EDF banner Meta.",
+      desc: "Nh\xE2n v\u1EADt: 30% s\u1ED1 banner l\xE0 Meta (quay t\u1ED1i \u0111a 120 roll). Banner th\u01B0\u1EDDng ch\u1EC9 commit khi b\u1EA3o to\xE0n ng\xE2n s\xE1ch cho Meta k\u1EBF ti\u1EBFp. V\u0169 kh\xED: Quay \u1EDF banner Meta, ho\u1EB7c banner th\u01B0\u1EDDng n\u1EBFu v\xED \u0111\u1EE7 b\u1EA3o hi\u1EC3m 8 Issues cho c\u1EA3 banner hi\u1EC7n t\u1EA1i l\u1EABn banner Meta k\u1EBF ti\u1EBFp.",
       runCharacterPull(player, bannerState, ticketIncome, bannerIdx, totalBanners) {
         return [];
       },
@@ -15775,7 +15775,7 @@
       "strategy.helpSingle": "2. Save & Commit (Quay l\u1EBB): Ch\u1EC9 quay x1 t\u1EEB \u0111\u1EA7u \u0111\u1EBFn cu\u1ED1i banner, d\u1EEBng khi ra Featured. \u0110i\u1EC1u ki\u1EC7n t\xEDch v\xE9 v\xE0 v\u0169 kh\xED gi\u1ED1ng Save & Commit.",
       "strategy.helpYolo": "3. Spend All (Yolo): D\xF9ng m\u1ECDi v\xE9 nh\xE2n v\u1EADt v\xE0 d\u1EEBng khi tr\xFAng Featured. Sau \u0111\xF3 quay Issue \u0111\u1EBFn khi c\xF3 Featured Weapon ho\u1EB7c h\u1EBFt v\xE9.",
       "strategy.help60": "4. M\u1ED1c 60 m\u1ED7i banner: N\u1EBFu \u0111\u1EE7 60 th\xEC quay t\u1EDBi m\u1ED1c 60; n\u1EBFu ch\u1EC9 \u0111\u1EE7 30 th\xEC d\u1EEBng \u1EDF 30; n\u1EBFu kh\xF4ng th\xEC ch\u1EC9 d\xF9ng free/Dossier b\u1EAFt bu\u1ED9c. Kh\xF4ng d\u1EEBng s\u1EDBm khi tr\xFAng Featured.",
-      "strategy.helpMeta": "5. Quay theo Meta: Ch\u1ECDn 30% banner l\xE0m Meta, t\u1ED1i \u0111a 120 pull. Banner th\u01B0\u1EDDng ch\u1EC9 commit khi b\u1EA3o to\xE0n ng\xE2n s\xE1ch cho Meta k\u1EBF ti\u1EBFp. V\u0169 kh\xED ch\u1EC9 quay \u1EDF banner Meta.",
+      "strategy.helpMeta": "5. Quay theo Meta: Ch\u1ECDn 30% banner l\xE0m Meta (t\u1ED1i \u0111a 120 pull). Banner th\u01B0\u1EDDng ch\u1EC9 commit nh\xE2n v\u1EADt khi b\u1EA3o to\xE0n qu\u1EF9 120 roll cho Meta k\u1EBF ti\u1EBFp. V\u0169 kh\xED quay \u1EDF banner Meta, ho\u1EB7c banner th\u01B0\u1EDDng n\u1EBFu v\xED \u0111\u1EE7 b\u1EA3o hi\u1EC3m 8 Issues cho c\u1EA3 banner hi\u1EC7n t\u1EA1i l\u1EABn banner Meta k\u1EBF ti\u1EBFp.",
       "rule.optimizeTitle": "[i] Lu\u1EADt t\u1ED1i \u01B0u m\u1ED1c 30",
       "rule.optimize": "N\u1EBFu \u0111\xE3 quay \u0111\u1EBFn 20 pull (10 free + 10 Dossier) m\xE0 ch\u01B0a tr\xFAng Featured, m\u1ECDi chi\u1EBFn thu\u1EADt d\xF9ng th\xEAm t\u1ED1i \u0111a 10 v\xE9 \u0111\u1EC3 ch\u1EA1m m\u1ED1c 30 v\xE0 nh\u1EADn 10 Urgent Recruitment mi\u1EC5n ph\xED.",
       "rule.urgentTitle": "[i] B\u1EA3o hi\u1EC3m 5\u2605 Urgent",
@@ -16041,7 +16041,7 @@
       "strategy.helpSingle": "2. Save & Commit (Singles): Pull x1 for the entire banner and stop on Featured. Uses the same savings and weapon conditions as Save & Commit.",
       "strategy.helpYolo": "3. Spend All (Yolo): Spend all character tickets and stop on Featured. Then perform Issues until the Featured weapon is obtained or tickets run out.",
       "strategy.help60": "4. Pull 60: Reach 60 when affordable; otherwise stop at 30 when affordable. If neither is possible, use only mandatory free/Dossier pulls. Do not stop early on Featured.",
-      "strategy.helpMeta": "5. Roll Meta: Select 30% of banners as Meta and pull up to 120. Commit on regular banners only when the next Meta budget remains safe. Pull weapons only on Meta banners.",
+      "strategy.helpMeta": "5. Roll Meta: Select 30% of banners as Meta (up to 120 pulls). Commit on regular banners only when the next Meta budget remains safe. Pull weapons on Meta banners, or regular banners if having enough tickets to guarantee 8 Issues for both current and next Meta banners.",
       "rule.optimizeTitle": "[i] Pull 30 optimization",
       "rule.optimize": "After 20 pulls (10 free + 10 Dossier) without Featured, every strategy spends up to 10 wallet tickets to reach pull 30 and receive 10 free Urgent Recruitment pulls.",
       "rule.urgentTitle": "[i] Urgent 5\u2605 guarantee",

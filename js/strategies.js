@@ -487,7 +487,7 @@ export const strategies = {
     roll_meta: {
         id: 'roll_meta',
         name: 'Roll Meta',
-        desc: 'Nhân vật: 30% số banner là Meta (quay tối đa 120 roll). Banner thường chỉ commit khi vẫn bảo toàn ngân sách cho Meta kế tiếp; Dossier hết hạn và tối ưu mốc 30 vẫn luôn áp dụng. Vũ khí: Chỉ quay ở banner Meta.',
+        desc: 'Nhân vật: 30% số banner là Meta (quay tối đa 120 roll). Banner thường chỉ commit khi bảo toàn ngân sách cho Meta kế tiếp. Vũ khí: Quay ở banner Meta, hoặc banner thường nếu ví đủ bảo hiểm 8 Issues cho cả banner hiện tại lẫn banner Meta kế tiếp.',
         
         runCharacterPull(player, bannerState, ticketIncome, bannerIdx, totalBanners) {
             return [];
