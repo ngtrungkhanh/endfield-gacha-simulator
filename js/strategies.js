@@ -683,14 +683,20 @@ export function runSingleBannerForPlayer(strategyId, player, charBannerState, we
                 if (nextMetaIdx !== -1) {
                     const bannersUntilMeta = nextMetaIdx - bannerIdx;
                     const expectedFutureEarnings = bannersUntilMeta * (weaponIncomeNonGacha + 860);
-                    const maxSpend = player.arsenalTickets + totalArsenalTicketsEarned + expectedFutureEarnings - 15840;
-                    if (maxSpend >= 1980) {
+                    const totalAvailable = player.arsenalTickets + totalArsenalTicketsEarned + expectedFutureEarnings;
+                    if (totalAvailable >= 31680) { // Đủ 8 Issues cho banner hiện tại + 8 Issues cho banner Meta tiếp theo
+                        const maxSpend = totalAvailable - 15840;
                         weaponIssues = executeWeaponPullSequence(player, weaponBannerState, totalArsenalTicketsEarned, gotFeaturedChar, maxSpend);
                     } else {
                         player.arsenalTickets += totalArsenalTicketsEarned;
                     }
                 } else {
-                    weaponIssues = executeWeaponPullSequence(player, weaponBannerState, totalArsenalTicketsEarned, gotFeaturedChar);
+                    // Không có banner Meta tiếp theo: Chỉ quay nếu bản thân banner này có đủ tích lũy 8 Issues (15840 vé)
+                    if (player.arsenalTickets + totalArsenalTicketsEarned >= 15840) {
+                        weaponIssues = executeWeaponPullSequence(player, weaponBannerState, totalArsenalTicketsEarned, gotFeaturedChar);
+                    } else {
+                        player.arsenalTickets += totalArsenalTicketsEarned;
+                    }
                 }
             } else {
                 player.arsenalTickets += totalArsenalTicketsEarned;
