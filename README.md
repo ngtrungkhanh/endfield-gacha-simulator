@@ -1,79 +1,79 @@
-# Endfield Gacha Simulator v1.1.0
+# Arknights: Endfield Gacha Simulator v1.1.0
 
 Trình giả lập gacha dành cho **Arknights: Endfield**, hỗ trợ quay tương tác và mô phỏng Monte Carlo để so sánh các chiến thuật sử dụng tài nguyên qua nhiều banner.
 
 An offline-first Vietnamese/English gacha simulator for **Arknights: Endfield**, with interactive pulls and Monte Carlo strategy comparisons.
 
-## Tính năng
+---
 
-- Quay Operator và vũ khí trực tiếp trên giao diện.
-- Theo dõi ví vé, pity, kết quả quay và tài nguyên hoàn trả.
-- Theo dõi Bond Quota, vé tự động quy đổi và các mốc pity 80/120 trong báo cáo run chi tiết.
-- Chạy mô phỏng nhiều người chơi qua nhiều banner.
-- Chạy một người chơi với seed ngẫu nhiên hoặc seed tự nhập, chọn một trong năm chiến thuật và xem timeline chi tiết theo từng banner.
-- So sánh năm chiến thuật chi tiêu bằng bảng thống kê và biểu đồ.
-- Lưu trạng thái và cấu hình gần nhất trong LocalStorage.
-- Cho phép cấu hình tài nguyên ban đầu và thu nhập theo phiên bản.
-- Chuyển đổi toàn bộ giao diện giữa tiếng Việt và tiếng Anh mà không reload hoặc mất trạng thái.
-- Chạy trực tiếp qua `file://` mà không cần server hay kết nối mạng.
-- Tài liệu luật và chiến thuật được nhúng trực tiếp trong giao diện, không phụ thuộc file Markdown khi chạy.
+## Tính năng nổi bật
 
-## Kiểm thử nội bộ / Internal testing
+### 1. Quay tương tác (Interactive Pulls)
+- Quay Operator và vũ khí trực tiếp trên giao diện trực quan.
+- Theo dõi ví vé nhân vật, vé vũ khí (Arsenal), pity hiện tại dạng `xx/80`, kết quả quay và tài nguyên hoàn trả.
+- **Bảo hiểm Featured động (Dynamic Featured Pity)**: Tự động tính bảo hiểm nâng cấp khi lấy thêm dupe (120 mốc đầu, 240 cho dupe 1, và tăng dần 480/720/960... cho các dupe tiếp theo).
+- **Hệ thống Vé Dossier**: Tích lũy 10 vé Dossier khi đạt mốc 60 lượt quay trên banner hiện tại, tự động tích lũy và ưu tiên sử dụng trước khi chuyển sang banner tiếp theo.
+- Tự động gợi ý chuyển banner khi quay trúng nhân vật Featured của banner hiện tại.
 
-Tạo bản offline chưa đóng gói release:
+### 2. Mô phỏng chiến thuật (Strategy Simulator)
+- Chạy giả lập Monte Carlo nhiều người chơi qua chu kỳ Banner (Banner cycles) để so sánh hiệu năng.
+- Tích hợp 5 chiến thuật gacha thông minh: *Save & Commit*, *Save & Commit (Roll lẻ)*, *Yolo / Spend All*, *Pull 60*, và *Roll Meta*.
+- Tích hợp nút **Reset cài đặt** để khôi phục cấu hình mặc định và xóa cache cũ một cách an toàn.
+- So sánh hiệu suất chi tiêu bằng bảng thống kê chi tiết và biểu đồ trực quan (sử dụng thư viện Chart.js).
 
+### 3. Gacha Simulator (Single Run)
+- Chạy giả lập chi tiết cho một người chơi với hạt giống (seed) ngẫu nhiên hoặc tự nhập.
+- Theo dõi toàn bộ timeline quyết định, pity, tài nguyên và kết quả quay chi tiết qua từng mùa banner.
+
+### 4. Thiết kế kỹ thuật & Offline-First
+- Chuyển đổi toàn bộ giao diện giữa tiếng Việt và tiếng Anh tức thời mà không cần reload.
+- Lưu trữ cấu hình và kết quả gần nhất trong `localStorage`.
+- Đóng gói toàn bộ tài nguyên (JS, CSS, Chart.js) thành một file HTML duy nhất **`A9EGacha.html`** có thể chạy trực tiếp qua giao diện file (`file://`) hoàn toàn không cần kết nối mạng hay server.
+
+---
+
+## Hướng dẫn phát triển và kiểm thử
+
+### Cài đặt dependencies
 ```bash
 npm ci
+```
+
+### Chạy kiểm thử tự động
+```bash
 npm test
-npm run build
-npm run build:offline
 ```
 
-Sau đó mở trực tiếp `dist/index.html`. Không cần local server. Khi kiểm thử offline, nên tắt mạng hoặc dùng DevTools để chặn network.
-
-Then open `dist/index.html` directly. No local server is required. Disable the network or block requests in DevTools for the offline smoke test.
-
-Tạo file HTML duy nhất tự chứa (self-contained) phục vụ kiểm thử nhanh hoặc phân phối gọn nhẹ:
-Create a single self-contained HTML file for quick testing or lightweight distribution:
-
-```bash
-npm run build:single
-```
-
-Sau đó mở trực tiếp `A9EGacha.html` ở thư mục gốc. Then open `A9EGacha.html` directly in the root folder.
-
-
-Sau khi sửa các module trong `js/`, tạo lại bundle dùng bởi giao diện:
-
+### Biên dịch lại mã nguồn khi có thay đổi (js/ -> js/bundle.js)
 ```bash
 npm run build
 ```
 
-Dùng chế độ theo dõi khi phát triển:
-
+### Theo dõi thay đổi tự động khi phát triển
 ```bash
 npm run watch
 ```
 
-Chỉ sau khi smoke test nội bộ đạt mới tạo ZIP release:
-
+### Đóng gói bản phát hành offline đơn nhất
 ```bash
 npm run package
 ```
+Sau khi hoàn tất, file HTML độc lập sẽ được tạo tại:
+- Thư mục gốc: `A9EGacha.html`
+- Thư mục phát hành: `release/A9EGacha.html` (đi kèm mã băm SHA-256 để kiểm chứng toàn vẹn).
 
-## Cấu trúc chính
+---
 
-- `index.html`: giao diện ứng dụng.
-- `css/style.css`: bố cục và giao diện.
-- `js/gacha-math.js`: xác suất, pity và kết quả quay.
-- `js/strategies.js`: trạng thái người chơi và chiến thuật mô phỏng.
-- `js/simulator.js`: bộ điều phối Monte Carlo.
-- `js/single-run.js`: runner một người chơi có seed tái lập và dữ liệu báo cáo chi tiết.
-- `js/chart-helper.js`: biểu đồ kết quả.
-- `js/app.js`: điều khiển giao diện và LocalStorage.
-- `js/i18n.js`: catalog VI/EN, định dạng số và locale độc lập với schema gacha.
-- `js/bundle.js`: bundle được tạo từ các module JavaScript.
-- `docs/` và `data/`: tài liệu nguồn phục vụ phát triển; không còn được sao chép vào bản offline runtime.
-- [`reports/detailed_gacha_run.md`](reports/detailed_gacha_run.md): run Save & Commit một người qua 10 banner để kiểm chứng diễn biến simulator.
+## Cấu trúc mã nguồn
 
-README chỉ giới thiệu sản phẩm. Luật, chiến thuật và dữ liệu được duy trì trong các tài liệu chuyên biệt ở trên.
+- `index.html`: Giao diện ứng dụng chính.
+- `css/style.css`: Hệ thống CSS, bố cục và hiệu ứng responsive.
+- `js/gacha-math.js`: Xác suất, pity, bảo hiểm động và kết quả quay gacha.
+- `js/strategies.js`: Trạng thái người chơi và logic 5 chiến thuật mô phỏng.
+- `js/simulator.js`: Bộ điều phối chạy Monte Carlo.
+- `js/single-run.js`: Trình chạy một người chơi có seed để tái lập và kết xuất timeline.
+- `js/chart-helper.js`: Tích hợp vẽ biểu đồ Chart.js.
+- `js/app.js`: Điểm khởi chạy (entry point), điều khiển DOM và đồng bộ LocalStorage.
+- `js/i18n.js`: Quản lý đa ngôn ngữ VI/EN và định dạng số theo locale.
+- `js/bundle.js`: File đóng gói runtime hoàn chỉnh cho trình duyệt.
+- `reports/detailed_gacha_run.md`: Báo cáo chạy Save & Commit một người qua 10 banner mẫu để kiểm chứng simulator.
