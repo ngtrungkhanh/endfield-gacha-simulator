@@ -1,3 +1,5 @@
+import { formatNumber, strategyName, t } from './i18n.js';
+
 /**
  * Wrapper hỗ trợ vẽ biểu đồ bằng thư viện Chart.js
  */
@@ -40,7 +42,7 @@ export function drawDistributionChart(canvasId, results, strategiesConfig) {
     // Tạo nhãn trục X (từ 0 đến maxOwned)
     const labels = [];
     for (let i = 0; i <= maxOwned; i++) {
-        labels.push(`${i} nhân vật`);
+        labels.push(t('chart.distribution.label', { count: formatNumber(i) }));
     }
 
     const colors = {
@@ -78,7 +80,7 @@ export function drawDistributionChart(canvasId, results, strategiesConfig) {
         const color = colors[strategyId] || { border: '#ccc', bg: 'rgba(200, 200, 200, 0.5)' };
 
         return {
-            label: strategyInfo ? strategyInfo.name : strategyId,
+            label: strategyInfo ? strategyName(strategyId) : strategyId,
             data: data,
             borderColor: color.border,
             backgroundColor: color.bg,
@@ -101,7 +103,7 @@ export function drawDistributionChart(canvasId, results, strategiesConfig) {
             plugins: {
                 title: {
                     display: true,
-                    text: 'Phân Phối Tỉ Lệ Sở Hữu Nhân Vật Giới Hạn',
+                    text: t('chart.distribution.title'),
                     color: '#ffffff',
                     font: {
                         size: 16,
@@ -120,7 +122,7 @@ export function drawDistributionChart(canvasId, results, strategiesConfig) {
                 tooltip: {
                     callbacks: {
                         label: function(context) {
-                            return ` ${context.dataset.label}: ${context.raw.toFixed(2)}% người chơi`;
+                            return ` ${context.dataset.label}: ${t('chart.playersPercent', { value: formatNumber(context.raw, { maximumFractionDigits: 2 }) })}`;
                         }
                     }
                 }
@@ -152,7 +154,7 @@ export function drawDistributionChart(canvasId, results, strategiesConfig) {
                     },
                     title: {
                         display: true,
-                        text: 'Phần trăm người chơi (%)',
+                        text: t('chart.playersAxis'),
                         color: '#a0aebf',
                         font: {
                             family: 'Inter'
@@ -177,7 +179,7 @@ export function drawComparisonChart(canvasId, results, strategiesConfig) {
     if (!canvas) return;
 
     const labels = Object.keys(results).map(strategyId => {
-        return strategiesConfig[strategyId] ? strategiesConfig[strategyId].name : strategyId;
+        return strategiesConfig[strategyId] ? strategyName(strategyId) : strategyId;
     });
 
     // 1. Tỉ lệ trúng Featured nhân vật (%)
@@ -196,7 +198,7 @@ export function drawComparisonChart(canvasId, results, strategiesConfig) {
             labels: labels,
             datasets: [
                 {
-                    label: 'Tỉ lệ sở hữu Featured trên mỗi banner (%)',
+                    label: t('chart.ownershipDataset'),
                     data: ownershipData,
                     backgroundColor: 'rgba(255, 107, 0, 0.7)',
                     borderColor: '#ff6b00',
@@ -205,7 +207,7 @@ export function drawComparisonChart(canvasId, results, strategiesConfig) {
                     yAxisID: 'y'
                 },
                 {
-                    label: 'Số pull trung bình cho 1 Featured (Hiệu năng)',
+                    label: t('chart.efficiencyDataset'),
                     data: pullsPerFeaturedData,
                     backgroundColor: 'rgba(157, 78, 221, 0.7)',
                     borderColor: '#9d4edd',
@@ -221,7 +223,7 @@ export function drawComparisonChart(canvasId, results, strategiesConfig) {
             plugins: {
                 title: {
                     display: true,
-                    text: 'So Sánh Tỉ Lệ Sở Hữu & Hiệu Năng Sử Dụng Vé',
+                    text: t('chart.comparison.title'),
                     color: '#ffffff',
                     font: {
                         size: 16,
@@ -263,7 +265,7 @@ export function drawComparisonChart(canvasId, results, strategiesConfig) {
                     },
                     title: {
                         display: true,
-                        text: 'Tỉ lệ sở hữu (%)',
+                        text: t('chart.ownershipAxis'),
                         color: '#a0aebf'
                     }
                 },
@@ -275,12 +277,12 @@ export function drawComparisonChart(canvasId, results, strategiesConfig) {
                     ticks: {
                         color: '#a0aebf',
                         callback: function(value) {
-                            return value + ' pull';
+                            return t('chart.pullTick', { value: formatNumber(value) });
                         }
                     },
                     title: {
                         display: true,
-                        text: 'Số pull trung bình',
+                        text: t('chart.pullsAxis'),
                         color: '#a0aebf'
                     }
                 }

@@ -2,3 +2,7 @@ node_modules/
 .DS_Store
 *.log
 scratch_test.js
+dist/
+release/
+.offline-verify/
+A9EGacha.html

@@ -25,11 +25,6 @@
             return false;
         };
     </script>
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <!-- Chart.js qua CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Style CSS -->
     <link rel="stylesheet" href="css/style.css">
 </head>
@@ -39,16 +34,25 @@
         <header class="glass-panel">
             <div class="logo-section">
                 <h1>A9E Gacha Simulator</h1>
-                <span>Giả lập gacha Arknights: Endfield</span>
+                <span data-i18n="app.subtitle">Giả lập gacha Arknights: Endfield</span>
             </div>
-            <nav class="tabs-navigation">
-                <button class="tab-btn active" id="btn-tab-interactive" data-tab="interactive-tab">Interactive Pull</button>
-                <button class="tab-btn" id="btn-tab-simulator" data-tab="simulator-tab">Strategy Simulator</button>
-            </nav>
+            <div class="header-controls">
+                <nav class="tabs-navigation" role="tablist" aria-label="Main sections">
+                    <button class="tab-btn active" id="btn-tab-interactive" data-tab="interactive-tab" data-i18n="tabs.interactive" role="tab" aria-selected="true" aria-controls="interactive-tab">Quay tương tác</button>
+                    <button class="tab-btn" id="btn-tab-simulator" data-tab="simulator-tab" data-i18n="tabs.simulator" role="tab" aria-selected="false" aria-controls="simulator-tab" tabindex="-1">Mô phỏng chiến thuật</button>
+                    <button class="tab-btn" id="btn-tab-single-run" data-tab="single-run-tab" data-i18n="tabs.singleRun" role="tab" aria-selected="false" aria-controls="single-run-tab" tabindex="-1">Gacha Simulator</button>
+                </nav>
+                <button class="docs-trigger" id="btn-open-docs" type="button" data-i18n="docs.open">Tài liệu</button>
+                <div class="locale-switcher" role="group" data-i18n-aria-label="language.label" aria-label="Ngôn ngữ">
+                    <button class="locale-btn" type="button" data-locale="vi" aria-pressed="true">VI</button>
+                    <button class="locale-btn" type="button" data-locale="en" aria-pressed="false">EN</button>
+                </div>
+                <small class="build-info" id="build-info"></small>
+            </div>
         </header>
 
         <!-- TAB 1: INTERACTIVE PULL -->
-        <main class="tab-content active" id="interactive-tab">
+        <main class="tab-content active" id="interactive-tab" role="tabpanel" aria-labelledby="btn-tab-interactive" tabindex="0">
             <div class="interactive-layout">
                 <!-- Banner & Stats Side (Left) -->
                 <div class="banner-side-container" style="display: flex; flex-direction: column; gap: 24px;">
@@ -56,104 +60,86 @@
                     <div class="banner-container glass-panel">
                         <div class="banner-header" style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%;">
                             <div style="flex-grow: 1;">
-                                <span class="banner-tag">Chartered Headhunting</span>
+                                <span class="banner-tag" data-i18n="banner.tag">Chartered Headhunting</span>
                                 <h2 class="banner-title" id="active-banner-title" style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-                                    <span>Mùa Hoa Nở Rộ (Featured: Endfield Operator)</span>
-                                    <button class="btn-secondary" id="btn-switch-banner" style="padding: 4px 10px; font-size: 11px; font-weight: 600; cursor: pointer; border-radius: 4px; border: 1px solid var(--orange-primary); color: var(--orange-primary); background: rgba(255,107,0,0.05); text-transform: uppercase;">Đổi Banner</button>
+                                    <span data-i18n="banner.0.title">Mùa Hoa Nở Rộ (Featured: Endfield Operator)</span>
+                                    <button class="btn-secondary" id="btn-switch-banner" data-i18n="banner.switch" style="padding: 4px 10px; font-size: 11px; font-weight: 600; cursor: pointer; border-radius: 4px; border: 1px solid var(--orange-primary); color: var(--orange-primary); background: rgba(255,107,0,0.05); text-transform: uppercase;">Đổi banner</button>
                                 </h2>
-                                <p class="banner-subtitle" id="active-banner-subtitle">Tỉ lệ 6★: 0.8% | Soft pity tăng từ lượt 66 | Hard pity 80 | Featured guarantee 120</p>
+                                <p class="banner-subtitle" id="active-banner-subtitle" data-i18n="banner.rules">Tỉ lệ 6★: 0,8% | Soft pity tăng từ lượt 66 | Hard pity 80 | Bảo hiểm Featured 120</p>
                             </div>
                             <div class="banner-pity-widgets">
                                 <div class="pity-widget">
                                     <div class="val" id="widget-pity6">0</div>
-                                    <div class="lbl">Pity 6★</div>
+                                    <div class="lbl" data-i18n="banner.pity6">Pity 6★</div>
+                                    <progress id="progress-pity6" max="80" value="0" data-i18n-aria-label="banner.pity6Progress" aria-label="Tiến độ pity 6★ trên 80"></progress>
                                 </div>
                                 <div class="pity-widget">
                                     <div class="val" id="widget-pity5">0</div>
-                                    <div class="lbl">Pity 5★</div>
+                                    <div class="lbl" data-i18n="banner.pity5">Pity 5★</div>
                                 </div>
                                 <div class="pity-widget">
                                     <div class="val" id="widget-pity-featured">0/120</div>
-                                    <div class="lbl">Bảo hiểm 120</div>
+                                    <div class="lbl" id="widget-pity-featured-lbl" data-i18n="banner.guarantee">Bảo hiểm 120</div>
+                                    <progress id="progress-featured" max="120" value="0" data-i18n-aria-label="banner.guaranteeProgress" aria-label="Tiến độ bảo hiểm Featured trên 120"></progress>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Pull Results Area -->
                         <div class="pull-reveal-board" id="pull-reveal-board">
-                            <span class="no-pulls-yet">Nhấn nút bên dưới để thực hiện quay gacha...</span>
+                            <span class="no-pulls-yet" data-i18n="pull.empty">Nhấn nút bên dưới để thực hiện quay gacha...</span>
+                        </div>
+                        <div class="six-star-legend" aria-label="Chú thích kết quả 6 sao">
+                            <span class="legend-featured" data-i18n="card.legendFeatured">✓ Trúng Rate-up</span>
+                            <span class="legend-offrate" data-i18n="card.legendOffrate">✕ Lệch Rate</span>
+                            <small data-i18n="card.orderHelp">Số góc trái là slot trong lần quay; P là số pull trên banner.</small>
                         </div>
 
                         <!-- Footer controls -->
                         <div class="banner-footer">
-                            <div class="wallet-view">
-                                <div class="wallet-item">
-                                    Vé nhân vật: <span class="amount" id="wallet-char-tickets">120</span>
-                                </div>
-                                <div class="wallet-item">
-                                    Vé vũ khí: <span class="amount" id="wallet-weapon-tickets">0</span>
-                                </div>
-                                <div class="wallet-item">
-                                    Bond Quota: <span class="amount" id="wallet-bond-quota" style="color: #ffb800;">0</span>
-                                </div>
-                            </div>
-                            <div class="wallet-view" style="margin-top: 10px; border-top: 1px solid var(--border-color); padding-top: 10px;">
-                                <div class="wallet-item">
-                                    Vé Free Banner: <span class="amount" id="wallet-free-limited" style="color: var(--orange-primary);">10</span>
-                                </div>
-                                <div class="wallet-item">
-                                    Vé Dossier khả dụng: <span class="amount" id="wallet-dossier-tickets" style="color: #9d4edd;">0</span>
-                                </div>
-                                <div class="wallet-item" title="Chỉ sử dụng được ở banner tiếp theo, đổi sang banner khác nữa sẽ biến mất">
-                                    Dossier tích luỹ: <span class="amount" id="wallet-next-dossier-tickets" style="color: #9d4edd; opacity: 0.7;">0</span>
-                                </div>
-                            </div>
-                            <div class="pull-btns" style="margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap;">
-                                <button class="btn-secondary" id="btn-roll-free-limited" style="border-color: var(--orange-primary); color: var(--orange-primary); flex-grow: 1;">Quay Free Banner (x10 Free)</button>
-                            </div>
                             <div class="pull-btns" style="margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap;">
-                                <button class="btn-secondary" id="btn-char-pull1" style="flex-grow: 1;">Quay x1</button>
-                                <button class="btn-primary" id="btn-char-pull10" style="flex-grow: 1;">Quay x10</button>
-                                <button class="btn-secondary" id="btn-weapon-issue" style="border-color: var(--star-6); color: var(--star-6); flex-grow: 1;">Quay Issue Vũ Khí (x10)</button>
+                                <button class="btn-secondary" id="btn-char-pull1" data-i18n="pull.one" style="flex-grow: 1;">Quay x1</button>
+                                <button class="btn-primary" id="btn-char-pull10" data-i18n="pull.ten" style="flex-grow: 1;">Quay x10</button>
+                                <button class="btn-secondary" id="btn-weapon-issue" data-i18n="pull.weapon" style="border-color: var(--star-6); color: var(--star-6); flex-grow: 1;">Quay Issue Vũ Khí (x10)</button>
                             </div>
                         </div>
                     </div>
 
                     <!-- Interactive Stats Panel -->
                     <div class="interactive-stats-panel glass-panel" style="padding: 20px;">
-                        <h3 class="panel-title" style="margin-bottom: 16px;">Thống kê đợt quay hiện tại</h3>
+                        <h3 class="panel-title" data-i18n="stats.title" style="margin-bottom: 16px;">Thống kê đợt quay hiện tại</h3>
                         <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
                             <!-- Char Stats -->
                             <div style="background: rgba(255,255,255,0.02); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color);">
-                                <h4 style="font-size: 13px; color: var(--text-white); margin-bottom: 8px; border-bottom: 1px solid var(--border-color); padding-bottom: 4px; font-weight: 700;">Nhân vật</h4>
+                                <h4 data-i18n="stats.characters" style="font-size: 13px; color: var(--text-white); margin-bottom: 8px; border-bottom: 1px solid var(--border-color); padding-bottom: 4px; font-weight: 700;">Nhân vật</h4>
                                 <div style="font-size: 12px; color: var(--text-secondary); display: flex; flex-direction: column; gap: 6px;">
-                                    <div>Tổng lượt quay: <span id="stat-char-total" style="color: var(--text-white); font-weight: 700;">0</span> (Urgent: <span id="stat-char-urgent" style="color: var(--text-white);">0</span>)</div>
-                                    <div>Số 6★ trúng: <span id="stat-char-6star" style="color: var(--star-6); font-weight: 700;">0</span> (<span id="stat-char-6star-rate" style="font-weight: 600; color: var(--text-primary);">0.0%</span>)</div>
+                                    <div><span data-i18n="stats.totalPulls">Tổng lượt quay:</span> <span id="stat-char-total" style="color: var(--text-white); font-weight: 700;">0</span> (Urgent: <span id="stat-char-urgent" style="color: var(--text-white);">0</span>, Dossier: <span id="stat-char-dossier" style="color: var(--text-white);">0</span>)</div>
+                                    <div><span data-i18n="stats.sixStar">Số 6★ trúng:</span> <span id="stat-char-6star" style="color: var(--star-6); font-weight: 700;">0</span> (<span id="stat-char-6star-rate" style="font-weight: 600; color: var(--text-primary);">0.0%</span>)</div>
                                     <div style="padding-left: 8px; font-size: 11px;">- Limited (New): <span id="stat-char-6star-lim-new" style="color: var(--text-white); font-weight: 600;">0</span></div>
                                     <div style="padding-left: 8px; font-size: 11px;">- Limited Dupe: <span id="stat-char-6star-lim-dupe" style="color: var(--text-white); font-weight: 600;">0</span></div>
-                                    <div style="padding-left: 8px; font-size: 11px;">- Lệch Limited: <span id="stat-char-6star-lech-lim" style="color: var(--text-white); font-weight: 600;">0</span></div>
-                                    <div>Số 5★ trúng: <span id="stat-char-5star" style="color: var(--star-5); font-weight: 700;">0</span> (<span id="stat-char-5star-rate" style="font-weight: 600; color: var(--text-primary);">0.0%</span>)</div>
-                                    <div>Token Potential mốc 240: <span id="stat-char-potential" style="color: var(--orange-primary); font-weight: 700;">0</span></div>
-                                    <div>Số pull trung bình / 6★: <span id="stat-char-avg-pull" style="color: var(--orange-primary); font-weight: 700;">--</span></div>
+                                    <div style="padding-left: 8px; font-size: 11px;"><span data-i18n="stats.offBannerLimited">– Lệch Limited:</span> <span id="stat-char-6star-lech-lim" style="color: var(--text-white); font-weight: 600;">0</span></div>
+                                    <div><span data-i18n="stats.fiveStar">Số 5★ trúng:</span> <span id="stat-char-5star" style="color: var(--star-5); font-weight: 700;">0</span> (<span id="stat-char-5star-rate" style="font-weight: 600; color: var(--text-primary);">0.0%</span>)</div>
+                                    <div><span data-i18n="stats.potential">Token Potential mốc 240:</span> <span id="stat-char-potential" style="color: var(--orange-primary); font-weight: 700;">0</span></div>
+                                    <div><span data-i18n="stats.averageSix">Số pull trung bình / 6★:</span> <span id="stat-char-avg-pull" style="color: var(--orange-primary); font-weight: 700;">--</span></div>
                                 </div>
                             </div>
                             <!-- Weapon Stats -->
                             <div style="background: rgba(255,255,255,0.02); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color);">
-                                <h4 style="font-size: 13px; color: var(--text-white); margin-bottom: 8px; border-bottom: 1px solid var(--border-color); padding-bottom: 4px; font-weight: 700;">Vũ khí</h4>
+                                <h4 data-i18n="stats.weapons" style="font-size: 13px; color: var(--text-white); margin-bottom: 8px; border-bottom: 1px solid var(--border-color); padding-bottom: 4px; font-weight: 700;">Vũ khí</h4>
                                 <div style="font-size: 12px; color: var(--text-secondary); display: flex; flex-direction: column; gap: 6px;">
-                                    <div>Tổng vé đã tích: <span id="stat-weap-tickets" style="color: var(--text-white); font-weight: 700;">0</span></div>
-                                    <div>Số Issue (x10) đã quay: <span id="stat-weap-issues" style="color: var(--text-white); font-weight: 700;">0</span></div>
-                                    <div>Số vũ khí 6★ trúng: <span id="stat-weap-6star" style="color: var(--star-6); font-weight: 700;">0</span></div>
-                                    <div>Hộp chọn vũ khí (Mốc 10): <span id="stat-weap-selectors" style="color: var(--star-6); font-weight: 700;">0</span></div>
+                                    <div><span data-i18n="stats.weaponTickets">Tổng vé đã tích:</span> <span id="stat-weap-tickets" style="color: var(--text-white); font-weight: 700;">0</span></div>
+                                    <div><span data-i18n="stats.weaponIssues">Số Issue (x10) đã quay:</span> <span id="stat-weap-issues" style="color: var(--text-white); font-weight: 700;">0</span></div>
+                                    <div><span data-i18n="stats.weaponSix">Số vũ khí 6★ trúng:</span> <span id="stat-weap-6star" style="color: var(--star-6); font-weight: 700;">0</span></div>
+                                    <div><span data-i18n="stats.weaponSelectors">Hộp chọn vũ khí (Mốc 10):</span> <span id="stat-weap-selectors" style="color: var(--star-6); font-weight: 700;">0</span></div>
                                 </div>
                             </div>
                             <!-- Luck Rating -->
                             <div style="background: rgba(255,255,255,0.02); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;">
-                                <div style="font-size: 11px; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;">Đánh giá nhân phẩm</div>
-                                <div id="stat-luck-badge" style="font-size: 14px; font-weight: 800; color: var(--text-secondary); margin-top: 8px; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: rgba(255,255,255,0.02);">
+                                <div data-i18n="luck.title" style="font-size: 11px; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;">Đánh giá nhân phẩm</div>
+                                <div id="stat-luck-badge" data-i18n="luck.unknown" style="font-size: 14px; font-weight: 800; color: var(--text-secondary); margin-top: 8px; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: rgba(255,255,255,0.02);">
                                     Chưa xác định
                                 </div>
-                                <div id="stat-luck-desc" style="font-size: 10px; color: var(--text-secondary); margin-top: 6px; text-align: center; max-width: 170px; line-height: 1.3;">
+                                <div id="stat-luck-desc" data-i18n="luck.minimum" style="font-size: 10px; color: var(--text-secondary); margin-top: 6px; text-align: center; max-width: 170px; line-height: 1.3;">
                                     Quay tối thiểu 20 lần để hệ thống đánh giá nhân phẩm.
                                 </div>
                             </div>
@@ -163,45 +149,38 @@
 
                 <!-- Sidebar Log & Info (Right) -->
                 <aside class="sidebar-panel glass-panel">
-                    <h3 class="panel-title">Tủ đồ kết quả</h3>
+                    <h3 class="panel-title" data-i18n="inventory.title">Tủ đồ kết quả</h3>
                     <div class="inventory-list" id="inventory-list">
                         <!-- Items dynamically added here -->
-                        <div style="color: var(--text-secondary); font-style: italic; text-align: center; margin-top: 50px;">Chưa có vật phẩm nào được quay...</div>
+                        <div data-i18n="inventory.empty" style="color: var(--text-secondary); font-style: italic; text-align: center; margin-top: 50px;">Chưa có vật phẩm nào được quay...</div>
                     </div>
                     
-                    <button class="btn-reset" id="btn-reset-interactive">Reset tiến trình</button>
+                    <button class="btn-reset" id="btn-reset-interactive" data-i18n="actions.reset">Reset tiến trình</button>
 
-                    <!-- Reference Docs link -->
-                    <div class="ref-links-box">
-                        <h4>Tài liệu liên quan</h4>
-                        <a href="docs/gacha_rules.md" target="_blank">📄 Luật Gacha</a>
-                        <a href="docs/strategies.md" target="_blank">📄 Chiến thuật mô phỏng</a>
-                        <a href="data/bookkeeping.md" target="_blank">📄 Dữ liệu Bookkeeping</a>
-                    </div>
                 </aside>
             </div>
         </main>
 
         <!-- TAB 2: STRATEGY SIMULATOR -->
-        <main class="tab-content" id="simulator-tab">
+        <main class="tab-content" id="simulator-tab" role="tabpanel" aria-labelledby="btn-tab-simulator" tabindex="0" hidden>
             <div class="simulator-layout">
                 <!-- Control Panel (Left Column) -->
                 <aside class="control-panel glass-panel">
-                    <h3 class="panel-title">Cấu hình giả lập</h3>
+                    <h3 class="panel-title" data-i18n="simulator.title">Cấu hình giả lập</h3>
 
                     <!-- Simulation Mode Select -->
-                    <div class="form-group">
-                        <label for="select-sim-mode">Chế độ giả lập:</label>
-                        <select id="select-sim-mode" style="background: var(--bg-darker); border: 1px solid var(--border-color); color: var(--text-primary); padding: 10px; border-radius: 8px; outline: none; font-family: 'Outfit'; font-weight: 600; cursor: pointer;">
-                            <option value="banners" selected>Theo chu kỳ Banner</option>
-                            <option value="pulls">Theo tổng số Pulls</option>
+                    <div class="form-group" style="display: none;">
+                        <label for="select-sim-mode" data-i18n="simulator.mode">Chế độ giả lập:</label>
+                        <select id="select-sim-mode" style="background: var(--bg-darker); border: 1px solid var(--border-color); color: var(--text-primary); padding: 10px; border-radius: 8px; outline: none; font-family: inherit; font-weight: 600; cursor: pointer;">
+                            <option value="banners" data-i18n="simulator.modeBanners" selected>Theo chu kỳ Banner</option>
+                            <option value="pulls" data-i18n="simulator.modePulls">Theo tổng số Pulls</option>
                         </select>
                     </div>
                     
                     <!-- Num Players (yy times) -->
                     <!-- Num Players (yy times) -->
                     <div class="form-group">
-                        <label for="input-players">Số người chơi (Số lần test):</label>
+                        <label for="input-players" data-i18n="simulator.players">Số người chơi (số lần test):</label>
                         <input type="number" id="input-players" min="100" max="100000" step="100" value="10000">
                     </div>
 
@@ -209,19 +188,19 @@
                     <div id="container-mode-banners" style="display: flex; flex-direction: column; gap: 20px;">
                         <!-- Num Banners -->
                         <div class="form-group">
-                            <label for="input-banners">Số mùa banner:</label>
+                            <label for="input-banners" data-i18n="simulator.banners">Số mùa banner:</label>
                             <input type="number" id="input-banners" min="1" max="100" step="1" value="10">
                         </div>
 
                         <!-- Starting Tickets -->
                         <div class="form-group">
-                            <label for="input-start-tickets">Vé nhân vật ban đầu:</label>
+                            <label for="input-start-tickets" data-i18n="simulator.startCharacters">Vé nhân vật ban đầu:</label>
                             <input type="number" id="input-start-tickets" min="0" max="2000" step="10" value="80">
                         </div>
 
                         <!-- Starting Weapon Tickets -->
                         <div class="form-group">
-                            <label for="input-start-weapon-tickets">Vé vũ khí ban đầu (Arsenal):</label>
+                            <label for="input-start-weapon-tickets" data-i18n="simulator.startWeapons">Vé vũ khí ban đầu (Arsenal):</label>
                             <input type="number" id="input-start-weapon-tickets" min="0" max="100000" step="500" value="0">
                         </div>
                     </div>
@@ -230,36 +209,36 @@
                     <div id="container-mode-pulls" style="display: none; flex-direction: column; gap: 20px;">
                         <!-- Total Pulls -->
                         <div class="form-group">
-                            <label for="input-total-pulls">Tổng số pull nhân vật:</label>
+                            <label for="input-total-pulls" data-i18n="simulator.totalPulls">Tổng số pull nhân vật:</label>
                             <input type="number" id="input-total-pulls" min="100" max="10000" step="50" value="500">
                         </div>
                     </div>
 
                     <!-- F2P Base Config -->
                     <div class="toggle-group">
-                        <h4>Tài nguyên F2P Cơ bản (mỗi banner)</h4>
+                        <h4 data-i18n="simulator.f2p">Tài nguyên F2P cơ bản (mỗi banner)</h4>
                         
                         <!-- Base Char Pulls -->
                         <div class="form-group">
-                            <label for="input-base-char">Vé nhân vật F2P gốc:</label>
+                            <label for="input-base-char" data-i18n="simulator.baseCharacters">Vé nhân vật F2P gốc:</label>
                             <input type="number" id="input-base-char" min="5" max="250" step="1" value="36">
                         </div>
 
                         <!-- Base Weapon Tickets -->
                         <div class="form-group">
-                            <label for="input-base-weapon">Vé vũ khí F2P gốc:</label>
+                            <label for="input-base-weapon" data-i18n="simulator.baseWeapons">Vé vũ khí F2P gốc:</label>
                             <input type="number" id="input-base-weapon" min="0" max="5000" step="50" value="600">
                         </div>
                     </div>
 
                     <!-- paid options -->
                     <div class="toggle-group">
-                        <h4>Gói dịch vụ (Paid options)</h4>
+                        <h4 data-i18n="simulator.paid">Gói dịch vụ (Paid options)</h4>
                         
                         <!-- Monthly Pass -->
                         <label class="toggle-label">
                             <div>
-                                <strong>Monthly Pass (Thẻ tháng)</strong>
+                                <strong data-i18n="simulator.monthly">Monthly Pass (Thẻ tháng)</strong>
                                 <div class="toggle-desc">+9 pulls / banner</div>
                             </div>
                             <div class="switch">
@@ -271,8 +250,8 @@
                         <!-- Protocol Pass -->
                         <label class="toggle-label">
                             <div>
-                                <strong>Protocol Pass (BP cao cấp)</strong>
-                                <div class="toggle-desc">+5 pulls & +1.2k vé vũ khí / banner</div>
+                                <strong data-i18n="simulator.protocol">Protocol Pass (BP cao cấp)</strong>
+                                <div class="toggle-desc" data-i18n="simulator.protocolDesc">+5 pull và +1,2k vé vũ khí / banner</div>
                             </div>
                             <div class="switch">
                                 <input type="checkbox" id="toggle-bp" checked>
@@ -283,60 +262,63 @@
 
                     <!-- Calculated Income Info -->
                     <div style="background: rgba(255,255,255,0.02); padding: 12px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 12px; display: flex; flex-direction: column; gap: 4px;">
-                        <div>Vé nhân vật/banner: <span id="info-version-income" style="color: var(--orange-primary); font-weight: 700;">~159 vé</span></div>
-                        <div>Vé vũ khí cố định/banner: <span id="info-weapon-income" style="color: var(--star-6); font-weight: 700;">~2,200 vé</span></div>
+                        <div><span data-i18n="simulator.charIncome">Vé nhân vật/banner:</span> <span id="info-version-income" style="color: var(--orange-primary); font-weight: 700;">~159 vé</span></div>
+                        <div><span data-i18n="simulator.weaponIncome">Vé vũ khí cố định/banner:</span> <span id="info-weapon-income" style="color: var(--star-6); font-weight: 700;">~2.200 vé</span></div>
                     </div>
 
-                    <button class="btn-primary" id="btn-run-simulation">Chạy giả lập</button>
+                    <button class="btn-primary" id="btn-run-simulation" data-i18n="simulator.run">Chạy giả lập</button>
+                    <button class="btn-secondary" id="btn-reset-simulator" data-i18n="simulator.reset" style="margin-top: 8px; width: 100%;">Reset cài đặt</button>
                 </aside>
 
                 <!-- Results & Visualizations (Right Column) -->
-                <div class="dashboard-content">
+                <div class="dashboard-content" aria-live="polite" aria-busy="false">
                     <!-- Stats Cards Grid -->
                     <div class="stats-cards-grid">
                         <!-- Avg Featured Chars -->
                         <div class="stat-card featured-card glass-panel">
-                            <span class="label">Nhân vật Featured trúng</span>
+                            <span class="label" data-i18n="summary.featured">Nhân vật Featured trúng</span>
                             <span class="value" id="card-avg-featured">--</span>
                         </div>
                         <!-- Avg Pulls per Featured -->
                         <div class="stat-card efficiency-card glass-panel">
-                            <span class="label">Hiệu suất (Pull/Featured)</span>
+                            <span class="label" data-i18n="summary.efficiency">Hiệu suất (Pull/Featured)</span>
                             <span class="value" id="card-avg-efficiency">--</span>
                         </div>
                         <!-- Avg Weapons 6* -->
                         <div class="stat-card weapon-card glass-panel">
-                            <span class="label">Featured Weapon nhận được</span>
+                            <span class="label" data-i18n="summary.weapon">Featured Weapon nhận được</span>
                             <span class="value" id="card-avg-weapons">--</span>
                         </div>
                     </div>
 
                     <!-- Comparison Table -->
                     <div class="table-panel glass-panel">
-                        <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 12px; color: var(--text-white);" id="table-comparison-title">Bảng so sánh chi tiết các chiến thuật</h3>
+                        <h3 data-i18n="table.title" style="font-size: 16px; font-weight: 700; margin-bottom: 12px; color: var(--text-white);" id="table-comparison-title">Bảng so sánh chi tiết các chiến thuật</h3>
+                        <p class="table-scroll-hint" data-i18n="table.scrollHint">Vuốt ngang để xem toàn bộ bảng.</p>
                         <table class="comparison-table">
+                            <caption class="sr-only" data-i18n="table.title">Bảng so sánh chi tiết các chiến thuật</caption>
                             <thead>
                                 <tr>
-                                    <th>Chiến thuật</th>
-                                    <th title="Tổng số lượt quay nhân vật đã thực hiện (bao gồm cả banner thường và banner limited)">Tổng Pull Nhân Vật</th>
-                                    <th title="Số vé nhân vật còn dư lại trong ví sau khi kết thúc chuỗi giả lập">Vé Nhân Vật Dư</th>
-                                    <th>Tổng 6★ Nhân Vật</th>
+                                    <th data-i18n="table.strategy">Chiến thuật</th>
+                                    <th data-i18n="table.charPulls">Tổng Pull Nhân Vật</th>
+                                    <th data-i18n="table.charRemaining">Vé Nhân Vật Dư</th>
+                                    <th data-i18n="table.charSix">Tổng 6★ Nhân Vật</th>
                                     <th>Limited (New/Dupe)</th>
-                                    <th>Lệch Limited</th>
-                                    <th>Lệch Standard</th>
-                                    <th title="Số lượt quay trung bình cần thiết để ra được 1 nhân vật Featured">Hiệu suất Pull</th>
-                                    <th title="Số lượng nhân vật Featured nhiều nhất / ít nhất một người chơi quay được trong đợt giả lập">Featured (Max/Min) ℹ️</th>
-                                    <th>Vũ khí 6★ Featured</th>
-                                    <th>Tổng Vũ khí 6★</th>
-                                    <th title="Tổng số lượt roll vũ khí đã thực hiện">Pull Vũ Khí Dùng</th>
-                                    <th title="Số lượt roll vũ khí còn dư lại quy đổi từ vé Arsenal">Pull Vũ Khí Dư</th>
-                                    <th title="Tỉ lệ phần trăm trung bình số nhân vật Featured độc nhất (Unique) sở hữu trên tổng số banner">Tỉ lệ sở hữu ℹ️</th>
+                                    <th data-i18n="table.limitedLoss">Lệch Limited</th>
+                                    <th data-i18n="table.standardLoss">Lệch Standard</th>
+                                    <th data-i18n="table.efficiency">Hiệu suất Pull</th>
+                                    <th data-i18n="table.featuredRange">Featured (Max/Min) ℹ️</th>
+                                    <th data-i18n="table.weaponFeatured">Vũ khí 6★ Featured</th>
+                                    <th data-i18n="table.weaponSix">Tổng Vũ khí 6★</th>
+                                    <th data-i18n="table.weaponUsed">Pull Vũ Khí Dùng</th>
+                                    <th data-i18n="table.weaponRemaining">Pull Vũ Khí Dư</th>
+                                    <th data-i18n="table.ownership">Tỉ lệ sở hữu ℹ️</th>
                                 </tr>
                             </thead>
                             <tbody id="comparison-table-body">
                                 <tr>
                                     <td colspan="14" style="text-align: center; color: var(--text-secondary); font-style: italic; padding: 30px;">
-                                        Nhấn nút "Chạy giả lập" để xem kết quả so sánh...
+                                        <span data-i18n="table.empty">Nhấn nút “Chạy giả lập” để xem kết quả so sánh...</span>
                                     </td>
                                 </tr>
                             </tbody>
@@ -345,31 +327,31 @@
 
                     <!-- Strategy Explanation Panel -->
                     <div class="table-panel glass-panel" style="padding: 20px;">
-                        <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 16px; color: var(--orange-primary);">Giải thích các Chiến thuật Gacha</h3>
+                        <h3 data-i18n="strategy.helpTitle" style="font-size: 16px; font-weight: 700; margin-bottom: 16px; color: var(--orange-primary);">Giải thích các chiến thuật Gacha</h3>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; font-size: 13px; line-height: 1.6; color: var(--text-secondary);">
                             <div>
-                                <p style="margin-bottom: 12px;"><strong style="color: var(--text-white);">1. Tích lũy an toàn (Save & Commit):</strong> Quay cụm x10, tự chuyển x1 khi còn dưới 10 lượt tới mốc 30/60/120 hoặc khi pity &ge; 71. Dừng khi ra Featured. Chỉ quay khi tổng vé ví và Dossier &ge; 110. Vũ khí quay ở mốc 8 Issues.</p>
-                                <p style="margin-bottom: 12px;"><strong style="color: var(--text-white);">2. Save & Commit (Roll lẻ):</strong> Chỉ quay lẻ x1 từ đầu đến cuối banner (không quay x10), dừng khi ra Featured. Điều kiện tích vé và vũ khí giống Save & Commit.</p>
-                                <p><strong style="color: var(--text-white);">3. Spend All (Yolo / Có nhiêu chơi nhiêu):</strong> Có bao nhiêu vé nhân vật quay bấy nhiêu, dừng ngay khi trúng Featured. Sau khi trúng nhân vật, quay Issue đến khi có Featured Weapon hoặc không còn đủ vé.</p>
+                                <p data-i18n="strategy.helpSave" style="margin-bottom: 12px;">1. Tích lũy an toàn...</p>
+                                <p data-i18n="strategy.helpSingle" style="margin-bottom: 12px;">2. Save & Commit (Quay lẻ)...</p>
+                                <p data-i18n="strategy.helpYolo">3. Spend All (Yolo)...</p>
                             </div>
                             <div>
-                                <p style="margin-bottom: 12px;"><strong style="color: var(--text-white);">4. Mốc 60 mỗi banner (Pull 60):</strong> Nếu tổng tài nguyên đủ 60 thì quay tới mốc 60; nếu chỉ đủ 30 thì dừng ở mốc 30, còn không sẽ skip ngoài free/Dossier bắt buộc. Không dừng sớm khi trúng Featured.</p>
-                                <p><strong style="color: var(--text-white);">5. Quay theo Meta (Roll Meta):</strong> Lựa chọn 30% số banner làm Meta (tối đa 120 roll). Banner thường chỉ commit khi vẫn bảo toàn ngân sách cho Meta kế tiếp; Dossier sắp hết hạn và tối ưu mốc 30 vẫn áp dụng. Vũ khí chỉ quay ở banner Meta.</p>
+                                <p data-i18n="strategy.help60" style="margin-bottom: 12px;">4. Mốc 60 mỗi banner...</p>
+                                <p data-i18n="strategy.helpMeta">5. Quay theo Meta...</p>
                             </div>
                         </div>
                         
                         <div style="margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 16px; font-size: 12px; line-height: 1.5; color: var(--text-secondary); display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; width: 100%;">
                             <div>
-                                <strong style="color: var(--orange-primary);">[i] Luật tối ưu mốc 30:</strong>
-                                <p>Cho tất cả chiến thuật, nếu đã quay đến 20 roll (10 free + 10 Dossier tích lũy) mà chưa trúng Featured, người chơi sẽ tự động bỏ thêm tối đa 10 vé từ ví để chạm mốc 30 roll nhằm lấy 10 roll Urgent Recruitment miễn phí (quay 20 giá 10).</p>
+                                <strong data-i18n="rule.optimizeTitle" style="color: var(--orange-primary);">[i] Luật tối ưu mốc 30</strong>
+                                <p data-i18n="rule.optimize">Nếu đã quay đến 20 pull...</p>
                             </div>
                             <div>
-                                <strong style="color: var(--orange-primary);">[i] Bảo hiểm 5★ Urgent:</strong>
-                                <p>10 lượt Urgent Recruitment miễn phí tương đương 1 lần roll x10, có áp dụng bảo hiểm cục bộ: nếu 9 lượt đầu toàn 4★, lượt thứ 10 chắc chắn ra tướng 5★ trở lên để tránh lãng phí.</p>
+                                <strong data-i18n="rule.urgentTitle" style="color: var(--orange-primary);">[i] Bảo hiểm 5★ Urgent</strong>
+                                <p data-i18n="rule.urgent">10 lượt Urgent miễn phí...</p>
                             </div>
                             <div>
-                                <strong style="color: var(--orange-primary);">[i] Giải thích Tỉ lệ sở hữu:</strong>
-                                <p>Là tỷ lệ phần trăm trung bình số lượng nhân vật Featured độc nhất (Unique) sở hữu trên tổng số lượng banner đã diễn ra. Thể hiện khả năng lấp đầy bộ sưu tập nhân vật mới.</p>
+                                <strong data-i18n="rule.ownershipTitle" style="color: var(--orange-primary);">[i] Giải thích tỉ lệ sở hữu</strong>
+                                <p data-i18n="rule.ownership">Tỉ lệ trung bình...</p>
                             </div>
                         </div>
                     </div>
@@ -386,7 +368,161 @@
                 </div>
             </div>
         </main>
+
+        <!-- TAB 3: SEEDED SINGLE RUN -->
+        <main class="tab-content" id="single-run-tab" role="tabpanel" aria-labelledby="btn-tab-single-run" tabindex="0" hidden>
+            <div class="single-run-layout">
+                <aside class="control-panel glass-panel single-run-controls">
+                    <div>
+                        <span class="eyebrow" data-i18n="single.eyebrow">ONE PLAYER · FULL TRACE</span>
+                        <h3 class="panel-title" data-i18n="single.title">Gacha Simulator</h3>
+                        <p class="panel-intro" data-i18n="single.intro">Chạy đúng một người chơi và theo dõi toàn bộ quyết định, pity, tài nguyên và kết quả qua từng banner.</p>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="single-strategy" data-i18n="single.strategy">Chiến thuật</label>
+                        <select id="single-strategy">
+                            <option value="save_commit" data-i18n="strategy.save_commit.name">Save &amp; Commit</option>
+                            <option value="save_commit_single" data-i18n="strategy.save_commit_single.name">Save &amp; Commit (Quay lẻ)</option>
+                            <option value="yolo" data-i18n="strategy.yolo.name">Yolo / Dùng hết</option>
+                            <option value="pull_60" data-i18n="strategy.pull_60.name">Mốc 60</option>
+                            <option value="roll_meta" data-i18n="strategy.roll_meta.name">Quay theo Meta</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="single-seed" data-i18n="single.seed">Seed (để trống = ngẫu nhiên)</label>
+                        <div class="seed-input-row">
+                            <input type="text" id="single-seed" data-i18n-placeholder="single.seedPlaceholder" placeholder="Tự tạo khi chạy" autocomplete="off" spellcheck="false">
+                            <button type="button" class="btn-secondary" id="btn-random-seed" data-i18n="single.randomSeed">Random</button>
+                        </div>
+                        <small class="field-help" data-i18n="single.seedHelp">Dùng lại cùng seed và cấu hình để tái tạo chính xác kết quả.</small>
+                    </div>
+
+                    <div class="single-config-grid">
+                        <div class="form-group">
+                            <label for="single-banners" data-i18n="simulator.banners">Số mùa banner:</label>
+                            <input type="number" id="single-banners" min="1" max="100" step="1" value="10">
+                        </div>
+                        <div class="form-group">
+                            <label for="single-start-tickets" data-i18n="simulator.startCharacters">Vé nhân vật ban đầu:</label>
+                            <input type="number" id="single-start-tickets" min="0" max="2000" step="10" value="80">
+                        </div>
+                        <div class="form-group">
+                            <label for="single-start-weapons" data-i18n="simulator.startWeapons">Vé vũ khí ban đầu (Arsenal):</label>
+                            <input type="number" id="single-start-weapons" min="0" max="100000" step="500" value="8000">
+                        </div>
+                        <div class="form-group">
+                            <label for="single-char-income" data-i18n="single.baseCharIncome">Vé nhân vật F2P gốc:</label>
+                            <input type="number" id="single-char-income" min="0" max="250" step="1" value="35">
+                        </div>
+                        <div class="form-group">
+                            <label for="single-weapon-income" data-i18n="single.baseWeaponIncome">Arsenal F2P gốc:</label>
+                            <input type="number" id="single-weapon-income" min="0" max="10000" step="100" value="500">
+                        </div>
+                    </div>
+
+                    <div class="toggle-group single-paid-options">
+                        <h4 data-i18n="single.paidOptions">Gói dịch vụ</h4>
+                        <label class="toggle-label">
+                            <div>
+                                <strong data-i18n="simulator.monthly">Monthly Pass (Thẻ tháng)</strong>
+                                <div class="toggle-desc" data-i18n="single.monthlyDesc">+9 vé nhân vật / banner</div>
+                            </div>
+                            <div class="switch">
+                                <input type="checkbox" id="single-monthly" checked>
+                                <span class="slider"></span>
+                            </div>
+                        </label>
+                        <label class="toggle-label">
+                            <div>
+                                <strong data-i18n="simulator.protocol">Protocol Pass (BP cao cấp)</strong>
+                                <div class="toggle-desc" data-i18n="simulator.protocolDesc">+5 pull và +1,2k vé vũ khí / banner</div>
+                            </div>
+                            <div class="switch">
+                                <input type="checkbox" id="single-bp">
+                                <span class="slider"></span>
+                            </div>
+                        </label>
+                    </div>
+
+                    <div class="single-income-total" aria-live="polite">
+                        <span data-i18n="single.actualIncome">Tổng thu nhập thực tế / banner</span>
+                        <strong id="single-income-summary">44 vé · 500 Arsenal</strong>
+                    </div>
+
+                    <button class="btn-primary" id="btn-run-single" data-i18n="single.run">Chạy một lượt mô phỏng</button>
+                    <div class="single-run-note" data-i18n="single.note">Đây là một kết quả RNG đơn lẻ, không phải giá trị trung bình hay khuyến nghị chi tiêu.</div>
+                </aside>
+
+                <section class="single-run-report" id="single-run-report" aria-live="polite" aria-busy="false">
+                    <div class="single-empty glass-panel">
+                        <span class="single-empty-icon" aria-hidden="true">⌁</span>
+                        <h2 data-i18n="single.emptyTitle">Chưa có run nào</h2>
+                        <p data-i18n="single.emptyText">Chọn chiến thuật, nhập seed nếu muốn tái lập, rồi chạy mô phỏng để xem hồ sơ chi tiết.</p>
+                    </div>
+                </section>
+            </div>
+        </main>
     </div>
+
+    <dialog class="docs-dialog" id="docs-dialog" aria-labelledby="docs-dialog-title">
+        <div class="docs-dialog-shell">
+            <div class="docs-dialog-header">
+                <div>
+                    <span class="eyebrow" data-i18n="docs.eyebrow">REFERENCE · OFFLINE</span>
+                    <h2 id="docs-dialog-title" data-i18n="docs.title">Tài liệu liên quan</h2>
+                    <p data-i18n="docs.intro">Tóm tắt luật gacha và năm chiến thuật đang được triển khai trực tiếp trong ứng dụng.</p>
+                </div>
+                <button class="docs-close" id="btn-close-docs" type="button" data-i18n-aria-label="docs.close" aria-label="Đóng">×</button>
+            </div>
+
+            <div class="docs-content">
+                <section class="docs-section">
+                    <h3 data-i18n="docs.rulesTitle">Luật Gacha</h3>
+                    <div class="docs-rule-grid">
+                        <article>
+                            <strong data-i18n="docs.characterRatesTitle">Tỷ lệ nhân vật</strong>
+                            <p data-i18n="docs.characterRates">6★ 0,8% · 5★ 8% · 4★ 91,2%. Mỗi chuỗi 10 lượt bảo đảm ít nhất một 5★ trở lên.</p>
+                        </article>
+                        <article>
+                            <strong data-i18n="docs.pityTitle">Pity 6★</strong>
+                            <p data-i18n="docs.pity">Tỷ lệ tăng từ lượt 66 và bảo đảm 6★ ở lượt 80. Pity được giữ khi đổi banner.</p>
+                        </article>
+                        <article>
+                            <strong data-i18n="docs.featuredTitle">Featured 120</strong>
+                            <p data-i18n="docs.featured">Mỗi 6★ có 50% là Featured. Nếu chưa nhận Featured, pull hợp lệ thứ 120 của banner chắc chắn là Featured.</p>
+                        </article>
+                        <article>
+                            <strong data-i18n="docs.milestonesTitle">Mốc banner</strong>
+                            <p data-i18n="docs.milestones">Pull 30 kích hoạt 10 Urgent ngay lập tức; pull 60 cấp 10 Dossier chỉ dùng ở banner kế tiếp; mỗi 240 pull nhận một Potential token.</p>
+                        </article>
+                        <article>
+                            <strong data-i18n="docs.quotaTitle">Bond Quota</strong>
+                            <p data-i18n="docs.quota">5★ nhận 10 Quota; Standard 6★ lệch nhận 50 Quota theo quy ước mô hình. Mỗi 25 Quota tự đổi thành một vé nhân vật.</p>
+                        </article>
+                        <article>
+                            <strong data-i18n="docs.weaponTitle">Arsenal Exchange</strong>
+                            <p data-i18n="docs.weapon">Một Issue tốn 1.980 Arsenal và cho 10 vũ khí. Tỷ lệ 6★/5★/4★ là 4%/15%/81%; Issue thứ 8 bảo đảm Featured một lần.</p>
+                        </article>
+                    </div>
+                </section>
+
+                <section class="docs-section">
+                    <h3 data-i18n="docs.strategiesTitle">Năm chiến thuật mô phỏng</h3>
+                    <div class="docs-strategy-list">
+                        <article><span>01</span><div><strong data-i18n="strategy.save_commit.name">Save &amp; Commit</strong><p data-i18n="docs.saveCommit">Chỉ commit khi có ít nhất 110 vé trả phí/Dossier; dừng sau cụm chứa Featured hoặc tại mốc 120.</p></div></article>
+                        <article><span>02</span><div><strong data-i18n="strategy.save_commit_single.name">Save &amp; Commit (Quay lẻ)</strong><p data-i18n="docs.saveSingle">Điều kiện tích vé giống Save &amp; Commit nhưng quay từng lượt và dừng ngay khi nhận Featured.</p></div></article>
+                        <article><span>03</span><div><strong data-i18n="strategy.yolo.name">Yolo / Dùng hết</strong><p data-i18n="docs.yolo">Dùng toàn bộ vé khả dụng cho đến khi nhận Featured hoặc hết tài nguyên.</p></div></article>
+                        <article><span>04</span><div><strong data-i18n="strategy.pull_60.name">Mốc 60</strong><p data-i18n="docs.pull60">Ưu tiên chạm mốc 60 nếu đủ 50 vé ngoài 10 free; nếu không, cân nhắc mốc 30.</p></div></article>
+                        <article><span>05</span><div><strong data-i18n="strategy.roll_meta.name">Quay theo Meta</strong><p data-i18n="docs.rollMeta">Dành ngân sách cho khoảng 30% banner Meta và chỉ commit banner thường khi vẫn bảo toàn quỹ cho Meta kế tiếp.</p></div></article>
+                    </div>
+                </section>
+
+                <p class="docs-footnote" data-i18n="docs.footnote">Nội dung này được đóng gói trực tiếp trong ứng dụng và không tải file hay dữ liệu bên ngoài.</p>
+            </div>
+        </div>
+    </dialog>
 
     <!-- Javascript entry module -->
     <script src="js/bundle.js"></script>

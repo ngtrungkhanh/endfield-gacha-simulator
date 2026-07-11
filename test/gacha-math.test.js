@@ -156,3 +156,33 @@ test('ownership and efficiency use unique Featured and Limited pulls', () => {
     assert.equal(result.avgPullsPerFeaturedChar, 40 / 3);
     assert.deepEqual(result.distribution, { 1: 100 });
 });
+
+test('dynamic featured guarantee for interactive pulling', () => {
+    const state = characterState({
+        featuredCountThisBanner: 0,
+        bannerPullsCount: 119
+    });
+    useRandomSequence([0.99]);
+    const res1 = rollCharacter(state);
+    assert.equal(res1.rarity, 6);
+    assert.equal(res1.isFeatured, true);
+    assert.equal(state.featuredCountThisBanner, 1);
+
+    state.bannerPullsCount = 239;
+    state.pity6 = 0;
+    state.pity5 = 0;
+    useRandomSequence([0.99]);
+    const res2 = rollCharacter(state);
+    assert.equal(res2.rarity, 6);
+    assert.equal(res2.isFeatured, true);
+    assert.equal(state.featuredCountThisBanner, 2);
+
+    state.bannerPullsCount = 479;
+    state.pity6 = 0;
+    state.pity5 = 0;
+    useRandomSequence([0.99]);
+    const res3 = rollCharacter(state);
+    assert.equal(res3.rarity, 6);
+    assert.equal(res3.isFeatured, true);
+    assert.equal(state.featuredCountThisBanner, 3);
+});

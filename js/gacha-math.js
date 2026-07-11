@@ -52,8 +52,18 @@ export function rollCharacter(state, isUrgent = false, force5Star = false) {
         rate6 = 0.008 + (state.pity6 - 65) * 0.05;
     }
 
-    // Bảo hiểm 120 lượt chắc chắn ra Featured nhân vật
-    const isGuaranteedFeatured = state.guarantee120Consumed !== true && state.pullsSinceFeatured >= 120;
+    // Bảo hiểm chắc chắn ra Featured nhân vật
+    let isGuaranteedFeatured = false;
+    if (typeof state.featuredCountThisBanner !== 'undefined') {
+        const k = state.featuredCountThisBanner || 0;
+        let threshold = 120;
+        if (k === 1) threshold = 240;
+        else if (k >= 2) threshold = 240 * k;
+        isGuaranteedFeatured = state.bannerPullsCount >= threshold;
+    } else {
+        isGuaranteedFeatured = state.guarantee120Consumed !== true && state.pullsSinceFeatured >= 120;
+    }
+
     if (isGuaranteedFeatured) {
         rate6 = 1.0;
     }
@@ -68,6 +78,9 @@ export function rollCharacter(state, isUrgent = false, force5Star = false) {
         if (isFeatured) {
             state.pullsSinceFeatured = 0;
             state.guarantee120Consumed = true;
+            if (typeof state.featuredCountThisBanner !== 'undefined') {
+                state.featuredCountThisBanner++;
+            }
         }
         return { rarity: 6, isFeatured, isUrgent: false, isLechLimited };
     }
