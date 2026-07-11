@@ -48,13 +48,18 @@ export class MonteCarloSimulator {
                 pity6: 0,
                 pity5: 0,
                 pullsSinceFeatured: 0,
-                bannerPullsCount: 0
+                bannerPullsCount: 0,
+                guarantee120Consumed: false,
+                milestone30Triggered: false,
+                milestone60Triggered: false,
+                potentialTokensThisBanner: 0
             }));
 
             const playerWeaponPities = Array.from({ length: numPlayers }, () => ({
                 issuesCount: 0,
                 issuesSince6: 0,
-                issuesSinceFeatured: 0
+                issuesSinceFeatured: 0,
+                featuredGuaranteeConsumed: false
             }));
 
             // Chạy qua từng banner gacha
@@ -111,7 +116,9 @@ export class MonteCarloSimulator {
         let sumStandard6Stars = 0;
         let sum5Stars = 0;
         let sumCharPulls = 0;
+        let sumLimitedPulls = 0;
         let sumUrgentPulls = 0;
+        let sumPotentialTokens = 0;
         let sumCharDebt = 0;
         let sumUnspentChar = 0;
         let sumUnspentWeapon = 0;
@@ -142,7 +149,9 @@ export class MonteCarloSimulator {
             sumStandard6Stars += player.ownedStandard6Stars;
             sum5Stars += player.owned5Stars;
             sumCharPulls += player.totalCharPulls;
+            sumLimitedPulls += player.totalLimitedPulls;
             sumUrgentPulls += player.totalUrgentPulls;
+            sumPotentialTokens += player.totalPotentialTokens;
             sumCharDebt += player.charTicketsDebt;
             sumUnspentChar += player.charTickets;
             sumUnspentWeapon += player.arsenalTickets;
@@ -163,7 +172,7 @@ export class MonteCarloSimulator {
             if (player.ownedFeaturedWeapons > maxFeaturedWeapons) maxFeaturedWeapons = player.ownedFeaturedWeapons;
             if (player.ownedFeaturedWeapons < minFeaturedWeapons) minFeaturedWeapons = player.ownedFeaturedWeapons;
 
-            const count = player.ownedFeaturedCharacters;
+            const count = player.ownedFeaturedUnique;
             distribution[count] = (distribution[count] || 0) + 1;
         });
 
@@ -174,20 +183,23 @@ export class MonteCarloSimulator {
         });
 
         const averageFeaturedChars = sumFeaturedChars / numPlayers;
-        const ownershipRate = (averageFeaturedChars / numBanners) * 100;
+        const averageFeaturedUnique = sumFeaturedUnique / numPlayers;
+        const ownershipRate = (averageFeaturedUnique / numBanners) * 100;
 
         return {
             // Thống kê Nhân vật (Trung bình mỗi người chơi)
             avgFeaturedChars: averageFeaturedChars,
-            avgFeaturedUnique: sumFeaturedUnique / numPlayers,
+            avgFeaturedUnique: averageFeaturedUnique,
             avgFeaturedDupes: sumFeaturedDupes / numPlayers,
             avgLechLimited: sumLechLimited / numPlayers,
             avgStandard6Stars: sumStandard6Stars / numPlayers,
             avg5Stars: sum5Stars / numPlayers,
             avgCharPulls: sumCharPulls / numPlayers,
+            avgLimitedPulls: sumLimitedPulls / numPlayers,
             avgUnspentChar: sumUnspentChar / numPlayers,
             avgUnspentWeapon: sumUnspentWeapon / numPlayers,
             avgUrgentPulls: sumUrgentPulls / numPlayers,
+            avgPotentialTokens: sumPotentialTokens / numPlayers,
             avgCharDebt: sumCharDebt / numPlayers,
             ownershipRate: ownershipRate,
             
@@ -197,7 +209,7 @@ export class MonteCarloSimulator {
             
             // Hiệu suất vé nhân vật (Số vé trung bình để ra 1 Featured)
             avgPullsPerFeaturedChar: averageFeaturedChars > 0 
-                ? (sumCharPulls + sumCharDebt) / sumFeaturedChars 
+                ? sumLimitedPulls / sumFeaturedChars
                 : Infinity,
 
             // Thống kê Vũ khí (Trung bình mỗi người chơi)

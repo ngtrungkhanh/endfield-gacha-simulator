@@ -186,7 +186,7 @@ export function drawComparisonChart(canvasId, results, strategiesConfig) {
     // 2. Số pull trung bình để trúng 1 Featured nhân vật
     const pullsPerFeaturedData = Object.keys(results).map(strategyId => {
         const val = results[strategyId].avgPullsPerFeaturedChar;
-        return val === Infinity || isNaN(val) ? 0 : val;
+        return Number.isFinite(val) ? val : 0;
     });
 
     const ctx = canvas.getContext('2d');

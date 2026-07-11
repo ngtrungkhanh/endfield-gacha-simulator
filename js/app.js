@@ -22,14 +22,17 @@ const interactiveCharPity = {
     pity6: 0,
     pity5: 0,
     pullsSinceFeatured: 0,
-    bannerPullsCount: 0
+    bannerPullsCount: 0,
+    guarantee120Consumed: false,
+    potentialTokensThisBanner: 0
 };
 
 // Trạng thái pity vũ khí
 const interactiveWeaponPity = {
     issuesCount: 0,
     issuesSince6: 0,
-    issuesSinceFeatured: 0
+    issuesSinceFeatured: 0,
+    featuredGuaranteeConsumed: false
 };
 
 let activeBannerIdx = 0;
@@ -48,10 +51,13 @@ const interactiveStats = {
     charPullsFor6starList: [], // Danh sách số lượt roll để ra mỗi 6★
     milestone30Triggered: false,
     milestone60Triggered: false,
+    potentialTokens: 0,
+    totalBondQuotaEarned: 0,
     
     weapTicketsAccumulated: 0,
     weapIssues: 0,
     weap6star: 0,
+    owned5StarWeapons: 0,
     weapSelectors: 0,
     weapTicketsUsed: 0
 };
@@ -65,7 +71,7 @@ const CHAR_5STAR_POOL = Array.from({ length: 15 }, (_, i) => `char_5_${i + 1}`);
 // LOCALSTORAGE PERSISTENCE HELPERS
 // ====================================================================
 const STORAGE_PREFIX = 'a9e_gacha_';
-const SCHEMA_VERSION = '1.5'; // Tăng schema version do tích hợp Vé vũ khí ban đầu (Arsenal)
+const SCHEMA_VERSION = '1.6'; // Thêm cờ guarantee một lần và trạng thái mốc Potential 240
 
 function saveInteractiveState() {
     try {
@@ -93,6 +99,7 @@ function loadInteractiveState() {
     try {
         const stateStr = localStorage.getItem(STORAGE_PREFIX + 'interactive_state');
         const invStr = localStorage.getItem(STORAGE_PREFIX + 'interactive_inventory');
+        let canLoadInventory = true;
         
         if (stateStr) {
             const state = JSON.parse(stateStr);
@@ -111,10 +118,11 @@ function loadInteractiveState() {
                 console.warn('Storage version mismatch. Resetting state.');
                 localStorage.removeItem(STORAGE_PREFIX + 'interactive_state');
                 localStorage.removeItem(STORAGE_PREFIX + 'interactive_inventory');
+                canLoadInventory = false;
             }
         }
         
-        if (invStr) {
+        if (invStr && canLoadInventory) {
             interactiveInventory = JSON.parse(invStr);
         }
     } catch (e) {
@@ -273,7 +281,9 @@ function updateInteractiveUI() {
     // Cập nhật Widgets Pity
     document.getElementById('widget-pity6').innerText = interactiveCharPity.pity6;
     document.getElementById('widget-pity5').innerText = interactiveCharPity.pity5;
-    document.getElementById('widget-pity-featured').innerText = `${interactiveCharPity.pullsSinceFeatured}/120`;
+    document.getElementById('widget-pity-featured').innerText = interactiveCharPity.guarantee120Consumed
+        ? 'Đã dùng'
+        : `${interactiveCharPity.pullsSinceFeatured}/120`;
 
     // Cập nhật Bảng thống kê Interactive
     document.getElementById('stat-char-total').innerText = interactiveStats.charTotal;
@@ -289,11 +299,13 @@ function updateInteractiveUI() {
     document.getElementById('stat-char-6star-lim-dupe').innerText = limDupe;
     document.getElementById('stat-char-6star-lech-lim').innerText = lechLim;
     
-    const char6Rate = interactiveStats.charTotal > 0 ? (interactiveStats.char6star / interactiveStats.charTotal * 100).toFixed(1) : '0.0';
+    const totalCharacterResults = interactiveStats.charTotal + interactiveStats.charUrgent;
+    const char6Rate = totalCharacterResults > 0 ? (interactiveStats.char6star / totalCharacterResults * 100).toFixed(1) : '0.0';
     document.getElementById('stat-char-6star-rate').innerText = `${char6Rate}%`;
     
     document.getElementById('stat-char-5star').innerText = interactiveStats.char5star;
-    const char5Rate = interactiveStats.charTotal > 0 ? (interactiveStats.char5star / interactiveStats.charTotal * 100).toFixed(1) : '0.0';
+    document.getElementById('stat-char-potential').innerText = interactiveStats.potentialTokens || 0;
+    const char5Rate = totalCharacterResults > 0 ? (interactiveStats.char5star / totalCharacterResults * 100).toFixed(1) : '0.0';
     document.getElementById('stat-char-5star-rate').innerText = `${char5Rate}%`;
 
     // Tính pull trung bình cho mỗi 6★
@@ -391,7 +403,7 @@ function updateLuckRating() {
         }
     } else {
         const currentPulls = interactiveCharPity.pity6;
-        if (currentPulls >= 65) {
+        if (currentPulls >= 66) {
             badge.innerText = 'Đang Bị Đen';
             badge.style.color = '#e63946';
             badge.style.borderColor = '#e63946';
@@ -413,10 +425,10 @@ function initInteractiveGacha() {
 
     // Cấu hình danh sách banner có thể đổi
     const BANNERS = [
-        { id: 0, title: 'Mùa Hoa Nở Rộ (Featured: Endfield Operator)', desc: 'Tỉ lệ 6★: 0.8% | Bảo hiểm: Soft pity 65+, Hard pity 80 | Bảo hiểm Featured: 120' },
-        { id: 1, title: 'Bình Minh Kỷ Nguyên (Featured: Perlica)', desc: 'Tỉ lệ 6★: 0.8% | Bảo hiểm: Soft pity 65+, Hard pity 80 | Bảo hiểm Featured: 120' },
-        { id: 2, title: 'Sa Mạc Hoang Vu (Featured: Chen Qianyu)', desc: 'Tỉ lệ 6★: 0.8% | Bảo hiểm: Soft pity 65+, Hard pity 80 | Bảo hiểm Featured: 120' },
-        { id: 3, title: 'Bóng Đêm Biên Giới (Featured: Wulfgard)', desc: 'Tỉ lệ 6★: 0.8% | Bảo hiểm: Soft pity 65+, Hard pity 80 | Bảo hiểm Featured: 120' }
+        { id: 0, title: 'Mùa Hoa Nở Rộ (Featured: Endfield Operator)', desc: 'Tỉ lệ 6★: 0.8% | Soft pity tăng từ lượt 66 | Hard pity 80 | Featured guarantee 120' },
+        { id: 1, title: 'Bình Minh Kỷ Nguyên (Featured: Perlica)', desc: 'Tỉ lệ 6★: 0.8% | Soft pity tăng từ lượt 66 | Hard pity 80 | Featured guarantee 120' },
+        { id: 2, title: 'Sa Mạc Hoang Vu (Featured: Chen Qianyu)', desc: 'Tỉ lệ 6★: 0.8% | Soft pity tăng từ lượt 66 | Hard pity 80 | Featured guarantee 120' },
+        { id: 3, title: 'Bóng Đêm Biên Giới (Featured: Wulfgard)', desc: 'Tỉ lệ 6★: 0.8% | Soft pity tăng từ lượt 66 | Hard pity 80 | Featured guarantee 120' }
     ];
     
     function updateBannerDisplay() {
@@ -455,8 +467,15 @@ function initInteractiveGacha() {
         // Reset bảo hiểm 120 và pulls count của banner mới
         interactiveCharPity.bannerPullsCount = 0;
         interactiveCharPity.pullsSinceFeatured = 0;
+        interactiveCharPity.guarantee120Consumed = false;
+        interactiveCharPity.potentialTokensThisBanner = 0;
         interactiveStats.milestone30Triggered = false;
         interactiveStats.milestone60Triggered = false;
+
+        // Banner Issue xoay cùng banner Operator: reset mốc và featured guarantee cục bộ.
+        interactiveWeaponPity.issuesCount = 0;
+        interactiveWeaponPity.issuesSinceFeatured = 0;
+        interactiveWeaponPity.featuredGuaranteeConsumed = false;
         
         revealBoard.innerHTML = `<span class="no-pulls-yet">Đã đổi banner. Vé miễn phí (10 limited) đã được cấp mới cho banner này!</span>`;
         updateInteractiveUI();
@@ -642,6 +661,8 @@ function initInteractiveGacha() {
         interactiveWeaponTickets = 0;
         interactiveBondQuota = 0;
         interactiveFreeLimitedTickets = 10;
+        interactiveDossierTickets = 0;
+        interactiveNextBannerDossierTickets = 0;
         interactiveInventory = [];
         interactiveOwnedCharactersSet.clear();
 
@@ -649,10 +670,13 @@ function initInteractiveGacha() {
         interactiveCharPity.pity5 = 0;
         interactiveCharPity.pullsSinceFeatured = 0;
         interactiveCharPity.bannerPullsCount = 0;
+        interactiveCharPity.guarantee120Consumed = false;
+        interactiveCharPity.potentialTokensThisBanner = 0;
 
         interactiveWeaponPity.issuesCount = 0;
         interactiveWeaponPity.issuesSince6 = 0;
         interactiveWeaponPity.issuesSinceFeatured = 0;
+        interactiveWeaponPity.featuredGuaranteeConsumed = false;
 
         // Reset thống kê
         interactiveStats.charTotal = 0;
@@ -666,10 +690,13 @@ function initInteractiveGacha() {
         interactiveStats.charPullsFor6starList = [];
         interactiveStats.milestone30Triggered = false;
         interactiveStats.milestone60Triggered = false;
+        interactiveStats.potentialTokens = 0;
+        interactiveStats.totalBondQuotaEarned = 0;
         
         interactiveStats.weapTicketsAccumulated = 0;
         interactiveStats.weapIssues = 0;
         interactiveStats.weap6star = 0;
+        interactiveStats.owned5StarWeapons = 0;
         interactiveStats.weapSelectors = 0;
         interactiveStats.weapTicketsUsed = 0;
 
@@ -795,6 +822,12 @@ function checkInteractiveMilestones() {
         interactiveStats.milestone60Triggered = true;
         alert('Cột mốc 60 roll đạt được! Bạn nhận được 10 vé Dossier miễn phí dành cho banner giới hạn tiếp theo!');
         interactiveNextBannerDossierTickets += 10;
+    }
+
+    while (interactiveCharPity.bannerPullsCount >= (interactiveCharPity.potentialTokensThisBanner + 1) * 240) {
+        interactiveCharPity.potentialTokensThisBanner++;
+        interactiveStats.potentialTokens++;
+        alert('Cột mốc 240 roll đạt được! Bạn nhận được 1 token Potential của Operator Featured.');
     }
 }
 
@@ -928,7 +961,7 @@ function displaySimulatorResults(results, numBanners) {
         document.getElementById('card-avg-featured').innerText = scRes.avgFeaturedChars.toFixed(2);
         
         const eff = scRes.avgPullsPerFeaturedChar;
-        document.getElementById('card-avg-efficiency').innerText = (eff === Infinity) ? 'N/A' : `${eff.toFixed(1)} pull`;
+        document.getElementById('card-avg-efficiency').innerText = Number.isFinite(eff) ? `${eff.toFixed(1)} pull` : 'N/A';
         
         document.getElementById('card-avg-weapons').innerText = scRes.avgFeaturedWeapons.toFixed(2);
     }
@@ -957,7 +990,7 @@ function displaySimulatorResults(results, numBanners) {
             <td>${(res.avgFeaturedUnique || 0).toFixed(2)} / ${(res.avgFeaturedDupes || 0).toFixed(2)}</td>
             <td>${(res.avgLechLimited || 0).toFixed(2)}</td>
             <td>${(res.avgStandard6Stars || 0).toFixed(2)}</td>
-            <td>${(eff === Infinity) ? 'N/A' : `${eff.toFixed(1)} pull/char`}</td>
+            <td>${Number.isFinite(eff) ? `${eff.toFixed(1)} pull/char` : 'N/A'}</td>
             <td style="font-weight: 600; color: #ffb800;">${res.bestLuckChar} / ${res.worstLuckChar}</td>
             <td>${res.avgFeaturedWeapons.toFixed(2)}</td>
             <td style="font-weight: 700; color: #00b4d8;">${total6StarWeap.toFixed(2)}</td>

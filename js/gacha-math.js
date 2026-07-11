@@ -19,7 +19,7 @@ export function rollCharacter(state, isUrgent = false, force5Star = false) {
                 const isLechLimited = !isFeatured && (Math.random() < 0.10);
                 return { rarity: 6, isFeatured, isUrgent: true, isLechLimited };
             } else {
-                return { rarity: 5, isFeatured: Math.random() < 0.5, isUrgent: true };
+                return { rarity: 5, isFeatured: false, isUrgent: true };
             }
         }
 
@@ -30,7 +30,7 @@ export function rollCharacter(state, isUrgent = false, force5Star = false) {
             const isLechLimited = !isFeatured && (Math.random() < 0.10);
             return { rarity: 6, isFeatured, isUrgent: true, isLechLimited };
         } else if (r < 0.008 + 0.08) {
-            return { rarity: 5, isFeatured: Math.random() < 0.5, isUrgent: true };
+            return { rarity: 5, isFeatured: false, isUrgent: true };
         } else {
             return { rarity: 4, isFeatured: false, isUrgent: true };
         }
@@ -53,7 +53,7 @@ export function rollCharacter(state, isUrgent = false, force5Star = false) {
     }
 
     // Bảo hiểm 120 lượt chắc chắn ra Featured nhân vật
-    const isGuaranteedFeatured = state.pullsSinceFeatured >= 120;
+    const isGuaranteedFeatured = state.guarantee120Consumed !== true && state.pullsSinceFeatured >= 120;
     if (isGuaranteedFeatured) {
         rate6 = 1.0;
     }
@@ -67,19 +67,17 @@ export function rollCharacter(state, isUrgent = false, force5Star = false) {
         state.pity5 = 0;
         if (isFeatured) {
             state.pullsSinceFeatured = 0;
+            state.guarantee120Consumed = true;
         }
         return { rarity: 6, isFeatured, isUrgent: false, isLechLimited };
     }
 
     // Bảo hiểm 5-Star: Chắc chắn ra 5-Star trở lên ở lượt thứ 10 nếu 9 lượt trước không ra 5-Star/6-Star
     const isGuaranteed5 = state.pity5 >= 10;
-    const rate5 = isGuaranteed5 ? 1.0 : 0.08;
-
-    if (Math.random() < rate5) {
+    if (isGuaranteed5 || r < rate6 + 0.08) {
         // Trúng 5-Star!
-        const isFeatured = Math.random() < 0.5;
         state.pity5 = 0;
-        return { rarity: 5, isFeatured, isUrgent: false };
+        return { rarity: 5, isFeatured: false, isUrgent: false };
     }
 
     // Ra 4-Star!
@@ -94,7 +92,7 @@ export function rollCharacter(state, isUrgent = false, force5Star = false) {
 export function rollWeaponIssue(state) {
     state.issuesCount++;
 
-    let guaranteeFeatured = state.issuesSinceFeatured >= 7; // Issue thứ 8 chắc chắn trúng Featured
+    let guaranteeFeatured = state.featuredGuaranteeConsumed !== true && state.issuesSinceFeatured >= 7; // Issue thứ 8 chắc chắn trúng Featured
     let guarantee6 = state.issuesSince6 >= 3;              // Issue thứ 4 chắc chắn trúng 6-Star
 
     const results = [];
@@ -138,7 +136,7 @@ export function rollWeaponIssue(state) {
                 isFeatured = Math.random() < 0.25;
             } else if (r < p6 + p5) {
                 rarity = 5;
-                isFeatured = Math.random() < 0.25;
+                isFeatured = false;
             } else {
                 rarity = 4;
             }
@@ -163,6 +161,7 @@ export function rollWeaponIssue(state) {
 
     if (foundFeatured) {
         state.issuesSinceFeatured = 0;
+        state.featuredGuaranteeConsumed = true;
     } else {
         state.issuesSinceFeatured++;
     }
@@ -229,9 +228,7 @@ export function rollStandardCharacter(state) {
     }
 
     const isGuaranteed5 = state.pity5 >= 10;
-    const rate5 = isGuaranteed5 ? 1.0 : 0.08;
-
-    if (Math.random() < rate5) {
+    if (isGuaranteed5 || r < rate6 + 0.08) {
         // Trúng Standard 5★
         state.pity5 = 0;
         return { rarity: 5, isFeatured: false, isUrgent: false };
@@ -240,4 +237,3 @@ export function rollStandardCharacter(state) {
     // Trúng 4★
     return { rarity: 4, isFeatured: false, isUrgent: false };
 }
-

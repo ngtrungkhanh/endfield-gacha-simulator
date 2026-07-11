@@ -61,7 +61,7 @@
                                     <span>Mùa Hoa Nở Rộ (Featured: Endfield Operator)</span>
                                     <button class="btn-secondary" id="btn-switch-banner" style="padding: 4px 10px; font-size: 11px; font-weight: 600; cursor: pointer; border-radius: 4px; border: 1px solid var(--orange-primary); color: var(--orange-primary); background: rgba(255,107,0,0.05); text-transform: uppercase;">Đổi Banner</button>
                                 </h2>
-                                <p class="banner-subtitle" id="active-banner-subtitle">Tỉ lệ 6★: 0.8% | Bảo hiểm: Soft pity 65+, Hard pity 80 | Bảo hiểm Featured: 120</p>
+                                <p class="banner-subtitle" id="active-banner-subtitle">Tỉ lệ 6★: 0.8% | Soft pity tăng từ lượt 66 | Hard pity 80 | Featured guarantee 120</p>
                             </div>
                             <div class="banner-pity-widgets">
                                 <div class="pity-widget">
@@ -133,6 +133,7 @@
                                     <div style="padding-left: 8px; font-size: 11px;">- Limited Dupe: <span id="stat-char-6star-lim-dupe" style="color: var(--text-white); font-weight: 600;">0</span></div>
                                     <div style="padding-left: 8px; font-size: 11px;">- Lệch Limited: <span id="stat-char-6star-lech-lim" style="color: var(--text-white); font-weight: 600;">0</span></div>
                                     <div>Số 5★ trúng: <span id="stat-char-5star" style="color: var(--star-5); font-weight: 700;">0</span> (<span id="stat-char-5star-rate" style="font-weight: 600; color: var(--text-primary);">0.0%</span>)</div>
+                                    <div>Token Potential mốc 240: <span id="stat-char-potential" style="color: var(--orange-primary); font-weight: 700;">0</span></div>
                                     <div>Số pull trung bình / 6★: <span id="stat-char-avg-pull" style="color: var(--orange-primary); font-weight: 700;">--</span></div>
                                 </div>
                             </div>
@@ -173,8 +174,9 @@
                     <!-- Reference Docs link -->
                     <div class="ref-links-box">
                         <h4>Tài liệu liên quan</h4>
-                        <a href="file:///C:/Users/DELL/.gemini/antigravity/brain/97330649-15f2-433b-9e57-d832eb5d7552/gacha_rules_and_data.md" target="_blank">📄 Luật Gacha & Số liệu Bookkeeping</a>
-                        <a href="file:///C:/Users/DELL/.gemini/antigravity/brain/97330649-15f2-433b-9e57-d832eb5d7552/implementation_plan.md" target="_blank">📄 Kế hoạch triển khai</a>
+                        <a href="docs/gacha_rules.md" target="_blank">📄 Luật Gacha</a>
+                        <a href="docs/strategies.md" target="_blank">📄 Chiến thuật mô phỏng</a>
+                        <a href="data/bookkeeping.md" target="_blank">📄 Dữ liệu Bookkeeping</a>
                     </div>
                 </aside>
             </div>
@@ -304,7 +306,7 @@
                         </div>
                         <!-- Avg Weapons 6* -->
                         <div class="stat-card weapon-card glass-panel">
-                            <span class="label">Vũ khí 6★ trúng (Gacha)</span>
+                            <span class="label">Featured Weapon nhận được</span>
                             <span class="value" id="card-avg-weapons">--</span>
                         </div>
                     </div>
@@ -328,7 +330,7 @@
                                     <th>Tổng Vũ khí 6★</th>
                                     <th title="Tổng số lượt roll vũ khí đã thực hiện">Pull Vũ Khí Dùng</th>
                                     <th title="Số lượt roll vũ khí còn dư lại quy đổi từ vé Arsenal">Pull Vũ Khí Dư</th>
-                                    <th title="Tỉ lệ phần trạng trung bình số nhân vật Featured độc nhất (Unique) sở hữu trên tổng số banner">Tỉ lệ sở hữu ℹ️</th>
+                                    <th title="Tỉ lệ phần trăm trung bình số nhân vật Featured độc nhất (Unique) sở hữu trên tổng số banner">Tỉ lệ sở hữu ℹ️</th>
                                 </tr>
                             </thead>
                             <tbody id="comparison-table-body">
@@ -346,23 +348,23 @@
                         <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 16px; color: var(--orange-primary);">Giải thích các Chiến thuật Gacha</h3>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; font-size: 13px; line-height: 1.6; color: var(--text-secondary);">
                             <div>
-                                <p style="margin-bottom: 12px;"><strong style="color: var(--text-white);">1. Tích lũy an toàn (Save & Commit):</strong> Quay cụm x10 (roll lẻ x1 khi pity &ge; 71 hoặc bảo hiểm &ge; 111), dừng khi ra Featured. Chỉ quay khi ví &ge; 110 vé. Vũ khí quay ở mốc 8 Issues.</p>
+                                <p style="margin-bottom: 12px;"><strong style="color: var(--text-white);">1. Tích lũy an toàn (Save & Commit):</strong> Quay cụm x10, tự chuyển x1 khi còn dưới 10 lượt tới mốc 30/60/120 hoặc khi pity &ge; 71. Dừng khi ra Featured. Chỉ quay khi tổng vé ví và Dossier &ge; 110. Vũ khí quay ở mốc 8 Issues.</p>
                                 <p style="margin-bottom: 12px;"><strong style="color: var(--text-white);">2. Save & Commit (Roll lẻ):</strong> Chỉ quay lẻ x1 từ đầu đến cuối banner (không quay x10), dừng khi ra Featured. Điều kiện tích vé và vũ khí giống Save & Commit.</p>
-                                <p><strong style="color: var(--text-white);">3. Spend All (Yolo / Có nhiêu chơi nhiêu):</strong> Có bao nhiêu vé nhân vật quay bấy nhiêu, dừng ngay khi trúng Featured. Vũ khí tự động quay sạch Arsenal Tickets hiện có nếu trúng nhân vật.</p>
+                                <p><strong style="color: var(--text-white);">3. Spend All (Yolo / Có nhiêu chơi nhiêu):</strong> Có bao nhiêu vé nhân vật quay bấy nhiêu, dừng ngay khi trúng Featured. Sau khi trúng nhân vật, quay Issue đến khi có Featured Weapon hoặc không còn đủ vé.</p>
                             </div>
                             <div>
-                                <p style="margin-bottom: 12px;"><strong style="color: var(--text-white);">4. Mốc 60 mỗi banner (Pull 60):</strong> Mỗi banner đều quay đúng 60 lượt (để lấy vé Dossier x10). Nếu ra nhân vật sớm vẫn tiếp tục quay đến mốc 60. Vũ khí quay nếu trúng nhân vật.</p>
-                                <p><strong style="color: var(--text-white);">5. Quay theo Meta (Roll Meta):</strong> Lựa chọn 30% số lượng banner làm banner Meta (quay tối đa 120 roll). Các banner không Meta khác sẽ quay theo Save & Commit nếu lượng vé còn dư đảm bảo tích đủ 120 roll cho banner Meta tiếp theo, ngược lại chỉ quay đúng 10 roll free. Vũ khí chỉ quay ở banner Meta.</p>
+                                <p style="margin-bottom: 12px;"><strong style="color: var(--text-white);">4. Mốc 60 mỗi banner (Pull 60):</strong> Nếu tổng tài nguyên đủ 60 thì quay tới mốc 60; nếu chỉ đủ 30 thì dừng ở mốc 30, còn không sẽ skip ngoài free/Dossier bắt buộc. Không dừng sớm khi trúng Featured.</p>
+                                <p><strong style="color: var(--text-white);">5. Quay theo Meta (Roll Meta):</strong> Lựa chọn 30% số banner làm Meta (tối đa 120 roll). Banner thường chỉ commit khi vẫn bảo toàn ngân sách cho Meta kế tiếp; Dossier sắp hết hạn và tối ưu mốc 30 vẫn áp dụng. Vũ khí chỉ quay ở banner Meta.</p>
                             </div>
                         </div>
                         
                         <div style="margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 16px; font-size: 12px; line-height: 1.5; color: var(--text-secondary); display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; width: 100%;">
                             <div>
-                                <strong style="color: var(--orange-primary);">[i] Luật tối ưu mốc 30 (Mới):</strong>
+                                <strong style="color: var(--orange-primary);">[i] Luật tối ưu mốc 30:</strong>
                                 <p>Cho tất cả chiến thuật, nếu đã quay đến 20 roll (10 free + 10 Dossier tích lũy) mà chưa trúng Featured, người chơi sẽ tự động bỏ thêm tối đa 10 vé từ ví để chạm mốc 30 roll nhằm lấy 10 roll Urgent Recruitment miễn phí (quay 20 giá 10).</p>
                             </div>
                             <div>
-                                <strong style="color: var(--orange-primary);">[i] Bảo hiểm 5★ Urgent (Mới):</strong>
+                                <strong style="color: var(--orange-primary);">[i] Bảo hiểm 5★ Urgent:</strong>
                                 <p>10 lượt Urgent Recruitment miễn phí tương đương 1 lần roll x10, có áp dụng bảo hiểm cục bộ: nếu 9 lượt đầu toàn 4★, lượt thứ 10 chắc chắn ra tướng 5★ trở lên để tránh lãng phí.</p>
                             </div>
                             <div>
