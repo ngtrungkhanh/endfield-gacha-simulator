@@ -44,6 +44,7 @@ Khi người chơi thực hiện quay trên một banner nhân vật, họ sẽ 
 1.  **Mốc 30 pulls (Urgent Recruitment):**
     *   Tặng ngay **10 lượt quay Urgent Recruitment** (tương đương 1 lần roll x10 miễn phí).
     *   *Quy tắc:* Chỉ được dùng trên banner hiện tại, không cộng dồn sang banner sau. Các lượt quay từ Urgent Recruitment này **không tính vào bộ đếm pity** (không tăng pity 6★, không tính vào bảo hiểm 120) và nếu may mắn ra 6★ từ đây thì cũng **không reset bộ đếm pity** hiện tại của bạn.
+    *   *Bảo hiểm 5★:* Tương đương với 1 lần roll x10 tiêu chuẩn, 10 lượt Urgent Recruitment này áp dụng bảo hiểm cục bộ: nếu 9 lượt đầu toàn 4★, lượt thứ 10 chắc chắn là nhân vật 5★ trở lên để tránh lãng phí.
 2.  **Mốc 60 pulls (Headhunting Dossier):**
     *   Tặng 1 vật phẩm **Headhunting Dossier**, vật phẩm này sẽ tự động chuyển đổi thành **10 lượt quay miễn phí dành cho banner giới hạn tiếp theo**.
     *   *Quy tắc:* Có giới hạn thời gian (sẽ hết hạn nếu không dùng ở banner tiếp theo). Các lượt quay từ Dossier này **có tính vào pity** như bình thường.

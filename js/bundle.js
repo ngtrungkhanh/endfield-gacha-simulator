@@ -1,7 +1,18 @@
 (() => {
   // js/gacha-math.js
-  function rollCharacter(state, isUrgent = false) {
+  function rollCharacter(state, isUrgent = false, force5Star = false) {
     if (isUrgent) {
+      if (force5Star) {
+        const totalRate = 8e-3 + 0.08;
+        const r3 = Math.random() * totalRate;
+        if (r3 < 8e-3) {
+          const isFeatured = Math.random() < 0.5;
+          const isLechLimited = !isFeatured && Math.random() < 0.1;
+          return { rarity: 6, isFeatured, isUrgent: true, isLechLimited };
+        } else {
+          return { rarity: 5, isFeatured: Math.random() < 0.5, isUrgent: true };
+        }
+      }
       const r2 = Math.random();
       if (r2 < 8e-3) {
         const isFeatured = Math.random() < 0.5;
@@ -164,6 +175,7 @@
       this.charTickets = 0;
       this.charTicketsDebt = 0;
       this.nextBannerDossierTickets = 0;
+      this.currentBannerDossierTickets = 0;
       this.bondQuota = 0;
       this.totalBondQuotaEarned = 0;
       this.ownedCharactersSet = /* @__PURE__ */ new Set();
@@ -213,8 +225,19 @@
     } else {
       return;
     }
-    if (player.ownedCharactersSet.has(charId)) {
-      const quotaEarned = result.rarity === 6 ? 50 : 10;
+    let quotaEarned = 0;
+    if (result.rarity === 6) {
+      if (result.isFeatured || result.isLechLimited) {
+        if (player.ownedCharactersSet.has(charId)) {
+          quotaEarned = 50;
+        }
+      } else {
+        quotaEarned = 50;
+      }
+    } else if (result.rarity === 5) {
+      quotaEarned = 10;
+    }
+    if (quotaEarned > 0) {
       player.bondQuota += quotaEarned;
       player.totalBondQuotaEarned += quotaEarned;
       if (player.bondQuota >= 25) {
@@ -222,9 +245,8 @@
         player.charTickets += ticketsExchanged;
         player.bondQuota -= ticketsExchanged * 25;
       }
-    } else {
-      player.ownedCharactersSet.add(charId);
     }
+    player.ownedCharactersSet.add(charId);
   }
   function executeStandardBannerRolls(player, rollsCount, bannerIdx) {
     const pullsRecord = [];
@@ -290,8 +312,10 @@
     const pullsRecord = [];
     let gotFeatured = gotFeaturedThisBanner;
     let currentBannerPulls = bannerState.bannerPullsCount;
-    const executeSinglePull = (isUrgent = false) => {
-      const result = rollCharacter(bannerState, isUrgent);
+    let milestone30Triggered = false;
+    let milestone60Triggered = false;
+    const executeSinglePull = (isUrgent = false, force5Star = false) => {
+      const result = rollCharacter(bannerState, isUrgent, force5Star);
       pullsRecord.push(result);
       processCharacterDuplicateAndQuota(player, result, bannerIdx);
       if (result.rarity === 6) {
@@ -319,16 +343,32 @@
       } else {
         player.totalCharPulls++;
         currentBannerPulls++;
+        if (currentBannerPulls >= 30 && !milestone30Triggered) {
+          milestone30Triggered = true;
+          let hasHighRarity = false;
+          for (let k = 0; k < 10; k++) {
+            const force5Star2 = k === 9 && !hasHighRarity;
+            const res = executeSinglePull(true, force5Star2);
+            if (res && res.rarity >= 5) {
+              hasHighRarity = true;
+            }
+          }
+        }
+        if (currentBannerPulls >= 60 && !milestone60Triggered) {
+          milestone60Triggered = true;
+          player.nextBannerDossierTickets += 10;
+        }
       }
+      return result;
     };
     while (currentBannerPulls < targetPulls && (!stopOnFeatured || !gotFeatured)) {
       const pullsNeeded = targetPulls - currentBannerPulls;
-      const totalTicketsAvailable = player.nextBannerDossierTickets + player.charTickets;
+      const totalTicketsAvailable = player.currentBannerDossierTickets + player.charTickets;
       const canRoll10 = !forceSingleRoll && pullsNeeded >= 10 && totalTicketsAvailable >= 10 && bannerState.pity6 < 71 && bannerState.pullsSinceFeatured < 111 && (!stopOnFeatured || !gotFeatured);
       if (canRoll10) {
         for (let k = 0; k < 10; k++) {
-          if (player.nextBannerDossierTickets > 0) {
-            player.nextBannerDossierTickets--;
+          if (player.currentBannerDossierTickets > 0) {
+            player.currentBannerDossierTickets--;
           } else if (player.charTickets > 0) {
             player.charTickets--;
           } else {
@@ -337,23 +377,14 @@
           executeSinglePull(false);
         }
       } else {
-        if (player.nextBannerDossierTickets > 0) {
-          player.nextBannerDossierTickets--;
+        if (player.currentBannerDossierTickets > 0) {
+          player.currentBannerDossierTickets--;
         } else if (player.charTickets > 0) {
           player.charTickets--;
         } else {
           break;
         }
         executeSinglePull(false);
-      }
-      if (currentBannerPulls === 30) {
-        for (let k = 0; k < 10; k++) {
-          if (stopOnFeatured && gotFeatured) break;
-          executeSinglePull(true);
-        }
-      }
-      if (currentBannerPulls === 60) {
-        player.nextBannerDossierTickets += 10;
       }
     }
     if (currentBannerPulls > 20 && currentBannerPulls < 30) {
@@ -362,10 +393,6 @@
         for (let i = 0; i < extraNeeded; i++) {
           player.charTickets--;
           executeSinglePull(false);
-        }
-        for (let k = 0; k < 10; k++) {
-          if (stopOnFeatured && gotFeatured) break;
-          executeSinglePull(true);
         }
       }
     }
@@ -376,7 +403,6 @@
           player.charTickets--;
           executeSinglePull(false);
         }
-        player.nextBannerDossierTickets += 10;
       }
     }
     return { pullsRecord, gotFeatured };
@@ -406,7 +432,11 @@
           player.owned5StarWeapons++;
         }
       });
-      if (result.milestoneReward === "selector_box" || result.milestoneReward === "featured_weapon") {
+      if (result.milestoneReward === "selector_box") {
+        gotFeatured = true;
+        player.ownedFeaturedWeapons++;
+        player.weaponMilestoneSelectors++;
+      } else if (result.milestoneReward === "featured_weapon") {
         gotFeatured = true;
         player.ownedFeaturedWeapons++;
       }
@@ -487,6 +517,8 @@
     if (!strategy) {
       throw new Error(`Strategy ${strategyId} is not defined.`);
     }
+    player.currentBannerDossierTickets = player.nextBannerDossierTickets;
+    player.nextBannerDossierTickets = 0;
     charBannerState.bannerPullsCount = 0;
     charBannerState.pullsSinceFeatured = 0;
     weaponBannerState.issuesCount = 0;
@@ -557,6 +589,20 @@
         gotFeaturedChar = gotFeaturedChar || res.gotFeatured;
       }
     }
+    if (pullsRecord.length === 0 && player.currentBannerDossierTickets > 0) {
+      const res = executeCharacterPullSequence(player, charBannerState, 10 + player.currentBannerDossierTickets, true, bannerIdx, gotFeaturedChar, strategyId === "save_commit_single");
+      pullsRecord = res.pullsRecord;
+      gotFeaturedChar = gotFeaturedChar || res.gotFeatured;
+    }
+    const currentPullsCount = charBannerState.bannerPullsCount;
+    if (currentPullsCount >= 20 && currentPullsCount < 30 && !gotFeaturedChar) {
+      const neededTo30 = 30 - currentPullsCount;
+      if (player.charTickets >= neededTo30) {
+        const res = executeCharacterPullSequence(player, charBannerState, 30, true, bannerIdx, gotFeaturedChar, strategyId === "save_commit_single");
+        pullsRecord.push(...res.pullsRecord);
+        gotFeaturedChar = gotFeaturedChar || res.gotFeatured;
+      }
+    }
     allCharPulls.push(...pullsRecord);
     const totalCharRollsThisBanner = [...stdPulls, ...allCharPulls];
     const arsenalTicketsRebate = calculateArsenalTicketsRebate(totalCharRollsThisBanner);
@@ -608,6 +654,7 @@
         for (let i = 0; i < numPlayers; i++) {
           const player = new SimulatorPlayer(i);
           player.charTickets = mode === "pulls" ? 0 : startingCharTickets;
+          player.arsenalTickets = mode === "pulls" ? 0 : config.startingWeaponTickets || 0;
           players.push(player);
         }
         const playerCharPities = Array.from({ length: numPlayers }, () => ({
@@ -1003,6 +1050,8 @@
   var interactiveWeaponTickets = 0;
   var interactiveBondQuota = 0;
   var interactiveFreeLimitedTickets = 10;
+  var interactiveDossierTickets = 0;
+  var interactiveNextBannerDossierTickets = 0;
   var interactiveInventory = [];
   var interactiveOwnedCharactersSet = /* @__PURE__ */ new Set();
   var interactiveCharPity = {
@@ -1016,6 +1065,7 @@
     issuesSince6: 0,
     issuesSinceFeatured: 0
   };
+  var activeBannerIdx = 0;
   var interactiveStats = {
     charTotal: 0,
     charUrgent: 0,
@@ -1039,7 +1089,7 @@
   var LECH_LIMITED_6STAR_POOL2 = ["lim_6_1", "lim_6_2", "lim_6_3"];
   var CHAR_5STAR_POOL2 = Array.from({ length: 15 }, (_, i) => `char_5_${i + 1}`);
   var STORAGE_PREFIX = "a9e_gacha_";
-  var SCHEMA_VERSION = "1.3";
+  var SCHEMA_VERSION = "1.5";
   function saveInteractiveState() {
     try {
       const state = {
@@ -1048,6 +1098,8 @@
         weaponTickets: interactiveWeaponTickets,
         bondQuota: interactiveBondQuota,
         freeLimited: interactiveFreeLimitedTickets,
+        dossierTickets: interactiveDossierTickets,
+        nextBannerDossierTickets: interactiveNextBannerDossierTickets,
         charPity: interactiveCharPity,
         weaponPity: interactiveWeaponPity,
         stats: interactiveStats,
@@ -1070,6 +1122,8 @@
           interactiveWeaponTickets = state.weaponTickets;
           interactiveBondQuota = state.bondQuota || 0;
           interactiveFreeLimitedTickets = state.freeLimited !== void 0 ? state.freeLimited : 10;
+          interactiveDossierTickets = state.dossierTickets || 0;
+          interactiveNextBannerDossierTickets = state.nextBannerDossierTickets || 0;
           Object.assign(interactiveCharPity, state.charPity);
           Object.assign(interactiveWeaponPity, state.weaponPity);
           Object.assign(interactiveStats, state.stats);
@@ -1095,6 +1149,7 @@
         players: document.getElementById("input-players").value,
         banners: document.getElementById("input-banners").value,
         startTickets: document.getElementById("input-start-tickets").value,
+        startWeaponTickets: document.getElementById("input-start-weapon-tickets").value,
         totalPulls: document.getElementById("input-total-pulls").value,
         baseChar: document.getElementById("input-base-char").value,
         baseWeapon: document.getElementById("input-base-weapon").value,
@@ -1116,6 +1171,7 @@
           document.getElementById("input-players").value = settings.players;
           document.getElementById("input-banners").value = settings.banners;
           document.getElementById("input-start-tickets").value = settings.startTickets;
+          document.getElementById("input-start-weapon-tickets").value = settings.startWeaponTickets || 0;
           document.getElementById("input-total-pulls").value = settings.totalPulls;
           document.getElementById("input-base-char").value = settings.baseChar;
           document.getElementById("input-base-weapon").value = settings.baseWeapon;
@@ -1203,6 +1259,8 @@
     document.getElementById("wallet-weapon-tickets").innerText = interactiveWeaponTickets;
     document.getElementById("wallet-bond-quota").innerText = interactiveBondQuota;
     document.getElementById("wallet-free-limited").innerText = interactiveFreeLimitedTickets;
+    document.getElementById("wallet-dossier-tickets").innerText = interactiveDossierTickets;
+    document.getElementById("wallet-next-dossier-tickets").innerText = interactiveNextBannerDossierTickets;
     const btnFreeLim = document.getElementById("btn-roll-free-limited");
     btnFreeLim.innerText = `Quay Free Banner (x${interactiveFreeLimitedTickets} Free)`;
     btnFreeLim.disabled = interactiveFreeLimitedTickets <= 0;
@@ -1328,7 +1386,6 @@
       { id: 2, title: "Sa M\u1EA1c Hoang Vu (Featured: Chen Qianyu)", desc: "T\u1EC9 l\u1EC7 6\u2605: 0.8% | B\u1EA3o hi\u1EC3m: Soft pity 65+, Hard pity 80 | B\u1EA3o hi\u1EC3m Featured: 120" },
       { id: 3, title: "B\xF3ng \u0110\xEAm Bi\xEAn Gi\u1EDBi (Featured: Wulfgard)", desc: "T\u1EC9 l\u1EC7 6\u2605: 0.8% | B\u1EA3o hi\u1EC3m: Soft pity 65+, Hard pity 80 | B\u1EA3o hi\u1EC3m Featured: 120" }
     ];
-    let activeBannerIdx = 0;
     function updateBannerDisplay() {
       const b = BANNERS[activeBannerIdx];
       const titleSpan = document.getElementById("active-banner-title").querySelector("span");
@@ -1353,6 +1410,8 @@
         localStorage.setItem(STORAGE_PREFIX + "active_banner_idx", activeBannerIdx);
       } catch (e) {
       }
+      interactiveDossierTickets = interactiveNextBannerDossierTickets;
+      interactiveNextBannerDossierTickets = 0;
       interactiveFreeLimitedTickets = 10;
       interactiveCharPity.bannerPullsCount = 0;
       interactiveCharPity.pullsSinceFeatured = 0;
@@ -1383,39 +1442,6 @@
       setTimeout(() => {
         card.classList.add("flipped");
       }, 100);
-    };
-    const checkDuplicateAndAwardQuota = (result) => {
-      let charId = "";
-      if (result.rarity === 6) {
-        if (result.isFeatured) {
-          charId = `featured_char_banner_${activeBannerIdx}`;
-        } else {
-          if (result.isLechLimited) {
-            const randIdx = Math.floor(Math.random() * LECH_LIMITED_6STAR_POOL2.length);
-            charId = LECH_LIMITED_6STAR_POOL2[randIdx];
-          } else {
-            const randIdx = Math.floor(Math.random() * STANDARD_6STAR_POOL2.length);
-            charId = STANDARD_6STAR_POOL2[randIdx];
-          }
-        }
-      } else if (result.rarity === 5) {
-        const randIdx = Math.floor(Math.random() * CHAR_5STAR_POOL2.length);
-        charId = CHAR_5STAR_POOL2[randIdx];
-      } else {
-        return;
-      }
-      if (interactiveOwnedCharactersSet.has(charId)) {
-        const award = result.rarity === 6 ? 50 : 10;
-        interactiveBondQuota += award;
-        interactiveStats.totalBondQuotaEarned = (interactiveStats.totalBondQuotaEarned || 0) + award;
-        if (interactiveBondQuota >= 25) {
-          const exchange = Math.floor(interactiveBondQuota / 25);
-          interactiveCharTickets += exchange;
-          interactiveBondQuota -= exchange * 25;
-        }
-      } else {
-        interactiveOwnedCharactersSet.add(charId);
-      }
     };
     const processCharacterPullResult = (result) => {
       result.type = "character";
@@ -1465,11 +1491,16 @@
       saveInteractiveState();
     });
     document.getElementById("btn-char-pull1").addEventListener("click", () => {
-      if (interactiveCharTickets < 1) {
+      const totalAvailable = interactiveDossierTickets + interactiveCharTickets;
+      if (totalAvailable < 1) {
         alert("B\u1EA1n kh\xF4ng \u0111\u1EE7 v\xE9 gacha nh\xE2n v\u1EADt! H\xE3y t\xEDch lu\u1EF9 th\xEAm ho\u1EB7c b\u1EA5m Reset.");
         return;
       }
-      interactiveCharTickets--;
+      if (interactiveDossierTickets > 0) {
+        interactiveDossierTickets--;
+      } else {
+        interactiveCharTickets--;
+      }
       revealBoard.innerHTML = "";
       const result = rollCharacter(interactiveCharPity, false);
       processCharacterPullResult(result);
@@ -1478,11 +1509,14 @@
       saveInteractiveState();
     });
     document.getElementById("btn-char-pull10").addEventListener("click", () => {
-      if (interactiveCharTickets < 10) {
+      const totalAvailable = interactiveDossierTickets + interactiveCharTickets;
+      if (totalAvailable < 10) {
         alert("B\u1EA1n kh\xF4ng \u0111\u1EE7 v\xE9 gacha nh\xE2n v\u1EADt! H\xE3y t\xEDch lu\u1EF9 th\xEAm ho\u1EB7c b\u1EA5m Reset.");
         return;
       }
-      interactiveCharTickets -= 10;
+      const spentDossier = Math.min(10, interactiveDossierTickets);
+      interactiveDossierTickets -= spentDossier;
+      interactiveCharTickets -= 10 - spentDossier;
       revealBoard.innerHTML = "";
       for (let i = 0; i < 10; i++) {
         const result = rollCharacter(interactiveCharPity, false);
@@ -1560,37 +1594,63 @@
       saveInteractiveState();
     });
   }
+  var checkDuplicateAndAwardQuota = (result) => {
+    let charId = "";
+    if (result.rarity === 6) {
+      if (result.isFeatured) {
+        charId = `featured_char_banner_${activeBannerIdx}`;
+      } else {
+        if (result.isLechLimited) {
+          const randIdx = Math.floor(Math.random() * LECH_LIMITED_6STAR_POOL2.length);
+          charId = LECH_LIMITED_6STAR_POOL2[randIdx];
+        } else {
+          const randIdx = Math.floor(Math.random() * STANDARD_6STAR_POOL2.length);
+          charId = STANDARD_6STAR_POOL2[randIdx];
+        }
+      }
+    } else if (result.rarity === 5) {
+      const randIdx = Math.floor(Math.random() * CHAR_5STAR_POOL2.length);
+      charId = CHAR_5STAR_POOL2[randIdx];
+    } else {
+      return;
+    }
+    let award = 0;
+    if (result.rarity === 6) {
+      if (result.isFeatured || result.isLechLimited) {
+        if (interactiveOwnedCharactersSet.has(charId)) {
+          award = 50;
+        }
+      } else {
+        award = 50;
+      }
+    } else if (result.rarity === 5) {
+      award = 10;
+    }
+    if (award > 0) {
+      interactiveBondQuota += award;
+      interactiveStats.totalBondQuotaEarned = (interactiveStats.totalBondQuotaEarned || 0) + award;
+      if (interactiveBondQuota >= 25) {
+        const exchange = Math.floor(interactiveBondQuota / 25);
+        interactiveCharTickets += exchange;
+        interactiveBondQuota -= exchange * 25;
+      }
+    }
+    interactiveOwnedCharactersSet.add(charId);
+  };
   function checkInteractiveMilestones() {
     const revealBoard = document.getElementById("pull-reveal-board");
     if (interactiveCharPity.bannerPullsCount >= 30 && !interactiveStats.milestone30Triggered) {
       interactiveStats.milestone30Triggered = true;
       alert("C\u1ED9t m\u1ED1c 30 roll \u0111\u1EA1t \u0111\u01B0\u1EE3c! B\u1EA1n nh\u1EADn \u0111\u01B0\u1EE3c 10 l\u01B0\u1EE3t quay Urgent Recruitment mi\u1EC5n ph\xED ngay b\xE2y gi\u1EDD!");
+      let hasHighRarity = false;
       for (let k = 0; k < 10; k++) {
-        const urgentResult = rollCharacter(interactiveCharPity, true);
-        urgentResult.type = "character";
-        const award = urgentResult.rarity === 6 ? 50 : urgentResult.rarity === 5 ? 10 : 0;
-        if (award > 0) {
-          let charId = "";
-          if (urgentResult.rarity === 6) {
-            if (urgentResult.isFeatured) {
-              charId = `featured_char_banner_urgent`;
-            } else {
-              charId = `std_6_urgent_${k}`;
-            }
-          } else {
-            charId = `char_5_urgent_${k}`;
-          }
-          if (interactiveOwnedCharactersSet.has(charId)) {
-            interactiveBondQuota += award;
-            if (interactiveBondQuota >= 25) {
-              const exchange = Math.floor(interactiveBondQuota / 25);
-              interactiveCharTickets += exchange;
-              interactiveBondQuota -= exchange * 25;
-            }
-          } else {
-            interactiveOwnedCharactersSet.add(charId);
-          }
+        const force5Star = k === 9 && !hasHighRarity;
+        const urgentResult = rollCharacter(interactiveCharPity, true, force5Star);
+        if (urgentResult.rarity >= 5) {
+          hasHighRarity = true;
         }
+        urgentResult.type = "character";
+        checkDuplicateAndAwardQuota(urgentResult);
         interactiveStats.charUrgent++;
         if (urgentResult.rarity === 6) {
           interactiveStats.char6star++;
@@ -1628,8 +1688,8 @@
     }
     if (interactiveCharPity.bannerPullsCount >= 60 && !interactiveStats.milestone60Triggered) {
       interactiveStats.milestone60Triggered = true;
-      alert("C\u1ED9t m\u1ED1c 60 roll \u0111\u1EA1t \u0111\u01B0\u1EE3c! B\u1EA1n nh\u1EADn \u0111\u01B0\u1EE3c 10 v\xE9 Dossier mi\u1EC5n ph\xED c\u1ED9ng tr\u1EF1c ti\u1EBFp v\xE0o v\xED.");
-      interactiveCharTickets += 10;
+      alert("C\u1ED9t m\u1ED1c 60 roll \u0111\u1EA1t \u0111\u01B0\u1EE3c! B\u1EA1n nh\u1EADn \u0111\u01B0\u1EE3c 10 v\xE9 Dossier mi\u1EC5n ph\xED d\xE0nh cho banner gi\u1EDBi h\u1EA1n ti\u1EBFp theo!");
+      interactiveNextBannerDossierTickets += 10;
     }
   }
   function initSimulatorControls() {
@@ -1637,6 +1697,7 @@
       "input-players",
       "input-banners",
       "input-start-tickets",
+      "input-start-weapon-tickets",
       "input-total-pulls",
       "input-base-char",
       "input-base-weapon"
@@ -1677,6 +1738,7 @@
       const numPlayers = Number(document.getElementById("input-players").value);
       const numBanners = Number(document.getElementById("input-banners").value);
       const startingCharTickets = Number(document.getElementById("input-start-tickets").value);
+      const startingWeaponTickets = Number(document.getElementById("input-start-weapon-tickets").value);
       const totalPulls = Number(document.getElementById("input-total-pulls").value);
       const baseChar = Number(document.getElementById("input-base-char").value);
       const baseWeapon = Number(document.getElementById("input-base-weapon").value);
@@ -1695,6 +1757,7 @@
           numBanners,
           totalPulls,
           startingCharTickets,
+          startingWeaponTickets,
           incomePerBanner,
           weaponIncomeNonGacha,
           strategyIds: ["save_commit", "save_commit_single", "yolo", "pull_60", "roll_meta"]

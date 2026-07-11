@@ -101,6 +101,12 @@
                                 <div class="wallet-item">
                                     Vé Free Banner: <span class="amount" id="wallet-free-limited" style="color: var(--orange-primary);">10</span>
                                 </div>
+                                <div class="wallet-item">
+                                    Vé Dossier khả dụng: <span class="amount" id="wallet-dossier-tickets" style="color: #9d4edd;">0</span>
+                                </div>
+                                <div class="wallet-item" title="Chỉ sử dụng được ở banner tiếp theo, đổi sang banner khác nữa sẽ biến mất">
+                                    Dossier tích luỹ: <span class="amount" id="wallet-next-dossier-tickets" style="color: #9d4edd; opacity: 0.7;">0</span>
+                                </div>
                             </div>
                             <div class="pull-btns" style="margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap;">
                                 <button class="btn-secondary" id="btn-roll-free-limited" style="border-color: var(--orange-primary); color: var(--orange-primary); flex-grow: 1;">Quay Free Banner (x10 Free)</button>
@@ -207,8 +213,14 @@
 
                         <!-- Starting Tickets -->
                         <div class="form-group">
-                            <label for="input-start-tickets">Vé tích lũy ban đầu:</label>
+                            <label for="input-start-tickets">Vé nhân vật ban đầu:</label>
                             <input type="number" id="input-start-tickets" min="0" max="2000" step="10" value="80">
+                        </div>
+
+                        <!-- Starting Weapon Tickets -->
+                        <div class="form-group">
+                            <label for="input-start-weapon-tickets">Vé vũ khí ban đầu (Arsenal):</label>
+                            <input type="number" id="input-start-weapon-tickets" min="0" max="100000" step="500" value="0">
                         </div>
                     </div>
 
@@ -344,14 +356,18 @@
                             </div>
                         </div>
                         
-                        <div style="margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 16px; font-size: 12px; line-height: 1.5; color: var(--text-secondary); display: grid; grid-template-columns: 1fr 1fr; gap: 20px; width: 100%;">
+                        <div style="margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 16px; font-size: 12px; line-height: 1.5; color: var(--text-secondary); display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; width: 100%;">
                             <div>
-                                <strong style="color: var(--orange-primary);">[i] Giải thích chỉ số Featured (Max/Min):</strong>
-                                <p>Thể hiện sự may mắn cực trị của người chơi trong toàn bộ đợt giả lập Monte Carlo. Số đầu tiên là lượng Featured nhiều nhất một người chơi nhận được, số thứ hai là lượng Featured ít nhất một người chơi quay được.</p>
+                                <strong style="color: var(--orange-primary);">[i] Luật tối ưu mốc 30 (Mới):</strong>
+                                <p>Cho tất cả chiến thuật, nếu đã quay đến 20 roll (10 free + 10 Dossier tích lũy) mà chưa trúng Featured, người chơi sẽ tự động bỏ thêm tối đa 10 vé từ ví để chạm mốc 30 roll nhằm lấy 10 roll Urgent Recruitment miễn phí (quay 20 giá 10).</p>
                             </div>
                             <div>
-                                <strong style="color: var(--orange-primary);">[i] Giải thích chỉ số Tỉ lệ sở hữu:</strong>
-                                <p>Là tỷ lệ phần trăm trung bình số lượng nhân vật Featured độc nhất (Unique) sở hữu trên tổng số lượng banner đã diễn ra. Thể hiện khả năng lấp đầy bộ sưu tập nhân vật mới của người chơi.</p>
+                                <strong style="color: var(--orange-primary);">[i] Bảo hiểm 5★ Urgent (Mới):</strong>
+                                <p>10 lượt Urgent Recruitment miễn phí tương đương 1 lần roll x10, có áp dụng bảo hiểm cục bộ: nếu 9 lượt đầu toàn 4★, lượt thứ 10 chắc chắn ra tướng 5★ trở lên để tránh lãng phí.</p>
+                            </div>
+                            <div>
+                                <strong style="color: var(--orange-primary);">[i] Giải thích Tỉ lệ sở hữu:</strong>
+                                <p>Là tỷ lệ phần trăm trung bình số lượng nhân vật Featured độc nhất (Unique) sở hữu trên tổng số lượng banner đã diễn ra. Thể hiện khả năng lấp đầy bộ sưu tập nhân vật mới.</p>
                             </div>
                         </div>
                     </div>

@@ -39,6 +39,7 @@ export class MonteCarloSimulator {
                 const player = new SimulatorPlayer(i);
                 // Với chế độ pulls, xuất phát điểm là 0 và nhận vé banner-by-banner để kiểm soát tổng lượng vé
                 player.charTickets = (mode === 'pulls') ? 0 : startingCharTickets;
+                player.arsenalTickets = (mode === 'pulls') ? 0 : (config.startingWeaponTickets || 0);
                 players.push(player);
             }
 

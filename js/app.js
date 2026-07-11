@@ -10,6 +10,8 @@ let interactiveCharTickets = 120;
 let interactiveWeaponTickets = 0;
 let interactiveBondQuota = 0;
 let interactiveFreeLimitedTickets = 10;
+let interactiveDossierTickets = 0;
+let interactiveNextBannerDossierTickets = 0;
 let interactiveInventory = [];
 
 // Tập hợp lưu trữ nhân vật đã sở hữu để xác định Dupe (Interactive)
@@ -29,6 +31,9 @@ const interactiveWeaponPity = {
     issuesSince6: 0,
     issuesSinceFeatured: 0
 };
+
+let activeBannerIdx = 0;
+
 
 // Thống kê đợt quay tương tác thời gian thực
 const interactiveStats = {
@@ -60,7 +65,7 @@ const CHAR_5STAR_POOL = Array.from({ length: 15 }, (_, i) => `char_5_${i + 1}`);
 // LOCALSTORAGE PERSISTENCE HELPERS
 // ====================================================================
 const STORAGE_PREFIX = 'a9e_gacha_';
-const SCHEMA_VERSION = '1.3'; // Tăng schema version do bỏ banner thường interactive
+const SCHEMA_VERSION = '1.5'; // Tăng schema version do tích hợp Vé vũ khí ban đầu (Arsenal)
 
 function saveInteractiveState() {
     try {
@@ -70,6 +75,8 @@ function saveInteractiveState() {
             weaponTickets: interactiveWeaponTickets,
             bondQuota: interactiveBondQuota,
             freeLimited: interactiveFreeLimitedTickets,
+            dossierTickets: interactiveDossierTickets,
+            nextBannerDossierTickets: interactiveNextBannerDossierTickets,
             charPity: interactiveCharPity,
             weaponPity: interactiveWeaponPity,
             stats: interactiveStats,
@@ -94,6 +101,8 @@ function loadInteractiveState() {
                 interactiveWeaponTickets = state.weaponTickets;
                 interactiveBondQuota = state.bondQuota || 0;
                 interactiveFreeLimitedTickets = state.freeLimited !== undefined ? state.freeLimited : 10;
+                interactiveDossierTickets = state.dossierTickets || 0;
+                interactiveNextBannerDossierTickets = state.nextBannerDossierTickets || 0;
                 Object.assign(interactiveCharPity, state.charPity);
                 Object.assign(interactiveWeaponPity, state.weaponPity);
                 Object.assign(interactiveStats, state.stats);
@@ -121,6 +130,7 @@ function saveSimulatorSettings() {
             players: document.getElementById('input-players').value,
             banners: document.getElementById('input-banners').value,
             startTickets: document.getElementById('input-start-tickets').value,
+            startWeaponTickets: document.getElementById('input-start-weapon-tickets').value,
             totalPulls: document.getElementById('input-total-pulls').value,
             baseChar: document.getElementById('input-base-char').value,
             baseWeapon: document.getElementById('input-base-weapon').value,
@@ -143,6 +153,7 @@ function loadSimulatorSettings() {
                 document.getElementById('input-players').value = settings.players;
                 document.getElementById('input-banners').value = settings.banners;
                 document.getElementById('input-start-tickets').value = settings.startTickets;
+                document.getElementById('input-start-weapon-tickets').value = settings.startWeaponTickets || 0;
                 document.getElementById('input-total-pulls').value = settings.totalPulls;
                 document.getElementById('input-base-char').value = settings.baseChar;
                 document.getElementById('input-base-weapon').value = settings.baseWeapon;
@@ -251,6 +262,8 @@ function updateInteractiveUI() {
     document.getElementById('wallet-weapon-tickets').innerText = interactiveWeaponTickets;
     document.getElementById('wallet-bond-quota').innerText = interactiveBondQuota;
     document.getElementById('wallet-free-limited').innerText = interactiveFreeLimitedTickets;
+    document.getElementById('wallet-dossier-tickets').innerText = interactiveDossierTickets;
+    document.getElementById('wallet-next-dossier-tickets').innerText = interactiveNextBannerDossierTickets;
 
     // Bật/tắt nút quay free limited
     const btnFreeLim = document.getElementById('btn-roll-free-limited');
@@ -406,8 +419,6 @@ function initInteractiveGacha() {
         { id: 3, title: 'Bóng Đêm Biên Giới (Featured: Wulfgard)', desc: 'Tỉ lệ 6★: 0.8% | Bảo hiểm: Soft pity 65+, Hard pity 80 | Bảo hiểm Featured: 120' }
     ];
     
-    let activeBannerIdx = 0;
-    
     function updateBannerDisplay() {
         const b = BANNERS[activeBannerIdx];
         const titleSpan = document.getElementById('active-banner-title').querySelector('span');
@@ -434,7 +445,11 @@ function initInteractiveGacha() {
             localStorage.setItem(STORAGE_PREFIX + 'active_banner_idx', activeBannerIdx);
         } catch(e) {}
         
-        // Đổi banner: reset vé miễn phí banner giới hạn
+        // Đổi banner: chuyển vé Dossier tích lũy thành vé khả dụng, và hủy các vé Dossier cũ không dùng
+        interactiveDossierTickets = interactiveNextBannerDossierTickets;
+        interactiveNextBannerDossierTickets = 0;
+
+        // Reset vé miễn phí banner giới hạn
         interactiveFreeLimitedTickets = 10;
         
         // Reset bảo hiểm 120 và pulls count của banner mới
@@ -472,47 +487,6 @@ function initInteractiveGacha() {
         setTimeout(() => {
             card.classList.add('flipped');
         }, 100);
-    };
-
-    // Xử lý Check Dupe & Bond Quota trong Interactive Pull
-    const checkDuplicateAndAwardQuota = (result) => {
-        let charId = '';
-        
-        if (result.rarity === 6) {
-            if (result.isFeatured) {
-                charId = `featured_char_banner_${activeBannerIdx}`;
-            } else {
-                if (result.isLechLimited) {
-                    const randIdx = Math.floor(Math.random() * LECH_LIMITED_6STAR_POOL.length);
-                    charId = LECH_LIMITED_6STAR_POOL[randIdx];
-                } else {
-                    const randIdx = Math.floor(Math.random() * STANDARD_6STAR_POOL.length);
-                    charId = STANDARD_6STAR_POOL[randIdx];
-                }
-            }
-        } else if (result.rarity === 5) {
-            const randIdx = Math.floor(Math.random() * CHAR_5STAR_POOL.length);
-            charId = CHAR_5STAR_POOL[randIdx];
-        } else {
-            return;
-        }
-
-        if (interactiveOwnedCharactersSet.has(charId)) {
-            // Trùng lặp
-            const award = result.rarity === 6 ? 50 : 10;
-            interactiveBondQuota += award;
-            interactiveStats.totalBondQuotaEarned = (interactiveStats.totalBondQuotaEarned || 0) + award;
-            
-            // Tự động đổi 25 Bond Quota thành 1 vé
-            if (interactiveBondQuota >= 25) {
-                const exchange = Math.floor(interactiveBondQuota / 25);
-                interactiveCharTickets += exchange;
-                interactiveBondQuota -= exchange * 25;
-            }
-        } else {
-            // Sở hữu mới
-            interactiveOwnedCharactersSet.add(charId);
-        }
     };
 
     // Hàm xử lý chung kết quả quay
@@ -576,12 +550,17 @@ function initInteractiveGacha() {
 
     // Nút quay x1 nhân vật
     document.getElementById('btn-char-pull1').addEventListener('click', () => {
-        if (interactiveCharTickets < 1) {
+        const totalAvailable = interactiveDossierTickets + interactiveCharTickets;
+        if (totalAvailable < 1) {
             alert('Bạn không đủ vé gacha nhân vật! Hãy tích luỹ thêm hoặc bấm Reset.');
             return;
         }
 
-        interactiveCharTickets--;
+        if (interactiveDossierTickets > 0) {
+            interactiveDossierTickets--;
+        } else {
+            interactiveCharTickets--;
+        }
         revealBoard.innerHTML = '';
 
         const result = rollCharacter(interactiveCharPity, false);
@@ -594,12 +573,15 @@ function initInteractiveGacha() {
 
     // Nút quay x10 nhân vật
     document.getElementById('btn-char-pull10').addEventListener('click', () => {
-        if (interactiveCharTickets < 10) {
+        const totalAvailable = interactiveDossierTickets + interactiveCharTickets;
+        if (totalAvailable < 10) {
             alert('Bạn không đủ vé gacha nhân vật! Hãy tích luỹ thêm hoặc bấm Reset.');
             return;
         }
 
-        interactiveCharTickets -= 10;
+        const spentDossier = Math.min(10, interactiveDossierTickets);
+        interactiveDossierTickets -= spentDossier;
+        interactiveCharTickets -= (10 - spentDossier);
         revealBoard.innerHTML = '';
 
         for (let i = 0; i < 10; i++) {
@@ -697,6 +679,59 @@ function initInteractiveGacha() {
     });
 }
 
+// Xử lý Check Dupe & Bond Quota trong Interactive Pull
+const checkDuplicateAndAwardQuota = (result) => {
+    let charId = '';
+    
+    if (result.rarity === 6) {
+        if (result.isFeatured) {
+            charId = `featured_char_banner_${activeBannerIdx}`;
+        } else {
+            if (result.isLechLimited) {
+                const randIdx = Math.floor(Math.random() * LECH_LIMITED_6STAR_POOL.length);
+                charId = LECH_LIMITED_6STAR_POOL[randIdx];
+            } else {
+                const randIdx = Math.floor(Math.random() * STANDARD_6STAR_POOL.length);
+                charId = STANDARD_6STAR_POOL[randIdx];
+            }
+        }
+    } else if (result.rarity === 5) {
+        const randIdx = Math.floor(Math.random() * CHAR_5STAR_POOL.length);
+        charId = CHAR_5STAR_POOL[randIdx];
+    } else {
+        return;
+    }
+
+    let award = 0;
+    if (result.rarity === 6) {
+        if (result.isFeatured || result.isLechLimited) {
+            if (interactiveOwnedCharactersSet.has(charId)) {
+                award = 50;
+            }
+        } else {
+            // Lệch Standard: mặc định luôn là dupe, luôn nhận 50 Quota!
+            award = 50;
+        }
+    } else if (result.rarity === 5) {
+        award = 10;
+    }
+
+    if (award > 0) {
+        interactiveBondQuota += award;
+        interactiveStats.totalBondQuotaEarned = (interactiveStats.totalBondQuotaEarned || 0) + award;
+        
+        // Tự động đổi 25 Bond Quota thành 1 vé
+        if (interactiveBondQuota >= 25) {
+            const exchange = Math.floor(interactiveBondQuota / 25);
+            interactiveCharTickets += exchange;
+            interactiveBondQuota -= exchange * 25;
+        }
+    }
+
+    // Vẫn cập nhật interactiveOwnedCharactersSet
+    interactiveOwnedCharactersSet.add(charId);
+};
+
 // Xử lý cột mốc Urgent/Dossier trong quay tương tác
 function checkInteractiveMilestones() {
     const revealBoard = document.getElementById('pull-reveal-board');
@@ -705,35 +740,17 @@ function checkInteractiveMilestones() {
         interactiveStats.milestone30Triggered = true;
         alert('Cột mốc 30 roll đạt được! Bạn nhận được 10 lượt quay Urgent Recruitment miễn phí ngay bây giờ!');
         
+        let hasHighRarity = false;
         for (let k = 0; k < 10; k++) {
-            const urgentResult = rollCharacter(interactiveCharPity, true);
+            const force5Star = (k === 9 && !hasHighRarity);
+            const urgentResult = rollCharacter(interactiveCharPity, true, force5Star);
+            if (urgentResult.rarity >= 5) {
+                hasHighRarity = true;
+            }
             urgentResult.type = 'character';
             
             // Xử lý dupe & Bond Quota cho Urgent
-            const award = urgentResult.rarity === 6 ? 50 : (urgentResult.rarity === 5 ? 10 : 0);
-            if (award > 0) {
-                let charId = '';
-                if (urgentResult.rarity === 6) {
-                    if (urgentResult.isFeatured) {
-                        charId = `featured_char_banner_urgent`;
-                    } else {
-                        charId = `std_6_urgent_${k}`;
-                    }
-                } else {
-                    charId = `char_5_urgent_${k}`;
-                }
-                
-                if (interactiveOwnedCharactersSet.has(charId)) {
-                    interactiveBondQuota += award;
-                    if (interactiveBondQuota >= 25) {
-                        const exchange = Math.floor(interactiveBondQuota / 25);
-                        interactiveCharTickets += exchange;
-                        interactiveBondQuota -= exchange * 25;
-                    }
-                } else {
-                    interactiveOwnedCharactersSet.add(charId);
-                }
-            }
+            checkDuplicateAndAwardQuota(urgentResult);
 
             interactiveStats.charUrgent++;
             if (urgentResult.rarity === 6) {
@@ -776,8 +793,8 @@ function checkInteractiveMilestones() {
 
     if (interactiveCharPity.bannerPullsCount >= 60 && !interactiveStats.milestone60Triggered) {
         interactiveStats.milestone60Triggered = true;
-        alert('Cột mốc 60 roll đạt được! Bạn nhận được 10 vé Dossier miễn phí cộng trực tiếp vào ví.');
-        interactiveCharTickets += 10;
+        alert('Cột mốc 60 roll đạt được! Bạn nhận được 10 vé Dossier miễn phí dành cho banner giới hạn tiếp theo!');
+        interactiveNextBannerDossierTickets += 10;
     }
 }
 
@@ -789,6 +806,7 @@ function initSimulatorControls() {
         'input-players',
         'input-banners',
         'input-start-tickets',
+        'input-start-weapon-tickets',
         'input-total-pulls',
         'input-base-char',
         'input-base-weapon'
@@ -835,6 +853,7 @@ function initSimulatorControls() {
         const numPlayers = Number(document.getElementById('input-players').value);
         const numBanners = Number(document.getElementById('input-banners').value);
         const startingCharTickets = Number(document.getElementById('input-start-tickets').value);
+        const startingWeaponTickets = Number(document.getElementById('input-start-weapon-tickets').value);
         const totalPulls = Number(document.getElementById('input-total-pulls').value);
         
         const baseChar = Number(document.getElementById('input-base-char').value);
@@ -858,6 +877,7 @@ function initSimulatorControls() {
                 numBanners,
                 totalPulls,
                 startingCharTickets,
+                startingWeaponTickets,
                 incomePerBanner,
                 weaponIncomeNonGacha,
                 strategyIds: ['save_commit', 'save_commit_single', 'yolo', 'pull_60', 'roll_meta']

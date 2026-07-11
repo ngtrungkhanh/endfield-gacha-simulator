@@ -10,7 +10,8 @@ export class SimulatorPlayer {
         // Tài nguyên nhân vật
         this.charTickets = 0;              // Số vé nhân vật hiện có (Oroberyl quy đổi)
         this.charTicketsDebt = 0;          // Nợ vé nhân vật (phải nạp tiền thêm) - giữ làm 0
-        this.nextBannerDossierTickets = 0; // Lượt roll Dossier miễn phí mang sang từ banner trước (mốc 60)
+        this.nextBannerDossierTickets = 0; // Lượt roll Dossier tích lũy được trong banner hiện tại (dành cho banner sau)
+        this.currentBannerDossierTickets = 0; // Lượt roll Dossier khả dụng ở banner hiện tại
         
         // Tiền tệ mới Bond Quota
         this.bondQuota = 0;                // Số dư Bond Quota hiện tại
@@ -80,9 +81,21 @@ export function processCharacterDuplicateAndQuota(player, result, bannerIdx) {
         return; // 4-Star không có Bond Quota
     }
 
-    if (player.ownedCharactersSet.has(charId)) {
-        // Đã sở hữu -> Trùng lặp (Dupe) -> Nhận Bond Quota
-        const quotaEarned = result.rarity === 6 ? 50 : 10;
+    let quotaEarned = 0;
+    if (result.rarity === 6) {
+        if (result.isFeatured || result.isLechLimited) {
+            if (player.ownedCharactersSet.has(charId)) {
+                quotaEarned = 50;
+            }
+        } else {
+            // Lệch Standard: mặc định luôn là dupe, luôn nhận 50 Quota!
+            quotaEarned = 50;
+        }
+    } else if (result.rarity === 5) {
+        quotaEarned = 10;
+    }
+
+    if (quotaEarned > 0) {
         player.bondQuota += quotaEarned;
         player.totalBondQuotaEarned += quotaEarned;
         
@@ -92,10 +105,10 @@ export function processCharacterDuplicateAndQuota(player, result, bannerIdx) {
             player.charTickets += ticketsExchanged;
             player.bondQuota -= ticketsExchanged * 25;
         }
-    } else {
-        // Sở hữu mới
-        player.ownedCharactersSet.add(charId);
     }
+
+    // Vẫn cập nhật ownedCharactersSet để tính toán thống kê Unique/Dupes
+    player.ownedCharactersSet.add(charId);
 }
 
 /**
@@ -183,9 +196,12 @@ function executeCharacterPullSequence(player, bannerState, targetPulls, stopOnFe
     let gotFeatured = gotFeaturedThisBanner;
     let currentBannerPulls = bannerState.bannerPullsCount; // Đã quay bao gồm 10 roll free
 
+    let milestone30Triggered = false;
+    let milestone60Triggered = false;
+
     // Định nghĩa hàm thực hiện một lượt pull lẻ
-    const executeSinglePull = (isUrgent = false) => {
-        const result = rollCharacter(bannerState, isUrgent);
+    const executeSinglePull = (isUrgent = false, force5Star = false) => {
+        const result = rollCharacter(bannerState, isUrgent, force5Star);
         pullsRecord.push(result);
         
         processCharacterDuplicateAndQuota(player, result, bannerIdx);
@@ -216,12 +232,32 @@ function executeCharacterPullSequence(player, bannerState, targetPulls, stopOnFe
         } else {
             player.totalCharPulls++;
             currentBannerPulls++;
+
+            // Kích hoạt mốc 30 roll Urgent Recruitment
+            if (currentBannerPulls >= 30 && !milestone30Triggered) {
+                milestone30Triggered = true;
+                let hasHighRarity = false;
+                for (let k = 0; k < 10; k++) {
+                    const force5Star = (k === 9 && !hasHighRarity);
+                    const res = executeSinglePull(true, force5Star); // Quay Urgent miễn phí, không bao giờ dừng!
+                    if (res && res.rarity >= 5) {
+                        hasHighRarity = true;
+                    }
+                }
+            }
+
+            // Nhận quà mốc 60 roll Dossier
+            if (currentBannerPulls >= 60 && !milestone60Triggered) {
+                milestone60Triggered = true;
+                player.nextBannerDossierTickets += 10;
+            }
         }
+        return result;
     };
 
     while (currentBannerPulls < targetPulls && (!stopOnFeatured || !gotFeatured)) {
         const pullsNeeded = targetPulls - currentBannerPulls;
-        const totalTicketsAvailable = player.nextBannerDossierTickets + player.charTickets;
+        const totalTicketsAvailable = player.currentBannerDossierTickets + player.charTickets;
 
         // Điều kiện để quay x10:
         // 1. Cần ít nhất 10 lượt quay nữa để đạt mốc mục tiêu.
@@ -239,8 +275,8 @@ function executeCharacterPullSequence(player, bannerState, targetPulls, stopOnFe
         if (canRoll10) {
             // Quay x10 (thực hiện liên tục 10 lần không ngắt quãng giữa chừng)
             for (let k = 0; k < 10; k++) {
-                if (player.nextBannerDossierTickets > 0) {
-                    player.nextBannerDossierTickets--;
+                if (player.currentBannerDossierTickets > 0) {
+                    player.currentBannerDossierTickets--;
                 } else if (player.charTickets > 0) {
                     player.charTickets--;
                 } else {
@@ -250,27 +286,14 @@ function executeCharacterPullSequence(player, bannerState, targetPulls, stopOnFe
             }
         } else {
             // Quay lẻ x1 (được gọi khi sát mốc pity/bảo hiểm để tiết kiệm vé)
-            if (player.nextBannerDossierTickets > 0) {
-                player.nextBannerDossierTickets--;
+            if (player.currentBannerDossierTickets > 0) {
+                player.currentBannerDossierTickets--;
             } else if (player.charTickets > 0) {
                 player.charTickets--;
             } else {
                 break;
             }
             executeSinglePull(false);
-        }
-
-        // Kích hoạt mốc 30 roll Urgent Recruitment
-        if (currentBannerPulls === 30) {
-            for (let k = 0; k < 10; k++) {
-                if (stopOnFeatured && gotFeatured) break;
-                executeSinglePull(true); // Quay Urgent miễn phí
-            }
-        }
-
-        // Nhận quà mốc 60 roll Dossier
-        if (currentBannerPulls === 60) {
-            player.nextBannerDossierTickets += 10;
         }
     }
 
@@ -282,10 +305,6 @@ function executeCharacterPullSequence(player, bannerState, targetPulls, stopOnFe
                 player.charTickets--;
                 executeSinglePull(false);
             }
-            for (let k = 0; k < 10; k++) {
-                if (stopOnFeatured && gotFeatured) break;
-                executeSinglePull(true);
-            }
         }
     }
 
@@ -296,7 +315,6 @@ function executeCharacterPullSequence(player, bannerState, targetPulls, stopOnFe
                 player.charTickets--;
                 executeSinglePull(false);
             }
-            player.nextBannerDossierTickets += 10;
         }
     }
 
@@ -336,7 +354,11 @@ function executeWeaponPullSequence(player, bannerState, totalArsenalTicketsEarne
             }
         });
 
-        if (result.milestoneReward === 'selector_box' || result.milestoneReward === 'featured_weapon') {
+        if (result.milestoneReward === 'selector_box') {
+            gotFeatured = true;
+            player.ownedFeaturedWeapons++;
+            player.weaponMilestoneSelectors++;
+        } else if (result.milestoneReward === 'featured_weapon') {
             gotFeatured = true;
             player.ownedFeaturedWeapons++;
         }
@@ -437,6 +459,10 @@ export function runSingleBannerForPlayer(strategyId, player, charBannerState, we
         throw new Error(`Strategy ${strategyId} is not defined.`);
     }
 
+    // Chuyển vé Dossier tích lũy từ mùa trước thành vé Dossier khả dụng mùa này
+    player.currentBannerDossierTickets = player.nextBannerDossierTickets;
+    player.nextBannerDossierTickets = 0;
+
     // Reset bộ đếm pulls trên banner cụ thể này
     charBannerState.bannerPullsCount = 0;
     charBannerState.pullsSinceFeatured = 0;
@@ -523,6 +549,26 @@ export function runSingleBannerForPlayer(strategyId, player, charBannerState, we
         if (shouldPull) {
             const res = executeCharacterPullSequence(player, charBannerState, 120, true, bannerIdx, gotFeaturedChar);
             pullsRecord = res.pullsRecord;
+            gotFeaturedChar = gotFeaturedChar || res.gotFeatured;
+        }
+    }
+
+    // Nếu chiến thuật quyết định bỏ qua (skip), nhưng người chơi vẫn đang có vé Dossier khả dụng (sắp hết hạn):
+    // Cưỡng chế thực hiện các lượt quay sử dụng vé Dossier để tránh lãng phí.
+    if (pullsRecord.length === 0 && player.currentBannerDossierTickets > 0) {
+        const res = executeCharacterPullSequence(player, charBannerState, 10 + player.currentBannerDossierTickets, true, bannerIdx, gotFeaturedChar, strategyId === 'save_commit_single');
+        pullsRecord = res.pullsRecord;
+        gotFeaturedChar = gotFeaturedChar || res.gotFeatured;
+    }
+
+    // TỐI ƯU MỐC 30: Nếu số lượt quay đã đạt từ 20 đến 29 (do có 10 free + 10 Dossier) và chưa ra Featured,
+    // người chơi sẽ bỏ thêm vé từ ví để đạt đúng mốc 30 roll nhằm lấy 10 roll Urgent Recruitment miễn phí.
+    const currentPullsCount = charBannerState.bannerPullsCount;
+    if (currentPullsCount >= 20 && currentPullsCount < 30 && !gotFeaturedChar) {
+        const neededTo30 = 30 - currentPullsCount;
+        if (player.charTickets >= neededTo30) {
+            const res = executeCharacterPullSequence(player, charBannerState, 30, true, bannerIdx, gotFeaturedChar, strategyId === 'save_commit_single');
+            pullsRecord.push(...res.pullsRecord);
             gotFeaturedChar = gotFeaturedChar || res.gotFeatured;
         }
     }

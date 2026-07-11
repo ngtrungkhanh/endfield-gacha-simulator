@@ -8,8 +8,21 @@
  * @param {boolean} isUrgent - Có phải lượt quay từ Urgent Recruitment (mốc 30) hay không
  * @returns {Object} Kết quả lượt quay { rarity: 4|5|6, isFeatured: boolean, isUrgent: boolean }
  */
-export function rollCharacter(state, isUrgent = false) {
+export function rollCharacter(state, isUrgent = false, force5Star = false) {
     if (isUrgent) {
+        if (force5Star) {
+            // Cưỡng chế ra 5★ trở lên (tỉ lệ 6★ là 0.8%, còn lại 5★)
+            const totalRate = 0.008 + 0.08;
+            const r = Math.random() * totalRate;
+            if (r < 0.008) {
+                const isFeatured = Math.random() < 0.5;
+                const isLechLimited = !isFeatured && (Math.random() < 0.10);
+                return { rarity: 6, isFeatured, isUrgent: true, isLechLimited };
+            } else {
+                return { rarity: 5, isFeatured: Math.random() < 0.5, isUrgent: true };
+            }
+        }
+
         // Urgent Recruitment: Tỉ lệ cơ bản, không tăng pity, không reset pity khi trúng
         const r = Math.random();
         if (r < 0.008) {
