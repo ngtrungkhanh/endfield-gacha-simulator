@@ -17197,22 +17197,25 @@
         }
       }, 50);
     });
-    document.getElementById("btn-reset-simulator").addEventListener("click", () => {
-      document.getElementById("input-players").value = 1e4;
-      document.getElementById("input-banners").value = 10;
-      document.getElementById("input-start-tickets").value = 80;
-      document.getElementById("input-start-weapon-tickets").value = 0;
-      document.getElementById("input-base-char").value = 36;
-      document.getElementById("input-base-weapon").value = 600;
-      document.getElementById("toggle-monthly").checked = true;
-      document.getElementById("toggle-bp").checked = true;
-      calculateVersionIncome();
-      saveSimulatorSettings();
-      try {
-        localStorage.removeItem(STORAGE_PREFIX + "last_results");
-      } catch (e) {
-      }
-    });
+    const resetSimBtn = document.getElementById("btn-reset-simulator");
+    if (resetSimBtn) {
+      resetSimBtn.addEventListener("click", () => {
+        document.getElementById("input-players").value = 1e4;
+        document.getElementById("input-banners").value = 10;
+        document.getElementById("input-start-tickets").value = 80;
+        document.getElementById("input-start-weapon-tickets").value = 0;
+        document.getElementById("input-base-char").value = 36;
+        document.getElementById("input-base-weapon").value = 600;
+        document.getElementById("toggle-monthly").checked = true;
+        document.getElementById("toggle-bp").checked = true;
+        calculateVersionIncome();
+        saveSimulatorSettings();
+        try {
+          localStorage.removeItem(STORAGE_PREFIX + "last_results");
+        } catch (e) {
+        }
+      });
+    }
   }
   function calculateVersionIncome() {
     const isBP = document.getElementById("toggle-bp").checked;
