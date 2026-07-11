@@ -14931,16 +14931,18 @@
     }
     return { pullsRecord, gotFeatured };
   }
-  function executeWeaponPullSequence(player, bannerState, totalArsenalTicketsEarned, gotFeaturedChar) {
+  function executeWeaponPullSequence(player, bannerState, totalArsenalTicketsEarned, gotFeaturedChar, maxSpend = Infinity) {
     player.arsenalTickets += totalArsenalTicketsEarned;
     if (!gotFeaturedChar) {
       return [];
     }
     const issuesRecord = [];
     let gotFeatured = false;
-    while (!gotFeatured && player.arsenalTickets >= 1980) {
+    let spent = 0;
+    while (!gotFeatured && player.arsenalTickets >= 1980 && spent + 1980 <= maxSpend) {
       player.arsenalTickets -= 1980;
       player.totalWeaponTicketsUsed += 1980;
+      spent += 1980;
       const result = rollWeaponIssue(bannerState);
       issuesRecord.push(result);
       player.totalWeaponPulls += 10;
@@ -15184,7 +15186,33 @@
       }
     } else if (strategyId === "roll_meta") {
       const isMeta = isMetaBanner(bannerIdx, totalBanners);
-      weaponIssues = executeWeaponPullSequence(player, weaponBannerState, totalArsenalTicketsEarned, gotFeaturedChar && isMeta);
+      if (isMeta) {
+        weaponIssues = executeWeaponPullSequence(player, weaponBannerState, totalArsenalTicketsEarned, gotFeaturedChar);
+      } else {
+        if (gotFeaturedChar) {
+          let nextMetaIdx = -1;
+          for (let idx = bannerIdx + 1; idx < totalBanners; idx++) {
+            if (isMetaBanner(idx, totalBanners)) {
+              nextMetaIdx = idx;
+              break;
+            }
+          }
+          if (nextMetaIdx !== -1) {
+            const bannersUntilMeta = nextMetaIdx - bannerIdx;
+            const expectedFutureEarnings = bannersUntilMeta * (weaponIncomeNonGacha + 860);
+            const maxSpend = player.arsenalTickets + totalArsenalTicketsEarned + expectedFutureEarnings - 15840;
+            if (maxSpend >= 1980) {
+              weaponIssues = executeWeaponPullSequence(player, weaponBannerState, totalArsenalTicketsEarned, gotFeaturedChar, maxSpend);
+            } else {
+              player.arsenalTickets += totalArsenalTicketsEarned;
+            }
+          } else {
+            weaponIssues = executeWeaponPullSequence(player, weaponBannerState, totalArsenalTicketsEarned, gotFeaturedChar);
+          }
+        } else {
+          player.arsenalTickets += totalArsenalTicketsEarned;
+        }
+      }
     } else {
       weaponIssues = executeWeaponPullSequence(player, weaponBannerState, totalArsenalTicketsEarned, gotFeaturedChar);
     }
