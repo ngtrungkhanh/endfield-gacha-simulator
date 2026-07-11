@@ -48,6 +48,10 @@ export function drawDistributionChart(canvasId, results, strategiesConfig) {
             border: '#ff6b00',
             bg: 'rgba(255, 107, 0, 0.6)'
         },
+        save_commit_single: {
+            border: '#2a9d8f',
+            bg: 'rgba(42, 157, 143, 0.6)'
+        },
         yolo: {
             border: '#0077b6',
             bg: 'rgba(0, 119, 182, 0.6)'
@@ -55,10 +59,6 @@ export function drawDistributionChart(canvasId, results, strategiesConfig) {
         pull_60: {
             border: '#9d4edd',
             bg: 'rgba(157, 78, 221, 0.6)'
-        },
-        '60_plus': {
-            border: '#00b4d8',
-            bg: 'rgba(0, 180, 216, 0.6)'
         },
         roll_meta: {
             border: '#ffb800',

@@ -121,6 +121,8 @@ export class MonteCarloSimulator {
         let sumWeaponPulls = 0;
         let sumWeaponDebt = 0;
         let sumWeaponSelectors = 0;
+        
+        let sumWeaponTicketsUsed = 0;
 
         // Cực trị (Hên nhất, Đen nhất)
         let maxFeaturedChars = -Infinity;
@@ -150,6 +152,8 @@ export class MonteCarloSimulator {
             sumWeaponPulls += player.totalWeaponPulls;
             sumWeaponDebt += player.arsenalTicketsDebt;
             sumWeaponSelectors += player.weaponMilestoneSelectors;
+            
+            sumWeaponTicketsUsed += player.totalWeaponTicketsUsed || 0;
 
             // Tính toán giá trị cực trị
             if (player.ownedFeaturedCharacters > maxFeaturedChars) maxFeaturedChars = player.ownedFeaturedCharacters;
@@ -202,6 +206,7 @@ export class MonteCarloSimulator {
             avgWeaponPulls: sumWeaponPulls / numPlayers,
             avgWeaponDebt: sumWeaponDebt / numPlayers,
             avgWeaponSelectors: sumWeaponSelectors / numPlayers,
+            avgWeaponTicketsUsed: sumWeaponTicketsUsed / numPlayers,
 
             // Cực trị vũ khí
             bestLuckWeapon: maxFeaturedWeapons,

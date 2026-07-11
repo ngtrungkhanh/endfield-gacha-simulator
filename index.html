@@ -91,13 +91,24 @@
                                     Vé nhân vật: <span class="amount" id="wallet-char-tickets">120</span>
                                 </div>
                                 <div class="wallet-item">
-                                    Vé vũ khí (Arsenal): <span class="amount" id="wallet-weapon-tickets">0</span>
+                                    Vé vũ khí: <span class="amount" id="wallet-weapon-tickets">0</span>
+                                </div>
+                                <div class="wallet-item">
+                                    Bond Quota: <span class="amount" id="wallet-bond-quota" style="color: #ffb800;">0</span>
                                 </div>
                             </div>
-                            <div class="pull-btns">
-                                <button class="btn-secondary" id="btn-char-pull1">Quay x1</button>
-                                <button class="btn-primary" id="btn-char-pull10">Quay x10</button>
-                                <button class="btn-secondary" id="btn-weapon-issue" style="border-color: var(--star-6); color: var(--star-6);">Quay Issue Vũ Khí (x10)</button>
+                            <div class="wallet-view" style="margin-top: 10px; border-top: 1px solid var(--border-color); padding-top: 10px;">
+                                <div class="wallet-item">
+                                    Vé Free Banner: <span class="amount" id="wallet-free-limited" style="color: var(--orange-primary);">10</span>
+                                </div>
+                            </div>
+                            <div class="pull-btns" style="margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap;">
+                                <button class="btn-secondary" id="btn-roll-free-limited" style="border-color: var(--orange-primary); color: var(--orange-primary); flex-grow: 1;">Quay Free Banner (x10 Free)</button>
+                            </div>
+                            <div class="pull-btns" style="margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap;">
+                                <button class="btn-secondary" id="btn-char-pull1" style="flex-grow: 1;">Quay x1</button>
+                                <button class="btn-primary" id="btn-char-pull10" style="flex-grow: 1;">Quay x10</button>
+                                <button class="btn-secondary" id="btn-weapon-issue" style="border-color: var(--star-6); color: var(--star-6); flex-grow: 1;">Quay Issue Vũ Khí (x10)</button>
                             </div>
                         </div>
                     </div>
@@ -156,8 +167,8 @@
                     <!-- Reference Docs link -->
                     <div class="ref-links-box">
                         <h4>Tài liệu liên quan</h4>
-                        <a href="file:///C:/Users/DELL/.gemini/antigravity/brain/ad3ec152-e6d1-4d19-8563-3cb25d5a5eae/gacha_rules_and_data.md" target="_blank">📄 Luật Gacha & Số liệu Bookkeeping</a>
-                        <a href="file:///C:/Users/DELL/.gemini/antigravity/brain/ad3ec152-e6d1-4d19-8563-3cb25d5a5eae/implementation_plan.md" target="_blank">📄 Kế hoạch triển khai</a>
+                        <a href="file:///C:/Users/DELL/.gemini/antigravity/brain/97330649-15f2-433b-9e57-d832eb5d7552/gacha_rules_and_data.md" target="_blank">📄 Luật Gacha & Số liệu Bookkeeping</a>
+                        <a href="file:///C:/Users/DELL/.gemini/antigravity/brain/97330649-15f2-433b-9e57-d832eb5d7552/implementation_plan.md" target="_blank">📄 Kế hoạch triển khai</a>
                     </div>
                 </aside>
             </div>
@@ -293,23 +304,24 @@
                             <thead>
                                 <tr>
                                     <th>Chiến thuật</th>
-                                    <th>Tổng Pull</th>
-                                    <th>Vé Dư</th>
+                                    <th title="Tổng số lượt quay nhân vật đã thực hiện (bao gồm cả banner thường và banner limited)">Tổng Pull Nhân Vật</th>
+                                    <th title="Số vé nhân vật còn dư lại trong ví sau khi kết thúc chuỗi giả lập">Vé Nhân Vật Dư</th>
                                     <th>Tổng 6★ Nhân Vật</th>
-                                    <th>Featured Nhân Vật</th>
                                     <th>Limited (New/Dupe)</th>
                                     <th>Lệch Limited</th>
                                     <th>Lệch Standard</th>
-                                    <th>Hiệu suất Pull</th>
-                                    <th>Hên / Đen</th>
+                                    <th title="Số lượt quay trung bình cần thiết để ra được 1 nhân vật Featured">Hiệu suất Pull</th>
+                                    <th title="Số lượng nhân vật Featured nhiều nhất / ít nhất một người chơi quay được trong đợt giả lập">Featured (Max/Min) ℹ️</th>
                                     <th>Vũ khí 6★ Featured</th>
                                     <th>Tổng Vũ khí 6★</th>
-                                    <th>Tỉ lệ sở hữu</th>
+                                    <th title="Tổng số lượt roll vũ khí đã thực hiện">Pull Vũ Khí Dùng</th>
+                                    <th title="Số lượt roll vũ khí còn dư lại quy đổi từ vé Arsenal">Pull Vũ Khí Dư</th>
+                                    <th title="Tỉ lệ phần trạng trung bình số nhân vật Featured độc nhất (Unique) sở hữu trên tổng số banner">Tỉ lệ sở hữu ℹ️</th>
                                 </tr>
                             </thead>
                             <tbody id="comparison-table-body">
                                 <tr>
-                                    <td colspan="13" style="text-align: center; color: var(--text-secondary); font-style: italic; padding: 30px;">
+                                    <td colspan="14" style="text-align: center; color: var(--text-secondary); font-style: italic; padding: 30px;">
                                         Nhấn nút "Chạy giả lập" để xem kết quả so sánh...
                                     </td>
                                 </tr>
@@ -322,12 +334,24 @@
                         <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 16px; color: var(--orange-primary);">Giải thích các Chiến thuật Gacha</h3>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; font-size: 13px; line-height: 1.6; color: var(--text-secondary);">
                             <div>
-                                <p style="margin-bottom: 12px;"><strong style="color: var(--text-white);">1. Tích luỹ an toàn (Save & Commit):</strong> Chỉ tiến hành quay nhân vật khi tích lũy đủ >= 120 vé (mốc chắc chắn ra). Khi quay sẽ quay đến khi ra Featured thì dừng lại. Vũ khí cũng chỉ quay khi tích đủ 8 Issues (15,840 vé) để đảm bảo 100% trúng vũ khí rate-up.</p>
-                                <p><strong style="color: var(--text-white);">2. Mốc 60 mỗi banner (Pull 60):</strong> Mỗi banner đều quay đúng 60 lượt (để lấy vé Headhunting Dossier x10 cho banner sau). Nếu ra nhân vật sớm vẫn tiếp tục quay đến mốc 60. Vũ khí tự động quay sạch Arsenal Tickets hiện có nếu trúng nhân vật.</p>
+                                <p style="margin-bottom: 12px;"><strong style="color: var(--text-white);">1. Tích lũy an toàn (Save & Commit):</strong> Quay cụm x10 (roll lẻ x1 khi pity &ge; 71 hoặc bảo hiểm &ge; 111), dừng khi ra Featured. Chỉ quay khi ví &ge; 110 vé. Vũ khí quay ở mốc 8 Issues.</p>
+                                <p style="margin-bottom: 12px;"><strong style="color: var(--text-white);">2. Save & Commit (Roll lẻ):</strong> Chỉ quay lẻ x1 từ đầu đến cuối banner (không quay x10), dừng khi ra Featured. Điều kiện tích vé và vũ khí giống Save & Commit.</p>
+                                <p><strong style="color: var(--text-white);">3. Spend All (Yolo / Có nhiêu chơi nhiêu):</strong> Có bao nhiêu vé nhân vật quay bấy nhiêu, dừng ngay khi trúng Featured. Vũ khí tự động quay sạch Arsenal Tickets hiện có nếu trúng nhân vật.</p>
                             </div>
                             <div>
-                                <p style="margin-bottom: 12px;"><strong style="color: var(--text-white);">3. Chiến thuật 60+ (60 Plus):</strong> Mỗi banner quay mốc 60. Nếu tại mốc 60 chưa ra Featured và số vé tích lũy còn lại trong túi lớn hơn hoặc bằng 80, sẽ tiếp tục quay lên 120 để chạm bảo hiểm (giúp bảo toàn 60 roll cho banner sau). Vũ khí quay nếu trúng nhân vật.</p>
-                                <p><strong style="color: var(--text-white);">4. Quay theo Meta (Roll Meta):</strong> Lựa chọn 30% số lượng banner làm banner Meta. Cố gắng tích lũy đủ 120 vé trước khi banner Meta bắt đầu. Các banner không Meta chỉ quay tối đa 60 vé nếu số dư túi đảm bảo đủ 120 vé cho banner Meta tiếp theo, ngược lại sẽ skip để tích lũy. Vũ khí chỉ quay ở banner Meta.</p>
+                                <p style="margin-bottom: 12px;"><strong style="color: var(--text-white);">4. Mốc 60 mỗi banner (Pull 60):</strong> Mỗi banner đều quay đúng 60 lượt (để lấy vé Dossier x10). Nếu ra nhân vật sớm vẫn tiếp tục quay đến mốc 60. Vũ khí quay nếu trúng nhân vật.</p>
+                                <p><strong style="color: var(--text-white);">5. Quay theo Meta (Roll Meta):</strong> Lựa chọn 30% số lượng banner làm banner Meta (quay tối đa 120 roll). Các banner không Meta khác sẽ quay theo Save & Commit nếu lượng vé còn dư đảm bảo tích đủ 120 roll cho banner Meta tiếp theo, ngược lại chỉ quay đúng 10 roll free. Vũ khí chỉ quay ở banner Meta.</p>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 16px; font-size: 12px; line-height: 1.5; color: var(--text-secondary); display: grid; grid-template-columns: 1fr 1fr; gap: 20px; width: 100%;">
+                            <div>
+                                <strong style="color: var(--orange-primary);">[i] Giải thích chỉ số Featured (Max/Min):</strong>
+                                <p>Thể hiện sự may mắn cực trị của người chơi trong toàn bộ đợt giả lập Monte Carlo. Số đầu tiên là lượng Featured nhiều nhất một người chơi nhận được, số thứ hai là lượng Featured ít nhất một người chơi quay được.</p>
+                            </div>
+                            <div>
+                                <strong style="color: var(--orange-primary);">[i] Giải thích chỉ số Tỉ lệ sở hữu:</strong>
+                                <p>Là tỷ lệ phần trăm trung bình số lượng nhân vật Featured độc nhất (Unique) sở hữu trên tổng số lượng banner đã diễn ra. Thể hiện khả năng lấp đầy bộ sưu tập nhân vật mới của người chơi.</p>
                             </div>
                         </div>
                     </div>

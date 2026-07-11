@@ -132,6 +132,30 @@
     });
     return tickets;
   }
+  function rollStandardCharacter(state) {
+    state.bannerPullsCount = (state.bannerPullsCount || 0) + 1;
+    state.pity6 = (state.pity6 || 0) + 1;
+    state.pity5 = (state.pity5 || 0) + 1;
+    let rate6 = 8e-3;
+    if (state.pity6 >= 80) {
+      rate6 = 1;
+    } else if (state.pity6 > 65) {
+      rate6 = 8e-3 + (state.pity6 - 65) * 0.05;
+    }
+    const r = Math.random();
+    if (r < rate6) {
+      state.pity6 = 0;
+      state.pity5 = 0;
+      return { rarity: 6, isFeatured: false, isUrgent: false, isLechLimited: false };
+    }
+    const isGuaranteed5 = state.pity5 >= 10;
+    const rate5 = isGuaranteed5 ? 1 : 0.08;
+    if (Math.random() < rate5) {
+      state.pity5 = 0;
+      return { rarity: 5, isFeatured: false, isUrgent: false };
+    }
+    return { rarity: 4, isFeatured: false, isUrgent: false };
+  }
 
   // js/strategies.js
   var SimulatorPlayer = class {
@@ -140,8 +164,17 @@
       this.charTickets = 0;
       this.charTicketsDebt = 0;
       this.nextBannerDossierTickets = 0;
+      this.bondQuota = 0;
+      this.totalBondQuotaEarned = 0;
+      this.ownedCharactersSet = /* @__PURE__ */ new Set();
+      this.standardCharPity = {
+        pity6: 0,
+        pity5: 0,
+        bannerPullsCount: 0
+      };
       this.arsenalTickets = 0;
       this.arsenalTicketsDebt = 0;
+      this.totalWeaponTicketsUsed = 0;
       this.ownedFeaturedCharacters = 0;
       this.ownedFeaturedUnique = 0;
       this.ownedFeaturedDupes = 0;
@@ -157,6 +190,92 @@
       this.weaponMilestoneSelectors = 0;
     }
   };
+  var STANDARD_6STAR_POOL = ["std_6_1", "std_6_2", "std_6_3", "std_6_4", "std_6_5", "std_6_6"];
+  var LECH_LIMITED_6STAR_POOL = ["lim_6_1", "lim_6_2", "lim_6_3"];
+  var CHAR_5STAR_POOL = Array.from({ length: 15 }, (_, i) => `char_5_${i + 1}`);
+  function processCharacterDuplicateAndQuota(player, result, bannerIdx) {
+    let charId = "";
+    if (result.rarity === 6) {
+      if (result.isFeatured) {
+        charId = `featured_char_banner_${bannerIdx}`;
+      } else {
+        if (result.isLechLimited) {
+          const randIdx = Math.floor(Math.random() * LECH_LIMITED_6STAR_POOL.length);
+          charId = LECH_LIMITED_6STAR_POOL[randIdx];
+        } else {
+          const randIdx = Math.floor(Math.random() * STANDARD_6STAR_POOL.length);
+          charId = STANDARD_6STAR_POOL[randIdx];
+        }
+      }
+    } else if (result.rarity === 5) {
+      const randIdx = Math.floor(Math.random() * CHAR_5STAR_POOL.length);
+      charId = CHAR_5STAR_POOL[randIdx];
+    } else {
+      return;
+    }
+    if (player.ownedCharactersSet.has(charId)) {
+      const quotaEarned = result.rarity === 6 ? 50 : 10;
+      player.bondQuota += quotaEarned;
+      player.totalBondQuotaEarned += quotaEarned;
+      if (player.bondQuota >= 25) {
+        const ticketsExchanged = Math.floor(player.bondQuota / 25);
+        player.charTickets += ticketsExchanged;
+        player.bondQuota -= ticketsExchanged * 25;
+      }
+    } else {
+      player.ownedCharactersSet.add(charId);
+    }
+  }
+  function executeStandardBannerRolls(player, rollsCount, bannerIdx) {
+    const pullsRecord = [];
+    for (let i = 0; i < rollsCount; i++) {
+      const result = rollStandardCharacter(player.standardCharPity);
+      pullsRecord.push(result);
+      processCharacterDuplicateAndQuota(player, result, bannerIdx);
+      if (result.rarity === 6) {
+        player.ownedStandard6Stars++;
+      } else if (result.rarity === 5) {
+        player.owned5Stars++;
+      }
+      player.totalCharPulls++;
+    }
+    return pullsRecord;
+  }
+  function executeFreeLimitedRolls(player, bannerState, bannerIdx) {
+    const pullsRecord = [];
+    let gotFeatured = false;
+    let gotFeaturedThisBanner = false;
+    const executeSinglePull = () => {
+      const result = rollCharacter(bannerState, false);
+      pullsRecord.push(result);
+      processCharacterDuplicateAndQuota(player, result, bannerIdx);
+      if (result.rarity === 6) {
+        if (result.isFeatured) {
+          gotFeatured = true;
+          player.ownedFeaturedCharacters++;
+          if (!gotFeaturedThisBanner) {
+            player.ownedFeaturedUnique++;
+            gotFeaturedThisBanner = true;
+          } else {
+            player.ownedFeaturedDupes++;
+          }
+        } else {
+          if (result.isLechLimited) {
+            player.ownedLechLimited++;
+          } else {
+            player.ownedStandard6Stars++;
+          }
+        }
+      } else if (result.rarity === 5) {
+        player.owned5Stars++;
+      }
+      player.totalCharPulls++;
+    };
+    for (let i = 0; i < 10; i++) {
+      executeSinglePull();
+    }
+    return { pullsRecord, gotFeatured };
+  }
   var isMetaBanner = (bannerIdx, totalBanners) => {
     const numMeta = Math.floor(totalBanners * 0.3);
     if (numMeta <= 0) return false;
@@ -167,16 +286,14 @@
     }
     return false;
   };
-  function executeCharacterPullSequence(player, bannerState, targetPulls, stopOnFeatured) {
-    let dossierPullsLeft = player.nextBannerDossierTickets;
-    player.nextBannerDossierTickets = 0;
+  function executeCharacterPullSequence(player, bannerState, targetPulls, stopOnFeatured, bannerIdx, gotFeaturedThisBanner = false, forceSingleRoll = false) {
     const pullsRecord = [];
-    let gotFeatured = false;
-    let currentBannerPulls = 0;
-    let gotFeaturedThisBanner = false;
+    let gotFeatured = gotFeaturedThisBanner;
+    let currentBannerPulls = bannerState.bannerPullsCount;
     const executeSinglePull = (isUrgent = false) => {
       const result = rollCharacter(bannerState, isUrgent);
       pullsRecord.push(result);
+      processCharacterDuplicateAndQuota(player, result, bannerIdx);
       if (result.rarity === 6) {
         if (result.isFeatured) {
           gotFeatured = true;
@@ -205,14 +322,29 @@
       }
     };
     while (currentBannerPulls < targetPulls && (!stopOnFeatured || !gotFeatured)) {
-      if (dossierPullsLeft > 0) {
-        dossierPullsLeft--;
-        executeSinglePull(false);
-      } else if (player.charTickets > 0) {
-        player.charTickets--;
-        executeSinglePull(false);
+      const pullsNeeded = targetPulls - currentBannerPulls;
+      const totalTicketsAvailable = player.nextBannerDossierTickets + player.charTickets;
+      const canRoll10 = !forceSingleRoll && pullsNeeded >= 10 && totalTicketsAvailable >= 10 && bannerState.pity6 < 71 && bannerState.pullsSinceFeatured < 111 && (!stopOnFeatured || !gotFeatured);
+      if (canRoll10) {
+        for (let k = 0; k < 10; k++) {
+          if (player.nextBannerDossierTickets > 0) {
+            player.nextBannerDossierTickets--;
+          } else if (player.charTickets > 0) {
+            player.charTickets--;
+          } else {
+            break;
+          }
+          executeSinglePull(false);
+        }
       } else {
-        break;
+        if (player.nextBannerDossierTickets > 0) {
+          player.nextBannerDossierTickets--;
+        } else if (player.charTickets > 0) {
+          player.charTickets--;
+        } else {
+          break;
+        }
+        executeSinglePull(false);
       }
       if (currentBannerPulls === 30) {
         for (let k = 0; k < 10; k++) {
@@ -258,6 +390,7 @@
     let gotFeatured = false;
     while (!gotFeatured && player.arsenalTickets >= 1980) {
       player.arsenalTickets -= 1980;
+      player.totalWeaponTicketsUsed += 1980;
       const result = rollWeaponIssue(bannerState);
       issuesRecord.push(result);
       player.totalWeaponPulls += 10;
@@ -289,20 +422,21 @@
       name: "Save & Commit",
       desc: "Nh\xE2n v\u1EADt: Ch\u1EC9 quay khi t\xEDch \u0111\u1EE7 >= 120 v\xE9 (ch\u1EAFc ch\u1EAFn ra). Khi quay s\u1EBD quay \u0111\u1EBFn khi ra Featured th\xEC d\u1EEBng l\u1EA1i. V\u0169 kh\xED: Ch\u1EC9 quay khi t\xEDch l\u0169y \u0111\u1EE7 8 Issues (15,840 v\xE9) \u0111\u1EC3 \u0111\u1EA3m b\u1EA3o 100% tr\xFAng v\u0169 kh\xED rate-up.",
       runCharacterPull(player, bannerState, ticketIncome, bannerIdx, totalBanners) {
-        player.charTickets += ticketIncome;
-        let dossierPullsLeft = player.nextBannerDossierTickets;
-        if (player.charTickets + dossierPullsLeft < 120) {
-          return [];
-        }
-        const res = executeCharacterPullSequence(player, bannerState, 120, true);
-        return res.pullsRecord;
+        return [];
       },
       runWeaponPull(player, bannerState, totalArsenalTicketsEarned, gotFeaturedChar, bannerIdx, totalBanners) {
-        player.arsenalTickets += totalArsenalTicketsEarned;
-        if (!gotFeaturedChar || player.arsenalTickets < 15840) {
-          return [];
-        }
-        return executeWeaponPullSequence(player, bannerState, 0, gotFeaturedChar);
+        return [];
+      }
+    },
+    save_commit_single: {
+      id: "save_commit_single",
+      name: "Save & Commit (Roll l\u1EBB)",
+      desc: "Nh\xE2n v\u1EADt: Ch\u1EC9 quay l\u1EBB x1 t\u1EEB \u0111\u1EA7u \u0111\u1EBFn cu\u1ED1i khi t\xEDch \u0111\u1EE7 >= 120 v\xE9 (ch\u1EAFc ch\u1EAFn ra), d\u1EEBng ngay khi ra Featured. V\u0169 kh\xED: Ch\u1EC9 quay khi t\xEDch l\u0169y \u0111\u1EE7 8 Issues (15,840 v\xE9).",
+      runCharacterPull(player, bannerState, ticketIncome, bannerIdx, totalBanners) {
+        return [];
+      },
+      runWeaponPull(player, bannerState, totalArsenalTicketsEarned, gotFeaturedChar, bannerIdx, totalBanners) {
+        return [];
       }
     },
     // ----------------------------------------------------------------
@@ -313,12 +447,10 @@
       name: "Yolo / Spend All",
       desc: "Nh\xE2n v\u1EADt: C\u1EE9 c\xF3 bao nhi\xEAu v\xE9 l\xE0 quay h\u1EBFt, nh\u01B0ng d\u1EEBng l\u1EA1i ngay l\u1EADp t\u1EE9c n\u1EBFu tr\xFAng nh\xE2n v\u1EADt Featured. V\u0169 kh\xED: Quay v\u0169 kh\xED n\u1EBFu tr\xFAng nh\xE2n v\u1EADt.",
       runCharacterPull(player, bannerState, ticketIncome, bannerIdx, totalBanners) {
-        player.charTickets += ticketIncome;
-        const res = executeCharacterPullSequence(player, bannerState, Infinity, true);
-        return res.pullsRecord;
+        return [];
       },
       runWeaponPull(player, bannerState, totalArsenalTicketsEarned, gotFeaturedChar, bannerIdx, totalBanners) {
-        return executeWeaponPullSequence(player, bannerState, totalArsenalTicketsEarned, gotFeaturedChar);
+        return [];
       }
     },
     // ----------------------------------------------------------------
@@ -329,186 +461,24 @@
       name: "Pull 60",
       desc: "Nh\xE2n v\u1EADt: Ch\u1EC9 quay khi t\xEDnh \u0111\u1EE7 60 l\u01B0\u1EE3t (\u0111\u1EC3 l\u1EA5y v\xE9 Dossier x10). N\u1EBFu kh\xF4ng \u0111\u1EE7 60, c\u1ED1 ch\u1EA1m m\u1ED1c 30 \u0111\u1EC3 nh\u1EADn Urgent free, ng\u01B0\u1EE3c l\u1EA1i s\u1EBD skip \u0111\u1EC3 tr\u1EEF v\xE9. V\u0169 kh\xED: Quay v\u0169 kh\xED n\u1EBFu tr\xFAng nh\xE2n v\u1EADt.",
       runCharacterPull(player, bannerState, ticketIncome, bannerIdx, totalBanners) {
-        player.charTickets += ticketIncome;
-        let dossierPullsLeft = player.nextBannerDossierTickets;
-        const totalTickets = player.charTickets + dossierPullsLeft;
-        let targetPulls = 0;
-        if (totalTickets >= 60) {
-          targetPulls = 60;
-        } else if (totalTickets >= 30) {
-          targetPulls = 30;
-        } else {
-          targetPulls = 0;
-        }
-        if (targetPulls === 0) {
-          return [];
-        }
-        const res = executeCharacterPullSequence(player, bannerState, targetPulls, false);
-        return res.pullsRecord;
+        return [];
       },
       runWeaponPull(player, bannerState, totalArsenalTicketsEarned, gotFeaturedChar, bannerIdx, totalBanners) {
-        return executeWeaponPullSequence(player, bannerState, totalArsenalTicketsEarned, gotFeaturedChar);
+        return [];
       }
     },
     // ----------------------------------------------------------------
-    // Chiến thuật 4: Chiến thuật 60+ (Tấn công khi có đệm)
-    // ----------------------------------------------------------------
-    "60_plus": {
-      id: "60_plus",
-      name: "Chi\u1EBFn thu\u1EADt 60+",
-      desc: "Nh\xE2n v\u1EADt: T\u01B0\u01A1ng t\u1EF1 m\u1ED1c 60, n\u1EBFu t\u1EA1i m\u1ED1c 60 ch\u01B0a ra Featured v\xE0 t\xFAi c\xF2n >= 80 v\xE9, ti\u1EBFp t\u1EE5c quay l\xEAn 120 \u0111\u1EC3 ch\u1EA1m b\u1EA3o hi\u1EC3m. V\u0169 kh\xED: Quay v\u0169 kh\xED n\u1EBFu tr\xFAng nh\xE2n v\u1EADt.",
-      runCharacterPull(player, bannerState, ticketIncome, bannerIdx, totalBanners) {
-        player.charTickets += ticketIncome;
-        let dossierPullsLeft = player.nextBannerDossierTickets;
-        const totalTickets = player.charTickets + dossierPullsLeft;
-        let targetPulls = 0;
-        let stopOnFeatured = false;
-        if (totalTickets >= 60) {
-          targetPulls = 60;
-        } else if (totalTickets >= 30) {
-          targetPulls = 30;
-        } else {
-          targetPulls = 0;
-        }
-        if (targetPulls <= 0) {
-          return [];
-        }
-        player.nextBannerDossierTickets = 0;
-        const pullsRecord = [];
-        let gotFeatured = false;
-        let currentBannerPulls = 0;
-        let gotFeaturedThisBanner = false;
-        const executeSinglePull = (isUrgent = false) => {
-          const result = rollCharacter(bannerState, isUrgent);
-          pullsRecord.push(result);
-          if (result.rarity === 6) {
-            if (result.isFeatured) {
-              gotFeatured = true;
-              player.ownedFeaturedCharacters++;
-              if (!gotFeaturedThisBanner) {
-                player.ownedFeaturedUnique++;
-                gotFeaturedThisBanner = true;
-              } else {
-                player.ownedFeaturedDupes++;
-              }
-            } else {
-              if (result.isLechLimited) {
-                player.ownedLechLimited++;
-              } else {
-                player.ownedStandard6Stars++;
-              }
-            }
-          } else if (result.rarity === 5) {
-            player.owned5Stars++;
-          }
-          if (isUrgent) {
-            player.totalUrgentPulls++;
-          } else {
-            player.totalCharPulls++;
-            currentBannerPulls++;
-          }
-        };
-        while (currentBannerPulls < targetPulls && (!stopOnFeatured || !gotFeatured)) {
-          if (dossierPullsLeft > 0) {
-            dossierPullsLeft--;
-            executeSinglePull(false);
-          } else if (player.charTickets > 0) {
-            player.charTickets--;
-            executeSinglePull(false);
-          } else {
-            break;
-          }
-          if (currentBannerPulls === 30) {
-            for (let k = 0; k < 10; k++) {
-              if (stopOnFeatured && gotFeatured) break;
-              executeSinglePull(true);
-            }
-          }
-          if (currentBannerPulls === 60) {
-            player.nextBannerDossierTickets += 10;
-            if (!gotFeatured && player.charTickets >= 80) {
-              targetPulls = 120;
-              stopOnFeatured = true;
-            }
-          }
-        }
-        if (currentBannerPulls > 20 && currentBannerPulls < 30) {
-          const extraNeeded = 30 - currentBannerPulls;
-          if (player.charTickets >= extraNeeded) {
-            for (let i = 0; i < extraNeeded; i++) {
-              player.charTickets--;
-              executeSinglePull(false);
-            }
-            for (let k = 0; k < 10; k++) {
-              if (stopOnFeatured && gotFeatured) break;
-              executeSinglePull(true);
-            }
-          }
-        }
-        if (currentBannerPulls > 50 && currentBannerPulls < 60) {
-          const extraNeeded = 60 - currentBannerPulls;
-          if (player.charTickets >= extraNeeded) {
-            for (let i = 0; i < extraNeeded; i++) {
-              player.charTickets--;
-              executeSinglePull(false);
-            }
-            player.nextBannerDossierTickets += 10;
-          }
-        }
-        return pullsRecord;
-      },
-      runWeaponPull(player, bannerState, totalArsenalTicketsEarned, gotFeaturedChar, bannerIdx, totalBanners) {
-        return executeWeaponPullSequence(player, bannerState, totalArsenalTicketsEarned, gotFeaturedChar);
-      }
-    },
-    // ----------------------------------------------------------------
-    // Chiến thuật 5: Quay theo Meta (Roll Meta)
+    // Chiến thuật 4: Quay theo Meta (Roll Meta)
     // ----------------------------------------------------------------
     roll_meta: {
       id: "roll_meta",
       name: "Roll Meta",
-      desc: "Nh\xE2n v\u1EADt: 30% s\u1ED1 banner l\xE0 Meta. C\u1ED1 g\u1EAFng t\xEDch 120 v\xE9 tr\u01B0\u1EDBc banner Meta. C\xE1c banner kh\xF4ng Meta quay m\u1ED1c 60 n\u1EBFu t\xFAi c\xF2n \u0111\u1EE7 120 v\xE9 d\u1EF1 ph\xF2ng cho banner Meta ti\u1EBFp theo, ng\u01B0\u1EE3c l\u1EA1i s\u1EBD skip \u0111\u1EC3 t\xEDch l\u0169y. V\u0169 kh\xED: Ch\u1EC9 quay v\u0169 kh\xED \u1EDF banner Meta.",
+      desc: "Nh\xE2n v\u1EADt: 30% s\u1ED1 banner l\xE0 Meta (quay t\u1ED1i \u0111a 120 roll). C\xE1c banner th\u01B0\u1EDDng kh\xE1c quay theo Save & Commit (ch\u1EC9 x\u1EA3 v\xE9 khi t\xEDch \u0111\u1EE7 b\u1EA3o hi\u1EC3m 120 roll v\xE0 b\u1EA3o \u0111\u1EA3m sau khi quay xong v\u1EABn t\xEDch \u0111\u1EE7 b\u1EA3o hi\u1EC3m 120 roll cho banner Meta ti\u1EBFp theo, ng\u01B0\u1EE3c l\u1EA1i ch\u1EC9 quay 10 roll free). V\u0169 kh\xED: Ch\u1EC9 quay v\u0169 kh\xED \u1EDF banner Meta.",
       runCharacterPull(player, bannerState, ticketIncome, bannerIdx, totalBanners) {
-        player.charTickets += ticketIncome;
-        const isMeta = isMetaBanner(bannerIdx, totalBanners);
-        let targetPulls = 0;
-        let stopOnFeatured = false;
-        if (isMeta) {
-          targetPulls = 120;
-          stopOnFeatured = true;
-        } else {
-          let nextMetaIdx = -1;
-          for (let idx = bannerIdx + 1; idx < totalBanners; idx++) {
-            if (isMetaBanner(idx, totalBanners)) {
-              nextMetaIdx = idx;
-              break;
-            }
-          }
-          if (nextMetaIdx !== -1) {
-            const bannersUntilMeta = nextMetaIdx - bannerIdx;
-            const expectedEarnings = bannersUntilMeta * ticketIncome;
-            const neededAfterThis = 120 - expectedEarnings;
-            const maxSpendable = player.charTickets - Math.max(0, neededAfterThis);
-            if (maxSpendable > 0) {
-              targetPulls = Math.min(60, maxSpendable);
-              stopOnFeatured = false;
-            } else {
-              targetPulls = 0;
-            }
-          } else {
-            targetPulls = 60;
-            stopOnFeatured = false;
-          }
-        }
-        if (targetPulls <= 0) {
-          return [];
-        }
-        const res = executeCharacterPullSequence(player, bannerState, targetPulls, stopOnFeatured);
-        return res.pullsRecord;
+        return [];
       },
       runWeaponPull(player, bannerState, totalArsenalTicketsEarned, gotFeaturedChar, bannerIdx, totalBanners) {
-        const isMeta = isMetaBanner(bannerIdx, totalBanners);
-        return executeWeaponPullSequence(player, bannerState, totalArsenalTicketsEarned, gotFeaturedChar && isMeta);
+        return [];
       }
     }
   };
@@ -521,13 +491,90 @@
     charBannerState.pullsSinceFeatured = 0;
     weaponBannerState.issuesCount = 0;
     weaponBannerState.issuesSinceFeatured = 0;
-    const charPulls = strategy.runCharacterPull(player, charBannerState, ticketIncome, bannerIdx, totalBanners);
-    const arsenalTicketsRebate = calculateArsenalTicketsRebate(charPulls);
+    player.charTickets += ticketIncome;
+    const stdPulls = executeStandardBannerRolls(player, 15, bannerIdx);
+    const freeLimResults = executeFreeLimitedRolls(player, charBannerState, bannerIdx);
+    let gotFeaturedChar = freeLimResults.gotFeatured;
+    const allCharPulls = [...freeLimResults.pullsRecord];
+    let pullsRecord = [];
+    if (strategyId === "save_commit") {
+      if (player.charTickets >= 110) {
+        const res = executeCharacterPullSequence(player, charBannerState, 120, true, bannerIdx, gotFeaturedChar);
+        pullsRecord = res.pullsRecord;
+        gotFeaturedChar = gotFeaturedChar || res.gotFeatured;
+      }
+    } else if (strategyId === "save_commit_single") {
+      if (player.charTickets >= 110) {
+        const res = executeCharacterPullSequence(player, charBannerState, 120, true, bannerIdx, gotFeaturedChar, true);
+        pullsRecord = res.pullsRecord;
+        gotFeaturedChar = gotFeaturedChar || res.gotFeatured;
+      }
+    } else if (strategyId === "yolo") {
+      const res = executeCharacterPullSequence(player, charBannerState, Infinity, true, bannerIdx, gotFeaturedChar);
+      pullsRecord = res.pullsRecord;
+      gotFeaturedChar = gotFeaturedChar || res.gotFeatured;
+    } else if (strategyId === "pull_60") {
+      let targetPulls = 0;
+      if (player.charTickets >= 50) {
+        targetPulls = 60;
+      } else if (player.charTickets >= 20) {
+        targetPulls = 30;
+      }
+      if (targetPulls > 0) {
+        const res = executeCharacterPullSequence(player, charBannerState, targetPulls, false, bannerIdx, gotFeaturedChar);
+        pullsRecord = res.pullsRecord;
+        gotFeaturedChar = gotFeaturedChar || res.gotFeatured;
+      }
+    } else if (strategyId === "roll_meta") {
+      const isMeta = isMetaBanner(bannerIdx, totalBanners);
+      let shouldPull = false;
+      if (isMeta) {
+        shouldPull = true;
+      } else {
+        let nextMetaIdx = -1;
+        for (let idx = bannerIdx + 1; idx < totalBanners; idx++) {
+          if (isMetaBanner(idx, totalBanners)) {
+            nextMetaIdx = idx;
+            break;
+          }
+        }
+        if (nextMetaIdx !== -1) {
+          const bannersUntilMeta = nextMetaIdx - bannerIdx;
+          const expectedEarnings = bannersUntilMeta * ticketIncome;
+          const neededAfterThis = 110 - expectedEarnings;
+          if (player.charTickets >= 110 + Math.max(0, neededAfterThis)) {
+            shouldPull = true;
+          }
+        } else {
+          if (player.charTickets >= 110) {
+            shouldPull = true;
+          }
+        }
+      }
+      if (shouldPull) {
+        const res = executeCharacterPullSequence(player, charBannerState, 120, true, bannerIdx, gotFeaturedChar);
+        pullsRecord = res.pullsRecord;
+        gotFeaturedChar = gotFeaturedChar || res.gotFeatured;
+      }
+    }
+    allCharPulls.push(...pullsRecord);
+    const totalCharRollsThisBanner = [...stdPulls, ...allCharPulls];
+    const arsenalTicketsRebate = calculateArsenalTicketsRebate(totalCharRollsThisBanner);
     const totalArsenalTicketsEarned = arsenalTicketsRebate + weaponIncomeNonGacha;
-    const gotFeaturedChar = charPulls.some((p) => p.rarity === 6 && p.isFeatured);
-    const weaponIssues = strategy.runWeaponPull(player, weaponBannerState, totalArsenalTicketsEarned, gotFeaturedChar, bannerIdx, totalBanners);
+    let weaponIssues = [];
+    if (strategyId === "save_commit" || strategyId === "save_commit_single") {
+      player.arsenalTickets += totalArsenalTicketsEarned;
+      if (gotFeaturedChar && player.arsenalTickets >= 15840) {
+        weaponIssues = executeWeaponPullSequence(player, weaponBannerState, 0, gotFeaturedChar);
+      }
+    } else if (strategyId === "roll_meta") {
+      const isMeta = isMetaBanner(bannerIdx, totalBanners);
+      weaponIssues = executeWeaponPullSequence(player, weaponBannerState, totalArsenalTicketsEarned, gotFeaturedChar && isMeta);
+    } else {
+      weaponIssues = executeWeaponPullSequence(player, weaponBannerState, totalArsenalTicketsEarned, gotFeaturedChar);
+    }
     return {
-      charPulls,
+      charPulls: allCharPulls,
       weaponIssues
     };
   }
@@ -626,6 +673,7 @@
       let sumWeaponPulls = 0;
       let sumWeaponDebt = 0;
       let sumWeaponSelectors = 0;
+      let sumWeaponTicketsUsed = 0;
       let maxFeaturedChars = -Infinity;
       let minFeaturedChars = Infinity;
       let maxFeaturedWeapons = -Infinity;
@@ -649,6 +697,7 @@
         sumWeaponPulls += player.totalWeaponPulls;
         sumWeaponDebt += player.arsenalTicketsDebt;
         sumWeaponSelectors += player.weaponMilestoneSelectors;
+        sumWeaponTicketsUsed += player.totalWeaponTicketsUsed || 0;
         if (player.ownedFeaturedCharacters > maxFeaturedChars) maxFeaturedChars = player.ownedFeaturedCharacters;
         if (player.ownedFeaturedCharacters < minFeaturedChars) minFeaturedChars = player.ownedFeaturedCharacters;
         if (player.ownedFeaturedWeapons > maxFeaturedWeapons) maxFeaturedWeapons = player.ownedFeaturedWeapons;
@@ -688,6 +737,7 @@
         avgWeaponPulls: sumWeaponPulls / numPlayers,
         avgWeaponDebt: sumWeaponDebt / numPlayers,
         avgWeaponSelectors: sumWeaponSelectors / numPlayers,
+        avgWeaponTicketsUsed: sumWeaponTicketsUsed / numPlayers,
         // Cực trị vũ khí
         bestLuckWeapon: maxFeaturedWeapons,
         worstLuckWeapon: minFeaturedWeapons,
@@ -725,6 +775,10 @@
         border: "#ff6b00",
         bg: "rgba(255, 107, 0, 0.6)"
       },
+      save_commit_single: {
+        border: "#2a9d8f",
+        bg: "rgba(42, 157, 143, 0.6)"
+      },
       yolo: {
         border: "#0077b6",
         bg: "rgba(0, 119, 182, 0.6)"
@@ -732,10 +786,6 @@
       pull_60: {
         border: "#9d4edd",
         bg: "rgba(157, 78, 221, 0.6)"
-      },
-      "60_plus": {
-        border: "#00b4d8",
-        bg: "rgba(0, 180, 216, 0.6)"
       },
       roll_meta: {
         border: "#ffb800",
@@ -951,7 +1001,10 @@
   // js/app.js
   var interactiveCharTickets = 120;
   var interactiveWeaponTickets = 0;
+  var interactiveBondQuota = 0;
+  var interactiveFreeLimitedTickets = 10;
   var interactiveInventory = [];
+  var interactiveOwnedCharactersSet = /* @__PURE__ */ new Set();
   var interactiveCharPity = {
     pity6: 0,
     pity5: 0,
@@ -979,19 +1032,26 @@
     weapTicketsAccumulated: 0,
     weapIssues: 0,
     weap6star: 0,
-    weapSelectors: 0
+    weapSelectors: 0,
+    weapTicketsUsed: 0
   };
+  var STANDARD_6STAR_POOL2 = ["std_6_1", "std_6_2", "std_6_3", "std_6_4", "std_6_5", "std_6_6"];
+  var LECH_LIMITED_6STAR_POOL2 = ["lim_6_1", "lim_6_2", "lim_6_3"];
+  var CHAR_5STAR_POOL2 = Array.from({ length: 15 }, (_, i) => `char_5_${i + 1}`);
   var STORAGE_PREFIX = "a9e_gacha_";
-  var SCHEMA_VERSION = "1.1";
+  var SCHEMA_VERSION = "1.3";
   function saveInteractiveState() {
     try {
       const state = {
         version: SCHEMA_VERSION,
         charTickets: interactiveCharTickets,
         weaponTickets: interactiveWeaponTickets,
+        bondQuota: interactiveBondQuota,
+        freeLimited: interactiveFreeLimitedTickets,
         charPity: interactiveCharPity,
         weaponPity: interactiveWeaponPity,
-        stats: interactiveStats
+        stats: interactiveStats,
+        ownedCharacters: Array.from(interactiveOwnedCharactersSet)
       };
       localStorage.setItem(STORAGE_PREFIX + "interactive_state", JSON.stringify(state));
       localStorage.setItem(STORAGE_PREFIX + "interactive_inventory", JSON.stringify(interactiveInventory));
@@ -1008,9 +1068,12 @@
         if (state.version === SCHEMA_VERSION) {
           interactiveCharTickets = state.charTickets;
           interactiveWeaponTickets = state.weaponTickets;
+          interactiveBondQuota = state.bondQuota || 0;
+          interactiveFreeLimitedTickets = state.freeLimited !== void 0 ? state.freeLimited : 10;
           Object.assign(interactiveCharPity, state.charPity);
           Object.assign(interactiveWeaponPity, state.weaponPity);
           Object.assign(interactiveStats, state.stats);
+          interactiveOwnedCharactersSet = new Set(state.ownedCharacters || []);
         } else {
           console.warn("Storage version mismatch. Resetting state.");
           localStorage.removeItem(STORAGE_PREFIX + "interactive_state");
@@ -1138,6 +1201,11 @@
   function updateInteractiveUI() {
     document.getElementById("wallet-char-tickets").innerText = interactiveCharTickets;
     document.getElementById("wallet-weapon-tickets").innerText = interactiveWeaponTickets;
+    document.getElementById("wallet-bond-quota").innerText = interactiveBondQuota;
+    document.getElementById("wallet-free-limited").innerText = interactiveFreeLimitedTickets;
+    const btnFreeLim = document.getElementById("btn-roll-free-limited");
+    btnFreeLim.innerText = `Quay Free Banner (x${interactiveFreeLimitedTickets} Free)`;
+    btnFreeLim.disabled = interactiveFreeLimitedTickets <= 0;
     document.getElementById("widget-pity6").innerText = interactiveCharPity.pity6;
     document.getElementById("widget-pity5").innerText = interactiveCharPity.pity5;
     document.getElementById("widget-pity-featured").innerText = `${interactiveCharPity.pullsSinceFeatured}/120`;
@@ -1145,8 +1213,8 @@
     document.getElementById("stat-char-urgent").innerText = interactiveStats.charUrgent;
     document.getElementById("stat-char-6star").innerText = interactiveStats.char6star;
     const limTotal = interactiveStats.char6starFeatured || 0;
-    const limNew = limTotal > 0 ? 1 : 0;
-    const limDupe = limTotal > 0 ? limTotal - 1 : 0;
+    const limNew = Array.from(interactiveOwnedCharactersSet).filter((id) => id.startsWith("featured_char_banner_")).length;
+    const limDupe = Math.max(0, limTotal - limNew);
     const lechLim = interactiveStats.char6starLechLimited || 0;
     document.getElementById("stat-char-6star-lim-new").innerText = limNew;
     document.getElementById("stat-char-6star-lim-dupe").innerText = limDupe;
@@ -1211,25 +1279,25 @@
       const sum = interactiveStats.charPullsFor6starList.reduce((a, b) => a + b, 0);
       const avg = sum / interactiveStats.charPullsFor6starList.length;
       if (avg < 40) {
-        badge.innerText = "Si\xEAu \u0110\u1ECF \u{1F451}";
+        badge.innerText = "Si\xEAu \u0110\u1ECF";
         badge.style.color = "#ffb800";
         badge.style.borderColor = "#ffb800";
         badge.style.background = "rgba(255, 184, 0, 0.05)";
         desc.innerText = `R\u1EA5t may m\u1EAFn! Trung b\xECnh ch\u1EC9 m\u1EA5t ${avg.toFixed(1)} rolls \u0111\u1EC3 ra 6\u2605.`;
       } else if (avg < 64) {
-        badge.innerText = "Kh\xE1 \u0110\u1ECF \u{1F44D}";
+        badge.innerText = "Kh\xE1 \u0110\u1ECF";
         badge.style.color = "#ff6b00";
         badge.style.borderColor = "#ff6b00";
         badge.style.background = "rgba(255, 107, 0, 0.05)";
         desc.innerText = `May m\u1EAFn t\u1ED1t! T\u1EC9 l\u1EC7 ra 6\u2605 trung b\xECnh l\xE0 ${avg.toFixed(1)} rolls.`;
       } else if (avg <= 72) {
-        badge.innerText = "B\xECnh Th\u01B0\u1EDDng \u2696\uFE0F";
+        badge.innerText = "B\xECnh Th\u01B0\u1EDDng";
         badge.style.color = "#0077b6";
         badge.style.borderColor = "#0077b6";
         badge.style.background = "rgba(0, 119, 182, 0.05)";
         desc.innerText = `Nh\xE2n ph\u1EA9m b\xECnh \u1ED5n. Trung b\xECnh m\u1EA5t ${avg.toFixed(1)} rolls \u0111\u1EC3 ra 6\u2605.`;
       } else {
-        badge.innerText = "H\u01A1i \u0110en \u{1F327}\uFE0F";
+        badge.innerText = "H\u01A1i \u0110en";
         badge.style.color = "#e63946";
         badge.style.borderColor = "#e63946";
         badge.style.background = "rgba(230, 57, 70, 0.05)";
@@ -1238,13 +1306,13 @@
     } else {
       const currentPulls = interactiveCharPity.pity6;
       if (currentPulls >= 65) {
-        badge.innerText = "\u0110ang B\u1ECB \u0110en \u{1F480}";
+        badge.innerText = "\u0110ang B\u1ECB \u0110en";
         badge.style.color = "#e63946";
         badge.style.borderColor = "#e63946";
         badge.style.background = "rgba(230, 57, 70, 0.05)";
         desc.innerText = `\u0110\xE3 quay ${currentPulls} l\u1EA7n ch\u01B0a c\xF3 6\u2605. \u0110ang \u1EDF v\xF9ng soft pity \u0111en \u0111\u1EE7i.`;
       } else {
-        badge.innerText = "B\xECnh Th\u01B0\u1EDDng \u2696\uFE0F";
+        badge.innerText = "B\xECnh Th\u01B0\u1EDDng";
         badge.style.color = "#0077b6";
         badge.style.borderColor = "#0077b6";
         badge.style.background = "rgba(0, 119, 182, 0.05)";
@@ -1255,10 +1323,10 @@
   function initInteractiveGacha() {
     const revealBoard = document.getElementById("pull-reveal-board");
     const BANNERS = [
-      { title: "M\xF9a Hoa N\u1EDF R\u1ED9 (Featured: Endfield Operator)", desc: "T\u1EC9 l\u1EC7 6\u2605: 0.8% | B\u1EA3o hi\u1EC3m: Soft pity 65+, Hard pity 80 | B\u1EA3o hi\u1EC3m Featured: 120" },
-      { title: "B\xECnh Minh K\u1EF7 Nguy\xEAn (Featured: Perlica)", desc: "T\u1EC9 l\u1EC7 6\u2605: 0.8% | B\u1EA3o hi\u1EC3m: Soft pity 65+, Hard pity 80 | B\u1EA3o hi\u1EC3m Featured: 120" },
-      { title: "Sa M\u1EA1c Hoang Vu (Featured: Chen Qianyu)", desc: "T\u1EC9 l\u1EC7 6\u2605: 0.8% | B\u1EA3o hi\u1EC3m: Soft pity 65+, Hard pity 80 | B\u1EA3o hi\u1EC3m Featured: 120" },
-      { title: "B\xF3ng \u0110\xEAm Bi\xEAn Gi\u1EDBi (Featured: Wulfgard)", desc: "T\u1EC9 l\u1EC7 6\u2605: 0.8% | B\u1EA3o hi\u1EC3m: Soft pity 65+, Hard pity 80 | B\u1EA3o hi\u1EC3m Featured: 120" }
+      { id: 0, title: "M\xF9a Hoa N\u1EDF R\u1ED9 (Featured: Endfield Operator)", desc: "T\u1EC9 l\u1EC7 6\u2605: 0.8% | B\u1EA3o hi\u1EC3m: Soft pity 65+, Hard pity 80 | B\u1EA3o hi\u1EC3m Featured: 120" },
+      { id: 1, title: "B\xECnh Minh K\u1EF7 Nguy\xEAn (Featured: Perlica)", desc: "T\u1EC9 l\u1EC7 6\u2605: 0.8% | B\u1EA3o hi\u1EC3m: Soft pity 65+, Hard pity 80 | B\u1EA3o hi\u1EC3m Featured: 120" },
+      { id: 2, title: "Sa M\u1EA1c Hoang Vu (Featured: Chen Qianyu)", desc: "T\u1EC9 l\u1EC7 6\u2605: 0.8% | B\u1EA3o hi\u1EC3m: Soft pity 65+, Hard pity 80 | B\u1EA3o hi\u1EC3m Featured: 120" },
+      { id: 3, title: "B\xF3ng \u0110\xEAm Bi\xEAn Gi\u1EDBi (Featured: Wulfgard)", desc: "T\u1EC9 l\u1EC7 6\u2605: 0.8% | B\u1EA3o hi\u1EC3m: Soft pity 65+, Hard pity 80 | B\u1EA3o hi\u1EC3m Featured: 120" }
     ];
     let activeBannerIdx = 0;
     function updateBannerDisplay() {
@@ -1285,7 +1353,14 @@
         localStorage.setItem(STORAGE_PREFIX + "active_banner_idx", activeBannerIdx);
       } catch (e) {
       }
-      revealBoard.innerHTML = `<span class="no-pulls-yet">\u0110\xE3 \u0111\u1ED5i banner. Nh\u1EA5n n\xFAt b\xEAn d\u01B0\u1EDBi \u0111\u1EC3 th\u1EF1c hi\u1EC7n quay...</span>`;
+      interactiveFreeLimitedTickets = 10;
+      interactiveCharPity.bannerPullsCount = 0;
+      interactiveCharPity.pullsSinceFeatured = 0;
+      interactiveStats.milestone30Triggered = false;
+      interactiveStats.milestone60Triggered = false;
+      revealBoard.innerHTML = `<span class="no-pulls-yet">\u0110\xE3 \u0111\u1ED5i banner. V\xE9 mi\u1EC5n ph\xED (10 limited) \u0111\xE3 \u0111\u01B0\u1EE3c c\u1EA5p m\u1EDBi cho banner n\xE0y!</span>`;
+      updateInteractiveUI();
+      saveInteractiveState();
     });
     const renderCard = (item) => {
       const card = document.createElement("div");
@@ -1309,8 +1384,42 @@
         card.classList.add("flipped");
       }, 100);
     };
+    const checkDuplicateAndAwardQuota = (result) => {
+      let charId = "";
+      if (result.rarity === 6) {
+        if (result.isFeatured) {
+          charId = `featured_char_banner_${activeBannerIdx}`;
+        } else {
+          if (result.isLechLimited) {
+            const randIdx = Math.floor(Math.random() * LECH_LIMITED_6STAR_POOL2.length);
+            charId = LECH_LIMITED_6STAR_POOL2[randIdx];
+          } else {
+            const randIdx = Math.floor(Math.random() * STANDARD_6STAR_POOL2.length);
+            charId = STANDARD_6STAR_POOL2[randIdx];
+          }
+        }
+      } else if (result.rarity === 5) {
+        const randIdx = Math.floor(Math.random() * CHAR_5STAR_POOL2.length);
+        charId = CHAR_5STAR_POOL2[randIdx];
+      } else {
+        return;
+      }
+      if (interactiveOwnedCharactersSet.has(charId)) {
+        const award = result.rarity === 6 ? 50 : 10;
+        interactiveBondQuota += award;
+        interactiveStats.totalBondQuotaEarned = (interactiveStats.totalBondQuotaEarned || 0) + award;
+        if (interactiveBondQuota >= 25) {
+          const exchange = Math.floor(interactiveBondQuota / 25);
+          interactiveCharTickets += exchange;
+          interactiveBondQuota -= exchange * 25;
+        }
+      } else {
+        interactiveOwnedCharactersSet.add(charId);
+      }
+    };
     const processCharacterPullResult = (result) => {
       result.type = "character";
+      checkDuplicateAndAwardQuota(result);
       if (result.isUrgent) {
         interactiveStats.charUrgent++;
       } else {
@@ -1340,9 +1449,24 @@
       interactiveInventory.unshift(result);
       renderCard(result);
     };
+    document.getElementById("btn-roll-free-limited").addEventListener("click", () => {
+      if (interactiveFreeLimitedTickets < 10) {
+        alert("B\u1EA1n kh\xF4ng \u0111\u1EE7 v\xE9 Free Banner gi\u1EDBi h\u1EA1n!");
+        return;
+      }
+      interactiveFreeLimitedTickets = 0;
+      revealBoard.innerHTML = "";
+      for (let i = 0; i < 10; i++) {
+        const result = rollCharacter(interactiveCharPity, false);
+        processCharacterPullResult(result);
+      }
+      checkInteractiveMilestones();
+      updateInteractiveUI();
+      saveInteractiveState();
+    });
     document.getElementById("btn-char-pull1").addEventListener("click", () => {
       if (interactiveCharTickets < 1) {
-        alert("B\u1EA1n kh\xF4ng \u0111\u1EE7 v\xE9 gacha nh\xE2n v\u1EADt! H\xE3y b\u1EA5m Reset \u0111\u1EC3 nh\u1EADn th\xEAm v\xE9.");
+        alert("B\u1EA1n kh\xF4ng \u0111\u1EE7 v\xE9 gacha nh\xE2n v\u1EADt! H\xE3y t\xEDch lu\u1EF9 th\xEAm ho\u1EB7c b\u1EA5m Reset.");
         return;
       }
       interactiveCharTickets--;
@@ -1355,7 +1479,7 @@
     });
     document.getElementById("btn-char-pull10").addEventListener("click", () => {
       if (interactiveCharTickets < 10) {
-        alert("B\u1EA1n kh\xF4ng \u0111\u1EE7 v\xE9 gacha nh\xE2n v\u1EADt! H\xE3y b\u1EA5m Reset \u0111\u1EC3 nh\u1EADn th\xEAm v\xE9.");
+        alert("B\u1EA1n kh\xF4ng \u0111\u1EE7 v\xE9 gacha nh\xE2n v\u1EADt! H\xE3y t\xEDch lu\u1EF9 th\xEAm ho\u1EB7c b\u1EA5m Reset.");
         return;
       }
       interactiveCharTickets -= 10;
@@ -1370,10 +1494,11 @@
     });
     document.getElementById("btn-weapon-issue").addEventListener("click", () => {
       if (interactiveWeaponTickets < 1980) {
-        alert("Kh\xF4ng \u0111\u1EE7 v\xE9 Arsenal Tickets! M\u1ED7i Issue (x10 v\u0169 kh\xED) y\xEAu c\u1EA7u 1980 v\xE9. V\xE9 n\xE0y ki\u1EBFm \u0111\u01B0\u1EE3c khi b\u1EA1n quay banner nh\xE2n v\u1EADt.");
+        alert("Kh\xF4ng \u0111\u1EE7 v\xE9 Arsenal Tickets! M\u1ED7i Issue (x10 v\u0169 kh\xED) y\xEAu c\u1EA7u 1980 v\xE9.");
         return;
       }
       interactiveWeaponTickets -= 1980;
+      interactiveStats.weapTicketsUsed += 1980;
       revealBoard.innerHTML = "";
       const result = rollWeaponIssue(interactiveWeaponPity);
       interactiveStats.weapIssues++;
@@ -1403,7 +1528,10 @@
     document.getElementById("btn-reset-interactive").addEventListener("click", () => {
       interactiveCharTickets = 120;
       interactiveWeaponTickets = 0;
+      interactiveBondQuota = 0;
+      interactiveFreeLimitedTickets = 10;
       interactiveInventory = [];
+      interactiveOwnedCharactersSet.clear();
       interactiveCharPity.pity6 = 0;
       interactiveCharPity.pity5 = 0;
       interactiveCharPity.pullsSinceFeatured = 0;
@@ -1426,6 +1554,7 @@
       interactiveStats.weapIssues = 0;
       interactiveStats.weap6star = 0;
       interactiveStats.weapSelectors = 0;
+      interactiveStats.weapTicketsUsed = 0;
       revealBoard.innerHTML = `<span class="no-pulls-yet">Nh\u1EA5n n\xFAt b\xEAn d\u01B0\u1EDBi \u0111\u1EC3 th\u1EF1c hi\u1EC7n quay gacha...</span>`;
       updateInteractiveUI();
       saveInteractiveState();
@@ -1439,6 +1568,29 @@
       for (let k = 0; k < 10; k++) {
         const urgentResult = rollCharacter(interactiveCharPity, true);
         urgentResult.type = "character";
+        const award = urgentResult.rarity === 6 ? 50 : urgentResult.rarity === 5 ? 10 : 0;
+        if (award > 0) {
+          let charId = "";
+          if (urgentResult.rarity === 6) {
+            if (urgentResult.isFeatured) {
+              charId = `featured_char_banner_urgent`;
+            } else {
+              charId = `std_6_urgent_${k}`;
+            }
+          } else {
+            charId = `char_5_urgent_${k}`;
+          }
+          if (interactiveOwnedCharactersSet.has(charId)) {
+            interactiveBondQuota += award;
+            if (interactiveBondQuota >= 25) {
+              const exchange = Math.floor(interactiveBondQuota / 25);
+              interactiveCharTickets += exchange;
+              interactiveBondQuota -= exchange * 25;
+            }
+          } else {
+            interactiveOwnedCharactersSet.add(charId);
+          }
+        }
         interactiveStats.charUrgent++;
         if (urgentResult.rarity === 6) {
           interactiveStats.char6star++;
@@ -1476,7 +1628,7 @@
     }
     if (interactiveCharPity.bannerPullsCount >= 60 && !interactiveStats.milestone60Triggered) {
       interactiveStats.milestone60Triggered = true;
-      alert("C\u1ED9t m\u1ED1c 60 roll \u0111\u1EA1t \u0111\u01B0\u1EE3c! B\u1EA1n nh\u1EADn \u0111\u01B0\u1EE3c 10 v\xE9 Dossier mi\u1EC5n ph\xED t\xEDch tr\u1EEF cho banner gi\u1EDBi h\u1EA1n ti\u1EBFp theo.");
+      alert("C\u1ED9t m\u1ED1c 60 roll \u0111\u1EA1t \u0111\u01B0\u1EE3c! B\u1EA1n nh\u1EADn \u0111\u01B0\u1EE3c 10 v\xE9 Dossier mi\u1EC5n ph\xED c\u1ED9ng tr\u1EF1c ti\u1EBFp v\xE0o v\xED.");
       interactiveCharTickets += 10;
     }
   }
@@ -1545,7 +1697,7 @@
           startingCharTickets,
           incomePerBanner,
           weaponIncomeNonGacha,
-          strategyIds: ["save_commit", "yolo", "pull_60", "60_plus", "roll_meta"]
+          strategyIds: ["save_commit", "save_commit_single", "yolo", "pull_60", "roll_meta"]
         };
         const numBannersVal = mode === "banners" ? numBanners : Math.max(1, Math.ceil(totalPulls / incomePerBanner));
         const tableTitle = document.getElementById("table-comparison-title");
@@ -1603,7 +1755,6 @@
             <td>${res.avgCharPulls.toFixed(0)} pull</td>
             <td>${res.avgUnspentChar.toFixed(1)} v\xE9</td>
             <td style="font-weight: 700; color: #ffcc00;">${total6StarChar.toFixed(2)}</td>
-            <td>${res.avgFeaturedChars.toFixed(2)} / ${numBanners} banner</td>
             <td>${(res.avgFeaturedUnique || 0).toFixed(2)} / ${(res.avgFeaturedDupes || 0).toFixed(2)}</td>
             <td>${(res.avgLechLimited || 0).toFixed(2)}</td>
             <td>${(res.avgStandard6Stars || 0).toFixed(2)}</td>
@@ -1611,6 +1762,8 @@
             <td style="font-weight: 600; color: #ffb800;">${res.bestLuckChar} / ${res.worstLuckChar}</td>
             <td>${res.avgFeaturedWeapons.toFixed(2)}</td>
             <td style="font-weight: 700; color: #00b4d8;">${total6StarWeap.toFixed(2)}</td>
+            <td>${res.avgWeaponPulls.toFixed(0)} pull</td>
+            <td>${(res.avgUnspentWeapon / 198).toFixed(1)} pull</td>
             <td style="font-weight: 700; color: var(--orange-primary);">${res.ownershipRate.toFixed(1)}%</td>
         `;
       tableBody.appendChild(tr);

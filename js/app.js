@@ -8,9 +8,14 @@ import { drawDistributionChart, drawComparisonChart } from './chart-helper.js';
 // ====================================================================
 let interactiveCharTickets = 120;
 let interactiveWeaponTickets = 0;
+let interactiveBondQuota = 0;
+let interactiveFreeLimitedTickets = 10;
 let interactiveInventory = [];
 
-// Trạng thái pity nhân vật của người chơi
+// Tập hợp lưu trữ nhân vật đã sở hữu để xác định Dupe (Interactive)
+let interactiveOwnedCharactersSet = new Set();
+
+// Trạng thái pity nhân vật của người chơi (Limited Banner)
 const interactiveCharPity = {
     pity6: 0,
     pity5: 0,
@@ -42,14 +47,20 @@ const interactiveStats = {
     weapTicketsAccumulated: 0,
     weapIssues: 0,
     weap6star: 0,
-    weapSelectors: 0
+    weapSelectors: 0,
+    weapTicketsUsed: 0
 };
+
+// Bể tướng giả lập để check dupe (interactive)
+const STANDARD_6STAR_POOL = ['std_6_1', 'std_6_2', 'std_6_3', 'std_6_4', 'std_6_5', 'std_6_6'];
+const LECH_LIMITED_6STAR_POOL = ['lim_6_1', 'lim_6_2', 'lim_6_3'];
+const CHAR_5STAR_POOL = Array.from({ length: 15 }, (_, i) => `char_5_${i + 1}`);
 
 // ====================================================================
 // LOCALSTORAGE PERSISTENCE HELPERS
 // ====================================================================
 const STORAGE_PREFIX = 'a9e_gacha_';
-const SCHEMA_VERSION = '1.1';
+const SCHEMA_VERSION = '1.3'; // Tăng schema version do bỏ banner thường interactive
 
 function saveInteractiveState() {
     try {
@@ -57,9 +68,12 @@ function saveInteractiveState() {
             version: SCHEMA_VERSION,
             charTickets: interactiveCharTickets,
             weaponTickets: interactiveWeaponTickets,
+            bondQuota: interactiveBondQuota,
+            freeLimited: interactiveFreeLimitedTickets,
             charPity: interactiveCharPity,
             weaponPity: interactiveWeaponPity,
-            stats: interactiveStats
+            stats: interactiveStats,
+            ownedCharacters: Array.from(interactiveOwnedCharactersSet)
         };
         localStorage.setItem(STORAGE_PREFIX + 'interactive_state', JSON.stringify(state));
         localStorage.setItem(STORAGE_PREFIX + 'interactive_inventory', JSON.stringify(interactiveInventory));
@@ -78,9 +92,12 @@ function loadInteractiveState() {
             if (state.version === SCHEMA_VERSION) {
                 interactiveCharTickets = state.charTickets;
                 interactiveWeaponTickets = state.weaponTickets;
+                interactiveBondQuota = state.bondQuota || 0;
+                interactiveFreeLimitedTickets = state.freeLimited !== undefined ? state.freeLimited : 10;
                 Object.assign(interactiveCharPity, state.charPity);
                 Object.assign(interactiveWeaponPity, state.weaponPity);
                 Object.assign(interactiveStats, state.stats);
+                interactiveOwnedCharactersSet = new Set(state.ownedCharacters || []);
             } else {
                 console.warn('Storage version mismatch. Resetting state.');
                 localStorage.removeItem(STORAGE_PREFIX + 'interactive_state');
@@ -168,7 +185,6 @@ function loadSimulatorLastResults() {
         if (dataStr) {
             const data = JSON.parse(dataStr);
             if (data.version === SCHEMA_VERSION) {
-                // Change title accordingly
                 const modeSelect = document.getElementById('select-sim-mode');
                 const totalPulls = Number(document.getElementById('input-total-pulls').value);
                 const tableTitle = document.getElementById('table-comparison-title');
@@ -233,6 +249,13 @@ function updateInteractiveUI() {
     // Cập nhật Wallet
     document.getElementById('wallet-char-tickets').innerText = interactiveCharTickets;
     document.getElementById('wallet-weapon-tickets').innerText = interactiveWeaponTickets;
+    document.getElementById('wallet-bond-quota').innerText = interactiveBondQuota;
+    document.getElementById('wallet-free-limited').innerText = interactiveFreeLimitedTickets;
+
+    // Bật/tắt nút quay free limited
+    const btnFreeLim = document.getElementById('btn-roll-free-limited');
+    btnFreeLim.innerText = `Quay Free Banner (x${interactiveFreeLimitedTickets} Free)`;
+    btnFreeLim.disabled = interactiveFreeLimitedTickets <= 0;
 
     // Cập nhật Widgets Pity
     document.getElementById('widget-pity6').innerText = interactiveCharPity.pity6;
@@ -245,8 +268,8 @@ function updateInteractiveUI() {
     document.getElementById('stat-char-6star').innerText = interactiveStats.char6star;
     
     const limTotal = interactiveStats.char6starFeatured || 0;
-    const limNew = limTotal > 0 ? 1 : 0;
-    const limDupe = limTotal > 0 ? limTotal - 1 : 0;
+    const limNew = Array.from(interactiveOwnedCharactersSet).filter(id => id.startsWith('featured_char_banner_')).length;
+    const limDupe = Math.max(0, limTotal - limNew);
     const lechLim = interactiveStats.char6starLechLimited || 0;
     
     document.getElementById('stat-char-6star-lim-new').innerText = limNew;
@@ -324,47 +347,45 @@ function updateLuckRating() {
         return;
     }
 
-    // Nếu đã trúng ít nhất một 6★
     if (interactiveStats.charPullsFor6starList.length > 0) {
         const sum = interactiveStats.charPullsFor6starList.reduce((a, b) => a + b, 0);
         const avg = sum / interactiveStats.charPullsFor6starList.length;
 
         if (avg < 40) {
-            badge.innerText = 'Siêu Đỏ 👑';
+            badge.innerText = 'Siêu Đỏ';
             badge.style.color = '#ffb800';
             badge.style.borderColor = '#ffb800';
             badge.style.background = 'rgba(255, 184, 0, 0.05)';
             desc.innerText = `Rất may mắn! Trung bình chỉ mất ${avg.toFixed(1)} rolls để ra 6★.`;
         } else if (avg < 64) {
-            badge.innerText = 'Khá Đỏ 👍';
+            badge.innerText = 'Khá Đỏ';
             badge.style.color = '#ff6b00';
             badge.style.borderColor = '#ff6b00';
             badge.style.background = 'rgba(255, 107, 0, 0.05)';
             desc.innerText = `May mắn tốt! Tỉ lệ ra 6★ trung bình là ${avg.toFixed(1)} rolls.`;
         } else if (avg <= 72) {
-            badge.innerText = 'Bình Thường ⚖️';
+            badge.innerText = 'Bình Thường';
             badge.style.color = '#0077b6';
             badge.style.borderColor = '#0077b6';
             badge.style.background = 'rgba(0, 119, 182, 0.05)';
             desc.innerText = `Nhân phẩm bình ổn. Trung bình mất ${avg.toFixed(1)} rolls để ra 6★.`;
         } else {
-            badge.innerText = 'Hơi Đen 🌧️';
+            badge.innerText = 'Hơi Đen';
             badge.style.color = '#e63946';
             badge.style.borderColor = '#e63946';
             badge.style.background = 'rgba(230, 57, 70, 0.05)';
             desc.innerText = `Hơi đen rồi! Trung bình mất tới ${avg.toFixed(1)} rolls mới nổ 6★.`;
         }
     } else {
-        // Chưa ra 6★ nào nhưng đã quay >= 20 lần
         const currentPulls = interactiveCharPity.pity6;
         if (currentPulls >= 65) {
-            badge.innerText = 'Đang Bị Đen 💀';
+            badge.innerText = 'Đang Bị Đen';
             badge.style.color = '#e63946';
             badge.style.borderColor = '#e63946';
             badge.style.background = 'rgba(230, 57, 70, 0.05)';
             desc.innerText = `Đã quay ${currentPulls} lần chưa có 6★. Đang ở vùng soft pity đen đủi.`;
         } else {
-            badge.innerText = 'Bình Thường ⚖️';
+            badge.innerText = 'Bình Thường';
             badge.style.color = '#0077b6';
             badge.style.borderColor = '#0077b6';
             badge.style.background = 'rgba(0, 119, 182, 0.05)';
@@ -379,10 +400,10 @@ function initInteractiveGacha() {
 
     // Cấu hình danh sách banner có thể đổi
     const BANNERS = [
-        { title: 'Mùa Hoa Nở Rộ (Featured: Endfield Operator)', desc: 'Tỉ lệ 6★: 0.8% | Bảo hiểm: Soft pity 65+, Hard pity 80 | Bảo hiểm Featured: 120' },
-        { title: 'Bình Minh Kỷ Nguyên (Featured: Perlica)', desc: 'Tỉ lệ 6★: 0.8% | Bảo hiểm: Soft pity 65+, Hard pity 80 | Bảo hiểm Featured: 120' },
-        { title: 'Sa Mạc Hoang Vu (Featured: Chen Qianyu)', desc: 'Tỉ lệ 6★: 0.8% | Bảo hiểm: Soft pity 65+, Hard pity 80 | Bảo hiểm Featured: 120' },
-        { title: 'Bóng Đêm Biên Giới (Featured: Wulfgard)', desc: 'Tỉ lệ 6★: 0.8% | Bảo hiểm: Soft pity 65+, Hard pity 80 | Bảo hiểm Featured: 120' }
+        { id: 0, title: 'Mùa Hoa Nở Rộ (Featured: Endfield Operator)', desc: 'Tỉ lệ 6★: 0.8% | Bảo hiểm: Soft pity 65+, Hard pity 80 | Bảo hiểm Featured: 120' },
+        { id: 1, title: 'Bình Minh Kỷ Nguyên (Featured: Perlica)', desc: 'Tỉ lệ 6★: 0.8% | Bảo hiểm: Soft pity 65+, Hard pity 80 | Bảo hiểm Featured: 120' },
+        { id: 2, title: 'Sa Mạc Hoang Vu (Featured: Chen Qianyu)', desc: 'Tỉ lệ 6★: 0.8% | Bảo hiểm: Soft pity 65+, Hard pity 80 | Bảo hiểm Featured: 120' },
+        { id: 3, title: 'Bóng Đêm Biên Giới (Featured: Wulfgard)', desc: 'Tỉ lệ 6★: 0.8% | Bảo hiểm: Soft pity 65+, Hard pity 80 | Bảo hiểm Featured: 120' }
     ];
     
     let activeBannerIdx = 0;
@@ -396,7 +417,6 @@ function initInteractiveGacha() {
         document.getElementById('active-banner-subtitle').innerText = b.desc;
     }
 
-    // Load active banner from localStorage if exists
     try {
         const savedBanner = localStorage.getItem(STORAGE_PREFIX + 'active_banner_idx');
         if (savedBanner !== null) {
@@ -414,11 +434,20 @@ function initInteractiveGacha() {
             localStorage.setItem(STORAGE_PREFIX + 'active_banner_idx', activeBannerIdx);
         } catch(e) {}
         
-        // Dọn dẹp bảng gacha hiển thị
-        revealBoard.innerHTML = `<span class="no-pulls-yet">Đã đổi banner. Nhấn nút bên dưới để thực hiện quay...</span>`;
+        // Đổi banner: reset vé miễn phí banner giới hạn
+        interactiveFreeLimitedTickets = 10;
+        
+        // Reset bảo hiểm 120 và pulls count của banner mới
+        interactiveCharPity.bannerPullsCount = 0;
+        interactiveCharPity.pullsSinceFeatured = 0;
+        interactiveStats.milestone30Triggered = false;
+        interactiveStats.milestone60Triggered = false;
+        
+        revealBoard.innerHTML = `<span class="no-pulls-yet">Đã đổi banner. Vé miễn phí (10 limited) đã được cấp mới cho banner này!</span>`;
+        updateInteractiveUI();
+        saveInteractiveState();
     });
 
-    // Hàm phụ trợ tạo card hiển thị trên màn hình
     const renderCard = (item) => {
         const card = document.createElement('div');
         card.className = 'gacha-card';
@@ -440,17 +469,58 @@ function initInteractiveGacha() {
         `;
         revealBoard.appendChild(card);
 
-        // Kích hoạt hiệu ứng lật thẻ
         setTimeout(() => {
             card.classList.add('flipped');
         }, 100);
     };
 
-    // Hàm xử lý khi thực hiện 1 lượt pull nhân vật
+    // Xử lý Check Dupe & Bond Quota trong Interactive Pull
+    const checkDuplicateAndAwardQuota = (result) => {
+        let charId = '';
+        
+        if (result.rarity === 6) {
+            if (result.isFeatured) {
+                charId = `featured_char_banner_${activeBannerIdx}`;
+            } else {
+                if (result.isLechLimited) {
+                    const randIdx = Math.floor(Math.random() * LECH_LIMITED_6STAR_POOL.length);
+                    charId = LECH_LIMITED_6STAR_POOL[randIdx];
+                } else {
+                    const randIdx = Math.floor(Math.random() * STANDARD_6STAR_POOL.length);
+                    charId = STANDARD_6STAR_POOL[randIdx];
+                }
+            }
+        } else if (result.rarity === 5) {
+            const randIdx = Math.floor(Math.random() * CHAR_5STAR_POOL.length);
+            charId = CHAR_5STAR_POOL[randIdx];
+        } else {
+            return;
+        }
+
+        if (interactiveOwnedCharactersSet.has(charId)) {
+            // Trùng lặp
+            const award = result.rarity === 6 ? 50 : 10;
+            interactiveBondQuota += award;
+            interactiveStats.totalBondQuotaEarned = (interactiveStats.totalBondQuotaEarned || 0) + award;
+            
+            // Tự động đổi 25 Bond Quota thành 1 vé
+            if (interactiveBondQuota >= 25) {
+                const exchange = Math.floor(interactiveBondQuota / 25);
+                interactiveCharTickets += exchange;
+                interactiveBondQuota -= exchange * 25;
+            }
+        } else {
+            // Sở hữu mới
+            interactiveOwnedCharactersSet.add(charId);
+        }
+    };
+
+    // Hàm xử lý chung kết quả quay
     const processCharacterPullResult = (result) => {
         result.type = 'character';
         
-        // Thống kê
+        checkDuplicateAndAwardQuota(result);
+
         if (result.isUrgent) {
             interactiveStats.charUrgent++;
         } else {
@@ -468,7 +538,6 @@ function initInteractiveGacha() {
                     interactiveStats.char6starLechLimited = (interactiveStats.char6starLechLimited || 0) + 1;
                 }
             }
-            // Lưu lại số lượt quay để nổ 6★ và reset
             if (!result.isUrgent) {
                 interactiveStats.charPullsFor6starList.push(interactiveStats.pullsInCurrent6StarCycle);
                 interactiveStats.pullsInCurrent6StarCycle = 0;
@@ -477,7 +546,6 @@ function initInteractiveGacha() {
             interactiveStats.char5star++;
         }
 
-        // Tính vé hoàn trả và cộng dồn
         const rebate = calculateArsenalTicketsRebate([result]);
         interactiveWeaponTickets += rebate;
         interactiveStats.weapTicketsAccumulated += rebate;
@@ -486,10 +554,30 @@ function initInteractiveGacha() {
         renderCard(result);
     };
 
+    // Nút quay Free Banner Limited (x10 Free)
+    document.getElementById('btn-roll-free-limited').addEventListener('click', () => {
+        if (interactiveFreeLimitedTickets < 10) {
+            alert('Bạn không đủ vé Free Banner giới hạn!');
+            return;
+        }
+
+        interactiveFreeLimitedTickets = 0;
+        revealBoard.innerHTML = '';
+
+        for (let i = 0; i < 10; i++) {
+            const result = rollCharacter(interactiveCharPity, false);
+            processCharacterPullResult(result);
+        }
+
+        checkInteractiveMilestones();
+        updateInteractiveUI();
+        saveInteractiveState();
+    });
+
     // Nút quay x1 nhân vật
     document.getElementById('btn-char-pull1').addEventListener('click', () => {
         if (interactiveCharTickets < 1) {
-            alert('Bạn không đủ vé gacha nhân vật! Hãy bấm Reset để nhận thêm vé.');
+            alert('Bạn không đủ vé gacha nhân vật! Hãy tích luỹ thêm hoặc bấm Reset.');
             return;
         }
 
@@ -499,7 +587,6 @@ function initInteractiveGacha() {
         const result = rollCharacter(interactiveCharPity, false);
         processCharacterPullResult(result);
 
-        // Kiểm tra cột mốc 30 roll
         checkInteractiveMilestones();
         updateInteractiveUI();
         saveInteractiveState();
@@ -508,7 +595,7 @@ function initInteractiveGacha() {
     // Nút quay x10 nhân vật
     document.getElementById('btn-char-pull10').addEventListener('click', () => {
         if (interactiveCharTickets < 10) {
-            alert('Bạn không đủ vé gacha nhân vật! Hãy bấm Reset để nhận thêm vé.');
+            alert('Bạn không đủ vé gacha nhân vật! Hãy tích luỹ thêm hoặc bấm Reset.');
             return;
         }
 
@@ -528,11 +615,12 @@ function initInteractiveGacha() {
     // Nút quay Issue vũ khí (x10)
     document.getElementById('btn-weapon-issue').addEventListener('click', () => {
         if (interactiveWeaponTickets < 1980) {
-            alert('Không đủ vé Arsenal Tickets! Mỗi Issue (x10 vũ khí) yêu cầu 1980 vé. Vé này kiếm được khi bạn quay banner nhân vật.');
+            alert('Không đủ vé Arsenal Tickets! Mỗi Issue (x10 vũ khí) yêu cầu 1980 vé.');
             return;
         }
 
         interactiveWeaponTickets -= 1980;
+        interactiveStats.weapTicketsUsed += 1980;
         revealBoard.innerHTML = '';
 
         const result = rollWeaponIssue(interactiveWeaponPity);
@@ -541,7 +629,6 @@ function initInteractiveGacha() {
         result.items.forEach(item => {
             item.type = 'weapon';
             
-            // Thống kê vũ khí
             if (item.rarity === 6) {
                 interactiveStats.weap6star++;
             } else if (item.rarity === 5) {
@@ -552,7 +639,6 @@ function initInteractiveGacha() {
             renderCard(item);
         });
 
-        // Xử lý quà cột mốc vũ khí
         if (result.milestoneReward === 'selector_box') {
             alert('Chúc mừng! Bạn đạt mốc 10 Issues và nhận được Hộp tự chọn vũ khí 6★!');
             interactiveStats.weapSelectors++;
@@ -572,7 +658,10 @@ function initInteractiveGacha() {
     document.getElementById('btn-reset-interactive').addEventListener('click', () => {
         interactiveCharTickets = 120;
         interactiveWeaponTickets = 0;
+        interactiveBondQuota = 0;
+        interactiveFreeLimitedTickets = 10;
         interactiveInventory = [];
+        interactiveOwnedCharactersSet.clear();
 
         interactiveCharPity.pity6 = 0;
         interactiveCharPity.pity5 = 0;
@@ -600,6 +689,7 @@ function initInteractiveGacha() {
         interactiveStats.weapIssues = 0;
         interactiveStats.weap6star = 0;
         interactiveStats.weapSelectors = 0;
+        interactiveStats.weapTicketsUsed = 0;
 
         revealBoard.innerHTML = `<span class="no-pulls-yet">Nhấn nút bên dưới để thực hiện quay gacha...</span>`;
         updateInteractiveUI();
@@ -611,7 +701,6 @@ function initInteractiveGacha() {
 function checkInteractiveMilestones() {
     const revealBoard = document.getElementById('pull-reveal-board');
 
-    // Mốc 30 roll Urgent Recruitment (Kích hoạt khi đạt hoặc vượt quá 30 nếu chưa nhận)
     if (interactiveCharPity.bannerPullsCount >= 30 && !interactiveStats.milestone30Triggered) {
         interactiveStats.milestone30Triggered = true;
         alert('Cột mốc 30 roll đạt được! Bạn nhận được 10 lượt quay Urgent Recruitment miễn phí ngay bây giờ!');
@@ -620,7 +709,32 @@ function checkInteractiveMilestones() {
             const urgentResult = rollCharacter(interactiveCharPity, true);
             urgentResult.type = 'character';
             
-            // Thống kê Urgent
+            // Xử lý dupe & Bond Quota cho Urgent
+            const award = urgentResult.rarity === 6 ? 50 : (urgentResult.rarity === 5 ? 10 : 0);
+            if (award > 0) {
+                let charId = '';
+                if (urgentResult.rarity === 6) {
+                    if (urgentResult.isFeatured) {
+                        charId = `featured_char_banner_urgent`;
+                    } else {
+                        charId = `std_6_urgent_${k}`;
+                    }
+                } else {
+                    charId = `char_5_urgent_${k}`;
+                }
+                
+                if (interactiveOwnedCharactersSet.has(charId)) {
+                    interactiveBondQuota += award;
+                    if (interactiveBondQuota >= 25) {
+                        const exchange = Math.floor(interactiveBondQuota / 25);
+                        interactiveCharTickets += exchange;
+                        interactiveBondQuota -= exchange * 25;
+                    }
+                } else {
+                    interactiveOwnedCharactersSet.add(charId);
+                }
+            }
+
             interactiveStats.charUrgent++;
             if (urgentResult.rarity === 6) {
                 interactiveStats.char6star++;
@@ -636,14 +750,12 @@ function checkInteractiveMilestones() {
                 interactiveStats.char5star++;
             }
 
-            // Hoàn vé vũ khí
             const rebate = calculateArsenalTicketsRebate([urgentResult]);
             interactiveWeaponTickets += rebate;
             interactiveStats.weapTicketsAccumulated += rebate;
 
             interactiveInventory.unshift(urgentResult);
             
-            // Vẽ thẻ Urgent với số sao được định dạng đẹp mắt
             const card = document.createElement('div');
             card.className = 'gacha-card';
             let stars = `<span class="star-display rarity-${urgentResult.rarity}">${'★'.repeat(urgentResult.rarity)}</span>`;
@@ -662,11 +774,9 @@ function checkInteractiveMilestones() {
         }
     }
 
-    // Mốc 60 roll Dossier (Kích hoạt khi đạt hoặc vượt quá 60 nếu chưa nhận)
     if (interactiveCharPity.bannerPullsCount >= 60 && !interactiveStats.milestone60Triggered) {
         interactiveStats.milestone60Triggered = true;
-        alert('Cột mốc 60 roll đạt được! Bạn nhận được 10 vé Dossier miễn phí tích trữ cho banner giới hạn tiếp theo.');
-        // Cộng luôn vào số dư vé nhân vật
+        alert('Cột mốc 60 roll đạt được! Bạn nhận được 10 vé Dossier miễn phí cộng trực tiếp vào ví.');
         interactiveCharTickets += 10;
     }
 }
@@ -694,7 +804,6 @@ function initSimulatorControls() {
         }
     });
 
-    // 2. Chuyển đổi chế độ giả lập (banners vs pulls)
     const modeSelect = document.getElementById('select-sim-mode');
     const containerBanners = document.getElementById('container-mode-banners');
     const containerPulls = document.getElementById('container-mode-pulls');
@@ -710,7 +819,6 @@ function initSimulatorControls() {
         saveSimulatorSettings();
     });
 
-    // 3. Lắng nghe toggle Paid Passes
     document.getElementById('toggle-monthly').addEventListener('change', () => {
         calculateVersionIncome();
         saveSimulatorSettings();
@@ -722,7 +830,6 @@ function initSimulatorControls() {
 
     calculateVersionIncome(); // Chạy tính toán ban đầu
 
-    // 4. Nút bấm Chạy giả lập
     document.getElementById('btn-run-simulation').addEventListener('click', () => {
         const mode = modeSelect.value;
         const numPlayers = Number(document.getElementById('input-players').value);
@@ -733,7 +840,6 @@ function initSimulatorControls() {
         const baseChar = Number(document.getElementById('input-base-char').value);
         const baseWeapon = Number(document.getElementById('input-base-weapon').value);
 
-        // Tính thu nhập nhân vật dựa trên cấu hình trả phí
         const isMonthly = document.getElementById('toggle-monthly').checked;
         const isBP = document.getElementById('toggle-bp').checked;
         
@@ -754,12 +860,11 @@ function initSimulatorControls() {
                 startingCharTickets,
                 incomePerBanner,
                 weaponIncomeNonGacha,
-                strategyIds: ['save_commit', 'yolo', 'pull_60', '60_plus', 'roll_meta']
+                strategyIds: ['save_commit', 'save_commit_single', 'yolo', 'pull_60', 'roll_meta']
             };
 
             const numBannersVal = mode === 'banners' ? numBanners : Math.max(1, Math.ceil(totalPulls / incomePerBanner));
 
-            // Đổi tiêu đề bảng so sánh dựa theo chế độ
             const tableTitle = document.getElementById('table-comparison-title');
             if (mode === 'banners') {
                 tableTitle.innerText = `Bảng so sánh chi tiết các chiến thuật (Giả lập qua ${numBanners} mùa banner)`;
@@ -769,7 +874,6 @@ function initSimulatorControls() {
 
             try {
                 const results = MonteCarloSimulator.run(config);
-                // Cập nhật UI kết quả
                 displaySimulatorResults(results, numBannersVal);
                 saveSimulatorLastResults(results, numBannersVal);
             } catch (err) {
@@ -793,14 +897,12 @@ function calculateVersionIncome() {
     const charIncomePerBanner = baseChar + (isMonthly ? 9 : 0) + (isBP ? 5 : 0);
     const weaponIncomePerBanner = baseWeapon + (isBP ? 1200 : 0);
     
-    // Hiển thị cả lượng vé phiên bản và lượng vé quy đổi trên mỗi banner limited
     document.getElementById('info-version-income').innerText = `~${charIncomePerBanner.toFixed(1)} vé/banner (~${(charIncomePerBanner * 2).toFixed(1)} vé/bản)`;
     document.getElementById('info-weapon-income').innerText = `~${Number(weaponIncomePerBanner).toLocaleString()} vé/banner (~${Number(weaponIncomePerBanner * 2).toLocaleString()} vé/bản)`;
 }
 
 // Cập nhật các chỉ số, bảng so sánh và biểu đồ kết quả giả lập
 function displaySimulatorResults(results, numBanners) {
-    // 1. Cập nhật các thẻ số liệu chính (Lấy chiến thuật Tích lũy làm mẫu)
     const scRes = results.save_commit;
     if (scRes) {
         document.getElementById('card-avg-featured').innerText = scRes.avgFeaturedChars.toFixed(2);
@@ -811,7 +913,6 @@ function displaySimulatorResults(results, numBanners) {
         document.getElementById('card-avg-weapons').innerText = scRes.avgFeaturedWeapons.toFixed(2);
     }
 
-    // 2. Cập nhật bảng so sánh
     const tableBody = document.getElementById('comparison-table-body');
     tableBody.innerHTML = '';
 
@@ -833,7 +934,6 @@ function displaySimulatorResults(results, numBanners) {
             <td>${res.avgCharPulls.toFixed(0)} pull</td>
             <td>${res.avgUnspentChar.toFixed(1)} vé</td>
             <td style="font-weight: 700; color: #ffcc00;">${total6StarChar.toFixed(2)}</td>
-            <td>${res.avgFeaturedChars.toFixed(2)} / ${numBanners} banner</td>
             <td>${(res.avgFeaturedUnique || 0).toFixed(2)} / ${(res.avgFeaturedDupes || 0).toFixed(2)}</td>
             <td>${(res.avgLechLimited || 0).toFixed(2)}</td>
             <td>${(res.avgStandard6Stars || 0).toFixed(2)}</td>
@@ -841,12 +941,13 @@ function displaySimulatorResults(results, numBanners) {
             <td style="font-weight: 600; color: #ffb800;">${res.bestLuckChar} / ${res.worstLuckChar}</td>
             <td>${res.avgFeaturedWeapons.toFixed(2)}</td>
             <td style="font-weight: 700; color: #00b4d8;">${total6StarWeap.toFixed(2)}</td>
+            <td>${res.avgWeaponPulls.toFixed(0)} pull</td>
+            <td>${(res.avgUnspentWeapon / 198).toFixed(1)} pull</td>
             <td style="font-weight: 700; color: var(--orange-primary);">${res.ownershipRate.toFixed(1)}%</td>
         `;
         tableBody.appendChild(tr);
     });
 
-    // 3. Vẽ lại biểu đồ
     drawDistributionChart('chart-distribution', results, strategies);
     drawComparisonChart('chart-efficiency', results, strategies);
 }

@@ -188,3 +188,43 @@ export function calculateArsenalTicketsRebate(hhResults) {
     });
     return tickets;
 }
+
+/**
+ * Thực hiện 1 lượt pull nhân vật trên banner thường (Standard Headhunting)
+ * @param {Object} state - Trạng thái pity của banner thường
+ * @returns {Object} Kết quả lượt quay { rarity: 4|5|6, isFeatured: false, isUrgent: false, isLechLimited: false }
+ */
+export function rollStandardCharacter(state) {
+    state.bannerPullsCount = (state.bannerPullsCount || 0) + 1;
+    state.pity6 = (state.pity6 || 0) + 1;
+    state.pity5 = (state.pity5 || 0) + 1;
+
+    let rate6 = 0.008;
+
+    if (state.pity6 >= 80) {
+        rate6 = 1.0;
+    } else if (state.pity6 > 65) {
+        rate6 = 0.008 + (state.pity6 - 65) * 0.05;
+    }
+
+    const r = Math.random();
+    if (r < rate6) {
+        // Trúng Standard 6★
+        state.pity6 = 0;
+        state.pity5 = 0;
+        return { rarity: 6, isFeatured: false, isUrgent: false, isLechLimited: false };
+    }
+
+    const isGuaranteed5 = state.pity5 >= 10;
+    const rate5 = isGuaranteed5 ? 1.0 : 0.08;
+
+    if (Math.random() < rate5) {
+        // Trúng Standard 5★
+        state.pity5 = 0;
+        return { rarity: 5, isFeatured: false, isUrgent: false };
+    }
+
+    // Trúng 4★
+    return { rarity: 4, isFeatured: false, isUrgent: false };
+}
+
