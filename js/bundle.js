@@ -15200,9 +15200,9 @@
           if (nextMetaIdx !== -1) {
             const bannersUntilMeta = nextMetaIdx - bannerIdx;
             const expectedFutureEarnings = bannersUntilMeta * (weaponIncomeNonGacha + 860);
-            const totalAvailable = player.arsenalTickets + totalArsenalTicketsEarned + expectedFutureEarnings;
-            if (totalAvailable >= 31680) {
-              const maxSpend = totalAvailable - 15840;
+            const currentTickets = player.arsenalTickets + totalArsenalTicketsEarned;
+            if (currentTickets >= 15840 && currentTickets - 15840 + expectedFutureEarnings >= 15840) {
+              const maxSpend = currentTickets - 15840 + expectedFutureEarnings;
               weaponIssues = executeWeaponPullSequence(player, weaponBannerState, totalArsenalTicketsEarned, gotFeaturedChar, maxSpend);
             } else {
               player.arsenalTickets += totalArsenalTicketsEarned;
