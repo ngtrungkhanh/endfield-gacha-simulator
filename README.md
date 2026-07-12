@@ -1,4 +1,4 @@
-# Arknights: Endfield Gacha Simulator v1.2.2
+# Arknights: Endfield Gacha Simulator v1.2.3
 
 Trình giả lập gacha dành cho **Arknights: Endfield**, hỗ trợ quay tương tác và mô phỏng Monte Carlo để so sánh các chiến thuật sử dụng tài nguyên qua nhiều banner.
 

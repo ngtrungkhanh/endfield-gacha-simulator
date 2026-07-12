@@ -15326,7 +15326,7 @@
     }
     return hash >>> 0;
   }
-  function createRandomSeed2() {
+  function createRandomSeed() {
     if (globalThis.crypto?.getRandomValues) {
       const values = new Uint32Array(2);
       globalThis.crypto.getRandomValues(values);
@@ -15381,7 +15381,7 @@
     const defaultMeta = Math.floor(numBanners * 0.3);
     const normalized = {
       strategyId: config.strategyId || "save_commit",
-      seed: String(config.seed || "").trim() || createRandomSeed2(),
+      seed: String(config.seed || "").trim() || createRandomSeed(),
       numBanners,
       numMetaBanners: config.numMetaBanners !== void 0 ? Math.max(0, Math.min(numBanners, Math.trunc(Number(config.numMetaBanners)))) : defaultMeta,
       startingCharTickets: Math.max(0, Math.trunc(Number(config.startingCharTickets) || 0)),
@@ -16862,7 +16862,7 @@
     loadSimulatorLastResults();
     updateInteractiveUI();
     calculateVersionIncome();
-    document.getElementById("build-info").textContent = t("app.version", { version: "1.2.2", commit: "08b7904" });
+    document.getElementById("build-info").textContent = t("app.version", { version: "1.2.3", commit: "f3d87e2" });
     subscribe(() => {
       applyTranslations();
       updateLocaleControls();
@@ -16871,7 +16871,7 @@
       updateSingleRunIncome();
       loadSimulatorLastResults();
       if (lastSingleRun) renderSingleRun(lastSingleRun);
-      document.getElementById("build-info").textContent = t("app.version", { version: "1.2.2", commit: "08b7904" });
+      document.getElementById("build-info").textContent = t("app.version", { version: "1.2.3", commit: "f3d87e2" });
     });
   });
   function updateLocaleControls() {

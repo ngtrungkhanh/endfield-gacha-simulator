@@ -1,7 +1,7 @@
 import Chart from 'chart.js/auto';
 window.Chart = Chart;
 import { rollCharacter, rollWeaponIssue, calculateArsenalTicketsRebate } from './gacha-math.js';
-import { runSingleDetailedSimulation } from './single-run.js';
+import { createRandomSeed, runSingleDetailedSimulation } from './single-run.js';
 import { MonteCarloSimulator } from './simulator.js';
 import { strategies } from './strategies.js';
 import { drawDistributionChart, drawWeaponDistributionChart } from './chart-helper.js';
