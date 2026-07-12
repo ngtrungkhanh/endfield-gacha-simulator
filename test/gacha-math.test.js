@@ -189,6 +189,22 @@ test('ownership rate counts players who obtained every unique Limited and ignore
     assert.deepEqual(result.distribution, { 1: 50, 2: 50 });
 });
 
+test('120 guarantee statistic increments when the guaranteed Featured is obtained', () => {
+    const player = new SimulatorPlayer(1);
+    player.charTickets = 200;
+    const charState = characterState();
+    const weaponState = { issuesCount: 0, issuesSince6: 0, issuesSinceFeatured: 0, featuredGuaranteeConsumed: false };
+
+    // Luôn trượt các roll tự nhiên và 50/50; hard pity 80 sẽ ra off-rate,
+    // sau đó Featured chỉ xuất hiện nhờ guarantee ở pull 120.
+    useRandomSequence([]);
+    runSingleBannerForPlayer('save_commit_single', player, charState, weaponState, 0, 0, 0, 1);
+
+    assert.equal(charState.bannerPullsCount, 120);
+    assert.equal(player.timesHit120Guarantee, 1);
+    assert.equal(player.ownedFeaturedCharacters, 1);
+});
+
 test('dynamic featured guarantee for interactive pulling', () => {
     const state = characterState({
         featuredCountThisBanner: 0,

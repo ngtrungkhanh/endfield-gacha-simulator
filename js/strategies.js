@@ -167,7 +167,9 @@ function executeFreeLimitedRolls(player, bannerState, bannerIdx, totalBanners = 
     const executeSinglePull = () => {
         const pity6Before = bannerState.pity6;
         const pullsSinceFeaturedBefore = bannerState.pullsSinceFeatured;
-        const isGuaranteedFeatured = bannerState.guarantee120Consumed !== true && bannerState.pullsSinceFeatured >= 120;
+        // rollCharacter tăng bộ đếm trước khi xét guarantee, nên trạng thái 119
+        // nghĩa là lượt sắp thực hiện chính là pull bảo hiểm thứ 120.
+        const isGuaranteedFeatured = bannerState.guarantee120Consumed !== true && bannerState.pullsSinceFeatured >= 119;
         const result = rollCharacter(bannerState, false);
         result.actionPhase = 'free';
         result.rollMode = 'free-x10';
@@ -292,7 +294,8 @@ function executeCharacterPullSequence(player, bannerState, targetPulls, stopOnFe
     const executeSinglePull = (isUrgent = false, force5Star = false, rollMode = 'x1', rollBatchId = null) => {
         const pity6Before = bannerState.pity6;
         const pullsSinceFeaturedBefore = bannerState.pullsSinceFeatured;
-        const isGuaranteedFeatured = !isUrgent && bannerState.guarantee120Consumed !== true && bannerState.pullsSinceFeatured >= 120;
+        // Kiểm tra trước khi roll: 119 lượt đã qua => lượt hiện tại chạm mốc 120.
+        const isGuaranteedFeatured = !isUrgent && bannerState.guarantee120Consumed !== true && bannerState.pullsSinceFeatured >= 119;
         const result = rollCharacter(bannerState, isUrgent, force5Star);
         result.pity6Before = pity6Before;
         result.pullsSinceFeaturedBefore = pullsSinceFeaturedBefore;

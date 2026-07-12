@@ -14775,7 +14775,7 @@
     const executeSinglePull = () => {
       const pity6Before = bannerState.pity6;
       const pullsSinceFeaturedBefore = bannerState.pullsSinceFeatured;
-      const isGuaranteedFeatured = bannerState.guarantee120Consumed !== true && bannerState.pullsSinceFeatured >= 120;
+      const isGuaranteedFeatured = bannerState.guarantee120Consumed !== true && bannerState.pullsSinceFeatured >= 119;
       const result = rollCharacter(bannerState, false);
       result.actionPhase = "free";
       result.rollMode = "free-x10";
@@ -14874,7 +14874,7 @@
     const executeSinglePull = (isUrgent = false, force5Star = false, rollMode = "x1", rollBatchId = null) => {
       const pity6Before = bannerState.pity6;
       const pullsSinceFeaturedBefore = bannerState.pullsSinceFeatured;
-      const isGuaranteedFeatured = !isUrgent && bannerState.guarantee120Consumed !== true && bannerState.pullsSinceFeatured >= 120;
+      const isGuaranteedFeatured = !isUrgent && bannerState.guarantee120Consumed !== true && bannerState.pullsSinceFeatured >= 119;
       const result = rollCharacter(bannerState, isUrgent, force5Star);
       result.pity6Before = pity6Before;
       result.pullsSinceFeaturedBefore = pullsSinceFeaturedBefore;
@@ -16857,7 +16857,7 @@
     loadSimulatorLastResults();
     updateInteractiveUI();
     calculateVersionIncome();
-    document.getElementById("build-info").textContent = t("app.version", { version: "1.2.0", commit: "d752fce" });
+    document.getElementById("build-info").textContent = t("app.version", { version: "1.2.1", commit: "3f469c0" });
     subscribe(() => {
       applyTranslations();
       updateLocaleControls();
@@ -16866,7 +16866,7 @@
       updateSingleRunIncome();
       loadSimulatorLastResults();
       if (lastSingleRun) renderSingleRun(lastSingleRun);
-      document.getElementById("build-info").textContent = t("app.version", { version: "1.2.0", commit: "d752fce" });
+      document.getElementById("build-info").textContent = t("app.version", { version: "1.2.1", commit: "3f469c0" });
     });
   });
   function updateLocaleControls() {
