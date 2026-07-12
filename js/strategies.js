@@ -529,7 +529,7 @@ export const strategies = {
     pull_60: {
         id: 'pull_60',
         name: 'Pull 60',
-        desc: 'Nhân vật: Hướng tới mốc 60 pull để lấy 10 vé Dossier (không dừng khi trúng Featured sớm). Nếu thiếu vé, hạ mục tiêu xuống mốc 30 để nhận 10 Urgent free; nếu vẫn thiếu sẽ skip để tích lũy. Đặc biệt, nếu đạt mốc 60 mà tạch Featured, sẽ tự động nâng lên mốc 120 để lấy bảo hiểm nếu ngân sách của banner hiện tại và banner kế tiếp vẫn an toàn. Vũ khí: Quay vũ khí nếu có nhân vật.',
+        desc: 'Nhân vật: Hướng tới mốc 60 pull để lấy 10 vé Dossier (không dừng khi trúng Featured sớm). Nếu thiếu vé, hạ mục tiêu xuống mốc 30 để nhận 10 Urgent free; nếu vẫn thiếu sẽ skip để tích lũy. Đặc biệt, nếu đạt mốc 60 mà tạch Featured, sẽ tự động nâng lên mốc 120 để lấy bảo hiểm nếu ngân sách của banner hiện tại và banner kế tiếp vẫn an toàn. Vũ khí: Chỉ quay sau khi có nhân vật và tích đủ 8 Issues (15.840 vé).',
         
         runCharacterPull(player, bannerState, ticketIncome, bannerIdx, totalBanners) {
             return [];
@@ -755,6 +755,11 @@ export function runSingleBannerForPlayer(strategyId, player, charBannerState, we
     // 6. Quay banner vũ khí
     let weaponIssues = [];
     if (strategyId === 'save_commit' || strategyId === 'save_commit_single') {
+        player.arsenalTickets += totalArsenalTicketsEarned;
+        if (gotFeaturedChar && player.arsenalTickets >= 15840) {
+            weaponIssues = executeWeaponPullSequence(player, weaponBannerState, 0, gotFeaturedChar, Infinity, bannerIdx, totalBanners);
+        }
+    } else if (strategyId === 'pull_60') {
         player.arsenalTickets += totalArsenalTicketsEarned;
         if (gotFeaturedChar && player.arsenalTickets >= 15840) {
             weaponIssues = executeWeaponPullSequence(player, weaponBannerState, 0, gotFeaturedChar, Infinity, bannerIdx, totalBanners);

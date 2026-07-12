@@ -150,6 +150,34 @@ test('Pull 60 counts Dossier toward its budget', () => {
     assert.equal(player.currentBannerDossierTickets, 0);
 });
 
+test('Pull 60 waits for 8 saved weapon Issues before pulling weapons', () => {
+    const runWithArsenal = (arsenalTickets) => {
+        const player = new SimulatorPlayer(1);
+        player.arsenalTickets = arsenalTickets;
+        const charState = characterState();
+        const weaponState = { issuesCount: 0, issuesSince6: 0, issuesSinceFeatured: 0, featuredGuaranteeConsumed: false };
+
+        useRandomSequence([
+            ...Array(16).fill(0.99),
+            0.001, 0.1,
+            ...Array(9).fill(0.99)
+        ]);
+
+        const result = runSingleBannerForPlayer('pull_60', player, charState, weaponState, 0, 0, 0, 1);
+        return { player, result };
+    };
+
+    const belowThreshold = runWithArsenal(1980);
+    assert.equal(belowThreshold.result.gotFeaturedChar, true);
+    assert.equal(belowThreshold.result.weaponIssues.length, 0);
+    assert.ok(belowThreshold.player.arsenalTickets >= 1980);
+
+    const atThreshold = runWithArsenal(15840);
+    assert.equal(atThreshold.result.gotFeaturedChar, true);
+    assert.ok(atThreshold.result.weaponIssues.length > 0);
+    assert.ok(atThreshold.result.weaponIssues.length <= 8);
+});
+
 test('all strategies switch to x1 only when fewer than 10 pulls remain to 30/60/120', () => {
     const state = characterState({ milestone30Triggered: false, milestone60Triggered: false });
     assert.equal(shouldForceSingleNearMilestone(state, 20), false);

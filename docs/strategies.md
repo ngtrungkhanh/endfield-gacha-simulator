@@ -60,7 +60,8 @@ ID: `pull_60`
 - Nếu không đủ mốc 60 nhưng tổng tài nguyên có ít nhất 20 lượt, quay đến mốc 30.
 - Nếu không đủ mốc 30, chiến thuật skip ngoài các lượt miễn phí và Dossier bắt buộc phải dùng.
 - Không dừng sớm khi nhận featured; mục tiêu chính là hoàn thành mốc đã chọn.
-- Sau khi nhận featured Operator, chính sách vũ khí giống Yolo.
+- Sau khi nhận featured Operator, chỉ bắt đầu quay vũ khí khi đã tích đủ 15.840 Arsenal Tickets, tương đương tám Issue.
+- Dừng quay vũ khí khi nhận featured hoặc phần thưởng mốc được simulator tính là featured.
 
 ## 5. Roll Meta
 

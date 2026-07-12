@@ -15062,7 +15062,7 @@
     pull_60: {
       id: "pull_60",
       name: "Pull 60",
-      desc: "Nh\xE2n v\u1EADt: H\u01B0\u1EDBng t\u1EDBi m\u1ED1c 60 pull \u0111\u1EC3 l\u1EA5y 10 v\xE9 Dossier (kh\xF4ng d\u1EEBng khi tr\xFAng Featured s\u1EDBm). N\u1EBFu thi\u1EBFu v\xE9, h\u1EA1 m\u1EE5c ti\xEAu xu\u1ED1ng m\u1ED1c 30 \u0111\u1EC3 nh\u1EADn 10 Urgent free; n\u1EBFu v\u1EABn thi\u1EBFu s\u1EBD skip \u0111\u1EC3 t\xEDch l\u0169y. \u0110\u1EB7c bi\u1EC7t, n\u1EBFu \u0111\u1EA1t m\u1ED1c 60 m\xE0 t\u1EA1ch Featured, s\u1EBD t\u1EF1 \u0111\u1ED9ng n\xE2ng l\xEAn m\u1ED1c 120 \u0111\u1EC3 l\u1EA5y b\u1EA3o hi\u1EC3m n\u1EBFu ng\xE2n s\xE1ch c\u1EE7a banner hi\u1EC7n t\u1EA1i v\xE0 banner k\u1EBF ti\u1EBFp v\u1EABn an to\xE0n. V\u0169 kh\xED: Quay v\u0169 kh\xED n\u1EBFu c\xF3 nh\xE2n v\u1EADt.",
+      desc: "Nh\xE2n v\u1EADt: H\u01B0\u1EDBng t\u1EDBi m\u1ED1c 60 pull \u0111\u1EC3 l\u1EA5y 10 v\xE9 Dossier (kh\xF4ng d\u1EEBng khi tr\xFAng Featured s\u1EDBm). N\u1EBFu thi\u1EBFu v\xE9, h\u1EA1 m\u1EE5c ti\xEAu xu\u1ED1ng m\u1ED1c 30 \u0111\u1EC3 nh\u1EADn 10 Urgent free; n\u1EBFu v\u1EABn thi\u1EBFu s\u1EBD skip \u0111\u1EC3 t\xEDch l\u0169y. \u0110\u1EB7c bi\u1EC7t, n\u1EBFu \u0111\u1EA1t m\u1ED1c 60 m\xE0 t\u1EA1ch Featured, s\u1EBD t\u1EF1 \u0111\u1ED9ng n\xE2ng l\xEAn m\u1ED1c 120 \u0111\u1EC3 l\u1EA5y b\u1EA3o hi\u1EC3m n\u1EBFu ng\xE2n s\xE1ch c\u1EE7a banner hi\u1EC7n t\u1EA1i v\xE0 banner k\u1EBF ti\u1EBFp v\u1EABn an to\xE0n. V\u0169 kh\xED: Ch\u1EC9 quay sau khi c\xF3 nh\xE2n v\u1EADt v\xE0 t\xEDch \u0111\u1EE7 8 Issues (15.840 v\xE9).",
       runCharacterPull(player, bannerState, ticketIncome, bannerIdx, totalBanners) {
         return [];
       },
@@ -15247,6 +15247,11 @@
     const totalArsenalTicketsEarned = arsenalTicketsRebate + weaponIncomeNonGacha;
     let weaponIssues = [];
     if (strategyId === "save_commit" || strategyId === "save_commit_single") {
+      player.arsenalTickets += totalArsenalTicketsEarned;
+      if (gotFeaturedChar && player.arsenalTickets >= 15840) {
+        weaponIssues = executeWeaponPullSequence(player, weaponBannerState, 0, gotFeaturedChar, Infinity, bannerIdx, totalBanners);
+      }
+    } else if (strategyId === "pull_60") {
       player.arsenalTickets += totalArsenalTicketsEarned;
       if (gotFeaturedChar && player.arsenalTickets >= 15840) {
         weaponIssues = executeWeaponPullSequence(player, weaponBannerState, 0, gotFeaturedChar, Infinity, bannerIdx, totalBanners);
@@ -15899,7 +15904,7 @@
       "strategy.helpSave": "1. T\xEDch l\u0169y an to\xE0n (Save & Commit): Ch\u1EC9 roll khi v\xED + Dossier \u0111\u1EE7 110 v\xE9 (c\u1ED9ng 10 free th\xE0nh 120). Roll x10, t\u1EF1 chuy\u1EC3n x1 khi c\xF2n d\u01B0\u1EDBi 10 l\u01B0\u1EE3t \u0111\u1EBFn m\u1ED1c 30/60/120 ho\u1EB7c khi pity \u2265 71, d\u1EEBng ngay khi c\xF3 Featured. V\u0169 kh\xED quay m\u1ED1c 8 Issues.",
       "strategy.helpSingle": "2. Save & Commit (Quay l\u1EBB): \u0110i\u1EC1u ki\u1EC7n t\xEDch l\u0169y gi\u1ED1ng Save & Commit, nh\u01B0ng quay l\u1EBB x1 t\u1EEB \u0111\u1EA7u \u0111\u1EBFn cu\u1ED1i \u0111\u1EC3 t\u1ED1i \u01B0u ti\u1EBFt ki\u1EC7m v\xE9. V\u0169 kh\xED quay m\u1ED1c 8 Issues.",
       "strategy.helpYolo": "3. Spend All (Yolo): C\u1EE9 c\xF3 bao nhi\xEAu v\xE9 l\xE0 quay h\u1EBFt, d\u1EEBng ngay khi ra Featured. N\u1EBFu tr\xFAng nh\xE2n v\u1EADt, x\u1EA3 s\u1EA1ch v\xE9 v\u0169 kh\xED \u0111\u1EC3 s\u0103n Featured Weapon.",
-      "strategy.help60": "4. M\u1ED1c 60 m\u1ED7i banner: C\u1ED1 \u0111\u1EA1t m\u1ED1c 60 \u0111\u1EC3 l\u1EA5y 10 v\xE9 Dossier (kh\xF4ng d\u1EEBng khi tr\xFAng Featured s\u1EDBm). N\u1EBFu thi\u1EBFu v\xE9, h\u1EA1 m\u1ED1c 30 \u0111\u1EC3 nh\u1EADn 10 Urgent; n\u1EBFu v\u1EABn thi\u1EBFu s\u1EBD skip. N\u1EBFu \u0111\u1EA1t m\u1ED1c 60 m\xE0 t\u1EA1ch Featured, t\u1EF1 \u0111\u1ED9ng n\xE2ng l\xEAn m\u1ED1c 120 n\u1EBFu ng\xE2n s\xE1ch an to\xE0n.",
+      "strategy.help60": "4. M\u1ED1c 60 m\u1ED7i banner: C\u1ED1 \u0111\u1EA1t m\u1ED1c 60 \u0111\u1EC3 l\u1EA5y 10 v\xE9 Dossier (kh\xF4ng d\u1EEBng khi tr\xFAng Featured s\u1EDBm). N\u1EBFu thi\u1EBFu v\xE9, h\u1EA1 m\u1ED1c 30 \u0111\u1EC3 nh\u1EADn 10 Urgent; n\u1EBFu v\u1EABn thi\u1EBFu s\u1EBD skip. N\u1EBFu \u0111\u1EA1t m\u1ED1c 60 m\xE0 t\u1EA1ch Featured, t\u1EF1 \u0111\u1ED9ng n\xE2ng l\xEAn m\u1ED1c 120 n\u1EBFu ng\xE2n s\xE1ch an to\xE0n. V\u0169 kh\xED ch\u1EC9 quay sau khi c\xF3 Featured Operator v\xE0 t\xEDch \u0111\u1EE7 8 Issues.",
       "strategy.helpMeta": "5. Quay theo Meta: Ch\u1ECDn ng\u1EABu nhi\xEAn \u0111\xFAng s\u1ED1 banner Meta \u0111\xE3 c\u1EA5u h\xECnh (m\u1ED7i banner quay t\u1ED1i \u0111a 120 roll). Banner th\u01B0\u1EDDng ch\u1EC9 commit n\u1EBFu s\u1ED1 v\xE9 d\u01B0 b\u1EA3o \u0111\u1EA3m 120 roll cho banner Meta k\u1EBF ti\u1EBFp. V\u0169 kh\xED quay \u1EDF banner Meta ho\u1EB7c banner th\u01B0\u1EDDng n\u1EBFu v\xED \u0111\u1EE7 8 Issues cho c\u1EA3 banner hi\u1EC7n t\u1EA1i l\u1EABn banner Meta k\u1EBF ti\u1EBFp.",
       "rule.optimizeTitle": "[i] Lu\u1EADt t\u1ED1i \u01B0u m\u1ED1c 30",
       "rule.optimize": "N\u1EBFu \u0111\xE3 quay \u0111\u1EBFn 20 pull (10 free + 10 Dossier) m\xE0 ch\u01B0a tr\xFAng Featured, m\u1ECDi chi\u1EBFn thu\u1EADt d\xF9ng th\xEAm t\u1ED1i \u0111a 10 v\xE9 \u0111\u1EC3 ch\u1EA1m m\u1ED1c 30 v\xE0 nh\u1EADn 10 Urgent Recruitment mi\u1EC5n ph\xED.",
@@ -15956,7 +15961,7 @@
       "docs.saveCommit": "Ch\u1EC9 roll khi c\xF3 \u0111\u1EE7 v\xE9 b\u1EA3o hi\u1EC3m 120 l\u01B0\u1EE3t (v\xED + Dossier); d\u1EEBng sau c\u1EE5m ch\u1EE9a Featured ho\u1EB7c t\u1EA1i m\u1ED1c 120.",
       "docs.saveSingle": "\u0110i\u1EC1u ki\u1EC7n t\xEDch v\xE9 gi\u1ED1ng Save & Commit nh\u01B0ng quay t\u1EEBng l\u01B0\u1EE3t v\xE0 d\u1EEBng ngay khi nh\u1EADn Featured.",
       "docs.yolo": "D\xF9ng to\xE0n b\u1ED9 v\xE9 kh\u1EA3 d\u1EE5ng cho \u0111\u1EBFn khi nh\u1EADn Featured ho\u1EB7c h\u1EBFt t\xE0i nguy\xEAn.",
-      "docs.pull60": "\u01AFu ti\xEAn ch\u1EA1m m\u1ED1c 60 n\u1EBFu \u0111\u1EE7 50 v\xE9 ngo\xE0i 10 free; n\u1EBFu kh\xF4ng, c\xE2n nh\u1EAFc m\u1ED1c 30.",
+      "docs.pull60": "\u01AFu ti\xEAn ch\u1EA1m m\u1ED1c 60 n\u1EBFu \u0111\u1EE7 50 v\xE9 ngo\xE0i 10 free; n\u1EBFu kh\xF4ng, c\xE2n nh\u1EAFc m\u1ED1c 30. V\u0169 kh\xED ch\u1EC9 quay khi \u0111\xE3 c\xF3 Featured Operator v\xE0 t\xEDch \u0111\u1EE7 8 Issues.",
       "docs.rollMeta": "Ch\u1ECDn ng\u1EABu nhi\xEAn \u0111\xFAng s\u1ED1 banner Meta \u0111\xE3 c\u1EA5u h\xECnh v\xE0 ch\u1EC9 commit banner th\u01B0\u1EDDng khi v\u1EABn b\u1EA3o to\xE0n qu\u1EF9 cho Meta k\u1EBF ti\u1EBFp.",
       "docs.footnote": "N\u1ED9i dung n\xE0y \u0111\u01B0\u1EE3c \u0111\xF3ng g\xF3i tr\u1EF1c ti\u1EBFp trong \u1EE9ng d\u1EE5ng v\xE0 kh\xF4ng t\u1EA3i file hay d\u1EEF li\u1EC7u b\xEAn ngo\xE0i.",
       "error.freeTickets": "B\u1EA1n kh\xF4ng \u0111\u1EE7 v\xE9 Free Banner gi\u1EDBi h\u1EA1n!",
@@ -16192,7 +16197,7 @@
       "strategy.helpSave": "1. Save & Commit: Only roll when wallet + Dossier has at least 110 tickets (guaranteeing 120 pulls). Pulls x10, switching to singles near milestones 30/60/120 or at pity \u2265 71, stopping on Featured. Pulls weapons at 8 Issues.",
       "strategy.helpSingle": "2. Save & Commit (Singles): Same accumulation condition as Save & Commit, but pulls x1 singles from start to finish to maximize ticket savings. Pulls weapons at 8 Issues.",
       "strategy.helpYolo": "3. Spend All (Yolo): Spends all available character tickets, stopping immediately on Featured. If character is obtained, spends all weapon tickets to search for Featured Weapon.",
-      "strategy.help60": "4. Pull 60: Targets pull 60 to secure 10 Dossier tickets (does not stop early on Featured). If budget is low, falls back to pull 30 for 10 free Urgent rolls; otherwise skips. Upgrades to 120 if budget allows and Featured is missed.",
+      "strategy.help60": "4. Pull 60: Targets pull 60 to secure 10 Dossier tickets (does not stop early on Featured). If budget is low, falls back to pull 30 for 10 free Urgent rolls; otherwise skips. Upgrades to 120 if budget allows and Featured is missed. Weapons are pulled only after obtaining the Featured Operator and saving 8 Issues.",
       "strategy.helpMeta": "5. Roll Meta: Randomly selects exactly the configured number of Meta banners (up to 120 pulls each). Regular banners are only committed if remaining budget guarantees 120 pulls for the next Meta banner. Pulls weapons on Meta banners, or regular banners if budget guarantees 8 Issues for both current and next Meta banners.",
       "rule.optimizeTitle": "[i] Pull 30 optimization",
       "rule.optimize": "After 20 pulls (10 free + 10 Dossier) without Featured, every strategy spends up to 10 wallet tickets to reach pull 30 and receive 10 free Urgent Recruitment pulls.",
@@ -16249,7 +16254,7 @@
       "docs.saveCommit": "Commit only when having enough guaranteed 120 pulls (wallet + Dossier); stop after the batch containing Featured or at pull 120.",
       "docs.saveSingle": "Uses the same savings condition as Save & Commit, but pulls one at a time and stops immediately on Featured.",
       "docs.yolo": "Spend every available ticket until Featured appears or resources run out.",
-      "docs.pull60": "Prefer reaching pull 60 with at least 50 tickets beyond the 10 free pulls; otherwise consider pull 30.",
+      "docs.pull60": "Prefer reaching pull 60 with at least 50 tickets beyond the 10 free pulls; otherwise consider pull 30. Weapons are pulled only after obtaining the Featured Operator and saving 8 Issues.",
       "docs.rollMeta": "Randomly select exactly the configured number of Meta banners and commit on regular banners only when the next Meta budget remains protected.",
       "docs.footnote": "This content is bundled directly into the application and does not load external files or data.",
       "error.freeTickets": "You do not have enough limited Free Banner tickets!",
@@ -16857,7 +16862,7 @@
     loadSimulatorLastResults();
     updateInteractiveUI();
     calculateVersionIncome();
-    document.getElementById("build-info").textContent = t("app.version", { version: "1.2.1", commit: "3f469c0" });
+    document.getElementById("build-info").textContent = t("app.version", { version: "1.2.2", commit: "08b7904" });
     subscribe(() => {
       applyTranslations();
       updateLocaleControls();
@@ -16866,7 +16871,7 @@
       updateSingleRunIncome();
       loadSimulatorLastResults();
       if (lastSingleRun) renderSingleRun(lastSingleRun);
-      document.getElementById("build-info").textContent = t("app.version", { version: "1.2.1", commit: "3f469c0" });
+      document.getElementById("build-info").textContent = t("app.version", { version: "1.2.2", commit: "08b7904" });
     });
   });
   function updateLocaleControls() {
