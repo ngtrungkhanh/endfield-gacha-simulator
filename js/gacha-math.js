@@ -11,9 +11,8 @@
 export function rollCharacter(state, isUrgent = false, force5Star = false) {
     if (isUrgent) {
         if (force5Star) {
-            // Cưỡng chế ra 5★ trở lên (tỉ lệ 6★ là 0.8%, còn lại 5★)
-            const totalRate = 0.008 + 0.08;
-            const r = Math.random() * totalRate;
+            // Cưỡng chế ra 5★ trở lên (tỉ lệ 6★ giữ nguyên 0.8%, còn lại là 5★)
+            const r = Math.random();
             if (r < 0.008) {
                 const isFeatured = Math.random() < 0.5;
                 const isLechLimited = !isFeatured && (Math.random() < 0.10);
@@ -136,11 +135,10 @@ export function rollWeaponIssue(state) {
             // Bảo hiểm 5★ trở lên trong cùng 1 Issue (x10)
             const hasHighRarity = results.some(item => item.rarity >= 5);
             if (i === 9 && !hasHighRarity) {
-                // Nếu 9 lượt trước toàn 4★, lượt thứ 10 buộc phải là 5★ hoặc 6★
+                // Nếu 9 lượt trước toàn 4★, lượt thứ 10 buộc phải là 5★ hoặc 6★ (tỷ lệ 6★ giữ nguyên 4%, còn lại là 5★)
                 p4 = 0;
-                const total = p6 + p5; // 0.04 + 0.15 = 0.19
-                p6 = p6 / total; // ~21%
-                p5 = p5 / total; // ~79%
+                p6 = 0.04;
+                p5 = 0.96;
             }
 
             const r = Math.random();
@@ -182,11 +180,12 @@ export function rollWeaponIssue(state) {
     // Tính toán phần thưởng cột mốc (Milestone Rewards)
     let milestoneReward = null;
     if (state.issuesCount === 10) {
-        milestoneReward = 'selector_box'; // Hộp tự chọn vũ khí
-    } else if (state.issuesCount === 18) {
-        milestoneReward = 'featured_weapon'; // Tặng thẳng vũ khí rate-up
-    } else if (state.issuesCount > 18 && (state.issuesCount - 18) % 8 === 0) {
-        milestoneReward = 'featured_weapon'; // Cứ mỗi 8 Issues tiếp theo lại tặng thẳng
+        milestoneReward = 'selector_box'; // Hộp chọn một vũ khí 6★ ngoài rate-up
+    } else if (state.issuesCount > 10 && (state.issuesCount - 10) % 8 === 0) {
+        // Sau mốc 10, phần thưởng luân phiên mỗi 8 Issue:
+        // 18 Featured, 26 Selector, 34 Featured, 42 Selector...
+        const rewardStep = (state.issuesCount - 10) / 8;
+        milestoneReward = rewardStep % 2 === 1 ? 'featured_weapon' : 'selector_box';
     }
 
     return {

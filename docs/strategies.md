@@ -30,7 +30,7 @@ Một cụm x10 đã bắt đầu không thể bị ngắt giữa chừng. Nếu
 
 ID: `save_commit`
 
-- Chỉ chi vé khi tổng vé thường và Dossier khả dụng có ít nhất 110 lượt; cộng 10 lượt Limited miễn phí thành đủ trần 120 lượt.
+- Chỉ chi vé khi có đủ vé bảo hiểm 120 lượt (ví + Dossier, đã tính đến cả Bond Quota hoàn trả tối thiểu thu về trong quá trình roll).
 - Quay đến khi nhận featured 6★ hoặc đạt mục tiêu 120 lượt; nếu featured xuất hiện giữa cụm x10 thì hoàn tất cụm trước khi dừng.
 - Dùng x10 thông thường và áp dụng quy tắc chuyển x1 chung khi gần mốc 30, 60, pity 6★ hoặc guarantee 120.
 - Chỉ bắt đầu quay vũ khí sau khi đã nhận featured Operator và có ít nhất 15.840 Arsenal Tickets, tương đương tám Issue.
@@ -66,16 +66,19 @@ ID: `pull_60`
 
 ID: `roll_meta`
 
-- Chọn `floor(30% × tổng số banner)` làm banner Meta và phân bổ chúng tương đối đều trong chuỗi mô phỏng.
+- Người dùng cấu hình trực tiếp số banner Meta từ `0` đến tổng số banner. Giá trị mặc định trên giao diện được gợi ý bằng `floor(30% × tổng số banner)`, nhưng không phải tỷ lệ cố định.
+- Đúng số vị trí Meta đã cấu hình được chọn ngẫu nhiên bằng Fisher–Yates trong chuỗi banner. Cùng một lượt Monte Carlo dùng chung tập vị trí này cho mọi người chơi và chiến thuật để so sánh trên cùng lịch banner; Single Run dùng seed riêng nên có thể tái lập tập Meta.
 - Banner Meta luôn được phép quay tối đa 120 lượt và dừng khi nhận featured.
-- Ở banner không Meta, chỉ quay khi có đủ ngân sách 110 vé và vẫn có thể tích lại đủ 110 vé cho banner Meta kế tiếp từ phần dư cộng thu nhập dự kiến.
+- Ở banner không Meta, chỉ quay khi có đủ ngân sách bảo hiểm 120 lượt và vẫn có thể tích lại đủ lượng vé bảo hiểm cho banner Meta kế tiếp từ phần dư cộng thu nhập dự kiến.
 - Nếu không còn banner Meta phía sau, quay theo điều kiện Save & Commit thông thường.
-- Chỉ quay vũ khí trên banner Meta và chỉ khi đã nhận featured Operator.
+- Trên banner Meta, quay vũ khí sau khi đã nhận featured Operator.
+- Trên banner thường, có thể quay vũ khí nếu đã nhận featured Operator, ví hiện tại đủ tám Issue và phần dư cộng thu nhập dự kiến vẫn bảo đảm tám Issue cho banner Meta kế tiếp. Nếu không còn banner Meta phía sau, áp dụng ngưỡng tám Issue cho banner hiện tại.
 
 ## Quy ước vũ khí trong simulator
 
 - Một Issue luôn được tính là 10 lượt và tiêu tốn 1.980 Arsenal Tickets.
-- Các chiến thuật dừng săn vũ khí khi nhận featured trực tiếp hoặc khi phần thưởng mốc trả về `selector_box`/`featured_weapon`.
+- Các chiến thuật dừng săn vũ khí khi nhận featured trực tiếp hoặc khi phần thưởng mốc trả về `featured_weapon`.
+- `selector_box` là hộp chọn 6★ ngoài rate-up: tăng thống kê 6★ Standard và hộp chọn, nhưng không tăng Featured Weapon và không hoàn thành mục tiêu săn Featured.
 - Save & Commit yêu cầu ngân sách đủ tám Issue trước khi bắt đầu; các chiến thuật còn lại có thể bắt đầu ngay khi đủ một Issue và thỏa điều kiện featured Operator của chúng.
 
 ## Giả định mô hình cần tiếp tục xác minh
@@ -84,8 +87,8 @@ Các giá trị sau đang được dùng trong code để mô phỏng dupe và B
 
 - Bể giả lập gồm 6 Standard 6★, 3 Limited lệch và 15 Operator 5★.
 - Khi lệch Featured 6★, có 10% khả năng kết quả thuộc nhóm Limited lệch.
-- Standard 6★ lệch được giả định luôn là dupe và nhận 50 Bond Quota.
-- Operator 5★ hiện luôn nhận 10 Bond Quota; Featured/Limited 6★ chỉ nhận 50 Quota khi đã sở hữu.
+- Mô hình giả định tài khoản đã sở hữu gần đủ pool: Standard 6★ lệch luôn được tính là dupe và nhận 50 Bond Quota.
+- Cũng theo giả định tài khoản lâu năm, Operator 5★ luôn nhận 10 Bond Quota; Featured/Limited 6★ chỉ nhận 50 Quota khi đã sở hữu.
 - Mỗi 25 Bond Quota tự động đổi thành một vé nhân vật.
 - Pity 6★ của Arsenal (`issuesSince6`) hiện được giữ khi đổi Issue banner, trong khi featured guarantee và số Issue cột mốc reset.
 
@@ -95,4 +98,4 @@ Những giả định này cần được thay bằng dữ liệu pool/sở hữ
 
 [`reports/detailed_gacha_run.md`](../reports/detailed_gacha_run.md) là một run Save & Commit có seed cố định `20260711`, dùng để kiểm tra thứ tự quyết định, pity 80/120, mốc 30/60, Urgent, Dossier, Bond Quota và Arsenal qua 10 banner.
 
-Run này gọi trực tiếp cùng `SimulatorPlayer` và `runSingleBannerForPlayer()` mà giao diện web sử dụng. Với cùng seed và cấu hình, số tổng hợp của báo cáo khớp `MonteCarloSimulator`. Giao diện web hiện dùng `Math.random()` và chưa có ô nhập seed, nên một lần bấm chạy thông thường có cùng logic nhưng không nhất thiết tái tạo đúng kết quả ngẫu nhiên của báo cáo.
+Run này gọi trực tiếp cùng `SimulatorPlayer` và `runSingleBannerForPlayer()` mà giao diện web sử dụng. Với cùng seed và cấu hình, tab Gacha Simulator có thể tái tạo cùng timeline. Mô phỏng Monte Carlo nhiều người chơi vẫn dùng `Math.random()` và không có seed đầu vào, nên mỗi lần chạy có cùng logic nhưng không nhất thiết cho đúng cùng một mẫu ngẫu nhiên.

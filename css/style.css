@@ -1,8 +1,8 @@
 :root {
-    --bg-darker: #080a0c;
-    --bg-dark: #0d1117;
-    --bg-card: rgba(22, 28, 38, 0.7);
-    --border-color: rgba(255, 255, 255, 0.08);
+    --bg-darker: #0c1017;
+    --bg-dark: #121822;
+    --bg-card: rgba(22, 30, 44, 0.75);
+    --border-color: rgba(255, 255, 255, 0.12);
     
     --orange-primary: #ff6b00;
     --orange-glow: rgba(255, 107, 0, 0.4);
@@ -20,6 +20,7 @@
     --text-white: #ffffff;
     --text-primary: #f0f3f6;
     --text-secondary: #8b9bb0;
+    --shadow-premium: 0 16px 48px rgba(0, 0, 0, 0.6);
 }
 
 * {
@@ -48,7 +49,7 @@ h1, h2, h3, h4, .outfit-font {
     -webkit-backdrop-filter: blur(12px);
     border: 1px solid var(--border-color);
     border-radius: 12px;
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+    box-shadow: var(--shadow-premium);
 }
 
 /* Wrapper Layout */
@@ -218,6 +219,12 @@ button:disabled {
     display: grid;
     grid-template-columns: 350px 1fr;
     gap: 24px;
+    transition: grid-template-columns 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.simulator-layout.sidebar-collapsed {
+    grid-template-columns: 0px 1fr;
+    gap: 0;
 }
 
 /* Control Panel Card */
@@ -227,6 +234,17 @@ button:disabled {
     flex-direction: column;
     gap: 20px;
     height: fit-content;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease, padding 0.3s ease, margin 0.3s ease;
+}
+
+.simulator-layout.sidebar-collapsed .control-panel {
+    transform: translateX(-374px);
+    opacity: 0;
+    pointer-events: none;
+    padding: 0;
+    margin: 0;
+    border: none;
+    overflow: hidden;
 }
 
 .panel-title {
@@ -412,7 +430,11 @@ input:checked + .slider:before {
 
 /* Strategy Comparison Table */
 .table-panel {
-    padding: 20px;
+    padding: 16px;
+}
+
+.table-wrapper {
+    width: 100%;
     overflow-x: auto;
 }
 
@@ -420,23 +442,34 @@ table.comparison-table {
     width: 100%;
     border-collapse: collapse;
     text-align: left;
-    font-size: 13px;
+    font-size: 12px;
 }
 
 table.comparison-table th {
     color: var(--text-secondary);
-    font-weight: 600;
-    padding: 12px 16px;
+    font-weight: 700;
+    padding: 10px 8px;
     border-bottom: 2px solid var(--border-color);
     font-family: inherit;
     text-transform: uppercase;
-    font-size: 11px;
+    font-size: 10px;
+    text-align: center;
+}
+
+table.comparison-table th[rowspan] {
+    vertical-align: middle;
 }
 
 table.comparison-table td {
-    padding: 14px 16px;
+    padding: 10px 8px;
     border-bottom: 1px solid var(--border-color);
     color: var(--text-primary);
+    text-align: center;
+}
+
+table.comparison-table th:first-child,
+table.comparison-table td:first-child {
+    text-align: left;
 }
 
 table.comparison-table tr:hover td {
@@ -445,6 +478,100 @@ table.comparison-table tr:hover td {
 
 table.comparison-table tr.selected-row td {
     background: rgba(255, 107, 0, 0.05);
+}
+
+/* Custom Scrollbars */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 107, 0, 0.25) rgba(0, 0, 0, 0.15);
+}
+
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 3px;
+}
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 107, 0, 0.25);
+    border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: var(--orange-primary);
+}
+
+/* Custom CSS Tooltips for Table Headers */
+.tooltip-header {
+    position: relative;
+    cursor: help;
+    border-bottom: 1px dotted rgba(255, 255, 255, 0.35);
+}
+
+/* Elevate the hovered header cell stacking context above sticky column */
+table.comparison-table th.tooltip-header:hover {
+    z-index: 101 !important;
+}
+
+.tooltip-header::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    top: 130%; /* Position below header to prevent clipping at top */
+    left: 50%;
+    transform: translateX(-50%) translateY(-8px);
+    background: #141b25;
+    color: var(--text-primary);
+    border: 1px solid var(--orange-primary);
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: normal;
+    text-transform: none;
+    line-height: 1.4;
+    width: 220px;
+    text-align: left;
+    box-shadow: var(--shadow-premium);
+    opacity: 0;
+    pointer-events: none;
+    display: none; /* Prevent scrollbar triggering when hidden */
+    z-index: 100;
+}
+
+.tooltip-header:hover::after {
+    display: block;
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* Luck Rating Badges */
+.luck-great {
+    color: #ffb800 !important;
+    border-color: #ffb800 !important;
+    background: rgba(255, 184, 0, 0.08) !important;
+    box-shadow: 0 0 12px rgba(255, 184, 0, 0.2);
+    animation: pulse-glow-gold 2s infinite alternate;
+}
+.luck-good {
+    color: #ff6b00 !important;
+    border-color: #ff6b00 !important;
+    background: rgba(255, 107, 0, 0.08) !important;
+    box-shadow: 0 0 10px rgba(255, 107, 0, 0.15);
+}
+.luck-normal {
+    color: #0077b6 !important;
+    border-color: #0077b6 !important;
+    background: rgba(0, 119, 182, 0.08) !important;
+}
+.luck-bad {
+    color: #e63946 !important;
+    border-color: #e63946 !important;
+    background: rgba(230, 57, 70, 0.08) !important;
+    box-shadow: 0 0 10px rgba(230, 57, 70, 0.15);
+}
+@keyframes pulse-glow-gold {
+    from { box-shadow: 0 0 4px rgba(255, 184, 0, 0.15); }
+    to { box-shadow: 0 0 14px rgba(255, 184, 0, 0.35); }
 }
 
 .strategy-badge {
@@ -473,6 +600,7 @@ table.comparison-table tr.selected-row td {
     padding: 20px;
     height: 350px;
     position: relative;
+    min-width: 0; /* Prevent Chart.js canvas from stretching grid column */
 }
 
 /* Tab Interactive Pull */
@@ -963,27 +1091,32 @@ table.comparison-table tr.selected-row td {
     font-size: 12px;
 }
 
-table.comparison-table th:first-child,
-table.comparison-table td:first-child {
+table.comparison-table th.sticky-col,
+table.comparison-table td.sticky-col {
     position: sticky;
     left: 0;
-    z-index: 1;
-    background: #121821;
-    box-shadow: 8px 0 12px -10px rgba(0, 0, 0, 0.95), 1px 0 0 var(--border-color);
-}
-
-table.comparison-table th:first-child {
     z-index: 2;
-    background: #111720;
+    background: #131924;
+    box-shadow: 8px 0 12px -10px rgba(0, 0, 0, 0.95), 1px 0 0 var(--border-color);
+    width: 130px;
+    min-width: 130px;
+    max-width: 130px;
+    white-space: normal;
+    word-break: break-word;
 }
 
-table.comparison-table tr:hover td:first-child {
-    background: #151b24;
+table.comparison-table th.sticky-col {
+    z-index: 3;
+    background: #121822;
 }
 
-table.comparison-table tr.selected-row td:first-child,
-table.comparison-table tr.selected-row:hover td:first-child {
-    background: #211914;
+table.comparison-table tr:hover td.sticky-col {
+    background: #192130;
+}
+
+table.comparison-table tr.selected-row td.sticky-col,
+table.comparison-table tr.selected-row:hover td.sticky-col {
+    background: #251c16;
 }
 
 .pity-widget progress {

@@ -1,4 +1,4 @@
-# Arknights: Endfield Gacha Simulator v1.1.0
+# Arknights: Endfield Gacha Simulator v1.2.0
 
 Trình giả lập gacha dành cho **Arknights: Endfield**, hỗ trợ quay tương tác và mô phỏng Monte Carlo để so sánh các chiến thuật sử dụng tài nguyên qua nhiều banner.
 
@@ -10,14 +10,15 @@ An offline-first Vietnamese/English gacha simulator for **Arknights: Endfield**,
 
 ### 1. Quay tương tác (Interactive Pulls)
 - Quay Operator và vũ khí trực tiếp trên giao diện trực quan.
-- Theo dõi ví vé nhân vật, vé vũ khí (Arsenal), pity hiện tại dạng `xx/80`, kết quả quay và tài nguyên hoàn trả.
-- **Bảo hiểm Featured động (Dynamic Featured Pity)**: Tự động tính bảo hiểm nâng cấp khi lấy thêm dupe (120 mốc đầu, 240 cho dupe 1, và tăng dần 480/720/960... cho các dupe tiếp theo).
+- Theo dõi pity hiện tại dạng `xx/80`, kết quả quay, Dossier, Bond Quota, Arsenal rebate và thống kê tài nguyên đã sử dụng/nhận được.
+- **Bảo hiểm Featured động (Dynamic Featured Pity)**: bảo đảm Featured đầu tiên ở mốc 120; nếu tiếp tục quay trên cùng banner, các bản tiếp theo được bảo đảm tại mốc tổng 240/480/720/960... Bản Featured trùng được ghi nhận thành dupe/Potential và nhận Bond Quota theo mô hình tài khoản hiện tại.
 - **Hệ thống Vé Dossier**: Tích lũy 10 vé Dossier khi đạt mốc 60 lượt quay trên banner hiện tại, tự động tích lũy và ưu tiên sử dụng trước khi chuyển sang banner tiếp theo.
 - Tự động gợi ý chuyển banner khi quay trúng nhân vật Featured của banner hiện tại.
 
 ### 2. Mô phỏng chiến thuật (Strategy Simulator)
 - Chạy giả lập Monte Carlo nhiều người chơi qua chu kỳ Banner (Banner cycles) để so sánh hiệu năng.
 - Tích hợp 5 chiến thuật gacha thông minh: *Save & Commit*, *Save & Commit (Roll lẻ)*, *Yolo / Spend All*, *Pull 60*, và *Roll Meta*.
+- Số banner Meta do người dùng cấu hình; các vị trí Meta được chọn ngẫu nhiên trong chuỗi banner và dùng chung khi so sánh các chiến thuật.
 - Tích hợp nút **Reset cài đặt** để khôi phục cấu hình mặc định và xóa cache cũ một cách an toàn.
 - So sánh hiệu suất chi tiêu bằng bảng thống kê chi tiết và biểu đồ trực quan (sử dụng thư viện Chart.js).
 

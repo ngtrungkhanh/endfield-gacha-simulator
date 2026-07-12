@@ -42,7 +42,9 @@ export class SimulatorPlayer {
         this.totalCharPulls = 0;           // Tổng số lượt pull nhân vật tiêu chuẩn đã thực hiện
         this.totalLimitedPulls = 0;        // Tổng lượt Limited có tính pity (không gồm Standard/Urgent)
         this.totalUrgentPulls = 0;         // Tổng số lượt Urgent pull miễn phí
+        this.totalDossierPulls = 0;        // Tổng số lượt Dossier pull
         this.totalPotentialTokens = 0;     // Token Potential nhận tại mỗi mốc 240 của banner
+        this.timesHit120Guarantee = 0;     // Số lần chạm bảo hiểm 120 pulls
         
         // Thống kê vũ khí
         this.ownedFeaturedWeapons = 0;     // Số lượng vũ khí rate-up sở hữu
@@ -51,7 +53,7 @@ export class SimulatorPlayer {
         this.ownedMetaFeaturedCharacters = 0; // Số nhân vật Featured trúng trên banner Meta
         this.ownedMetaFeaturedWeapons = 0;    // Số vũ khí Featured trúng trên banner Meta
         this.totalWeaponPulls = 0;         // Tổng số lượt pull vũ khí
-        this.weaponMilestoneSelectors = 0; // Số hộp chọn vũ khí nhận được từ mốc 10
+        this.weaponMilestoneSelectors = 0; // Số hộp chọn vũ khí nhận từ chu kỳ phần thưởng Issue
     }
 }
 
@@ -165,6 +167,7 @@ function executeFreeLimitedRolls(player, bannerState, bannerIdx, totalBanners = 
     const executeSinglePull = () => {
         const pity6Before = bannerState.pity6;
         const pullsSinceFeaturedBefore = bannerState.pullsSinceFeatured;
+        const isGuaranteedFeatured = bannerState.guarantee120Consumed !== true && bannerState.pullsSinceFeatured >= 120;
         const result = rollCharacter(bannerState, false);
         result.actionPhase = 'free';
         result.rollMode = 'free-x10';
@@ -183,7 +186,10 @@ function executeFreeLimitedRolls(player, bannerState, bannerIdx, totalBanners = 
             if (result.isFeatured) {
                 gotFeatured = true;
                 player.ownedFeaturedCharacters++;
-                if (isMetaBanner(bannerIdx, totalBanners)) {
+                if (isGuaranteedFeatured) {
+                    player.timesHit120Guarantee++;
+                }
+                if (isMetaBanner(player, bannerIdx, totalBanners)) {
                     player.ownedMetaFeaturedCharacters++;
                 }
                 if (!gotFeaturedThisBanner) {
@@ -213,8 +219,11 @@ function executeFreeLimitedRolls(player, bannerState, bannerIdx, totalBanners = 
     return { pullsRecord, gotFeatured };
 }
 
-// Helper xác định banner Meta (30% số banner phân bổ đều)
-const isMetaBanner = (bannerIdx, totalBanners) => {
+// Helper xác định banner Meta (Ưu tiên kiểm tra Set ngẫu nhiên của player, nếu không có sẽ dùng phân bổ đều làm fallback)
+export const isMetaBanner = (player, bannerIdx, totalBanners) => {
+    if (player && player.metaBannersSet) {
+        return player.metaBannersSet.has(bannerIdx);
+    }
     const numMeta = Math.floor(totalBanners * 0.3);
     if (numMeta <= 0) return false;
     
@@ -225,6 +234,33 @@ const isMetaBanner = (bannerIdx, totalBanners) => {
     }
     return false;
 };
+
+// Hàm sinh tập chỉ số banner Meta ngẫu nhiên
+export function generateMetaBannerIndices(numBanners, numMeta, customRandom = Math.random) {
+    const indices = [];
+    for (let i = 0; i < numBanners; i++) {
+        indices.push(i);
+    }
+    // Fisher-Yates shuffle
+    for (let i = indices.length - 1; i > 0; i--) {
+        const j = Math.floor(customRandom() * (i + 1));
+        const temp = indices[i];
+        indices[i] = indices[j];
+        indices[j] = temp;
+    }
+    return new Set(indices.slice(0, numMeta));
+}
+
+// Tính số vé ví thực tế tối đa cần chi ở trường hợp xấu nhất (đã trừ bảo hiểm Quota rebate)
+export function calculateWorstCaseNetWalletSpent(player, targetPulls, hasDossier) {
+    const grossWallet = Math.max(0, targetPulls - 10 - (hasDossier ? 10 : 0));
+    const max6Stars = Math.ceil(targetPulls / 80);
+    const guaranteed5Stars = Math.max(0, Math.floor((targetPulls - max6Stars) / 10));
+    const guaranteedQuota = guaranteed5Stars * 10;
+    const totalQuota = (player.bondQuota || 0) + guaranteedQuota;
+    const guaranteedRebate = Math.floor(totalQuota / 25);
+    return Math.max(0, grossWallet - guaranteedRebate);
+}
 
 /**
  * Xác định khi nào phải chuyển sang x1 để không đi xuyên qua mốc 30/60/120.
@@ -256,6 +292,7 @@ function executeCharacterPullSequence(player, bannerState, targetPulls, stopOnFe
     const executeSinglePull = (isUrgent = false, force5Star = false, rollMode = 'x1', rollBatchId = null) => {
         const pity6Before = bannerState.pity6;
         const pullsSinceFeaturedBefore = bannerState.pullsSinceFeatured;
+        const isGuaranteedFeatured = !isUrgent && bannerState.guarantee120Consumed !== true && bannerState.pullsSinceFeatured >= 120;
         const result = rollCharacter(bannerState, isUrgent, force5Star);
         result.pity6Before = pity6Before;
         result.pullsSinceFeaturedBefore = pullsSinceFeaturedBefore;
@@ -274,7 +311,10 @@ function executeCharacterPullSequence(player, bannerState, targetPulls, stopOnFe
             if (result.isFeatured) {
                 gotFeatured = true;
                 player.ownedFeaturedCharacters++;
-                if (isMetaBanner(bannerIdx, totalBanners)) {
+                if (isGuaranteedFeatured) {
+                    player.timesHit120Guarantee++;
+                }
+                if (isMetaBanner(player, bannerIdx, totalBanners)) {
                     player.ownedMetaFeaturedCharacters++;
                 }
                 if (!gotFeaturedThisBanner) {
@@ -353,6 +393,7 @@ function executeCharacterPullSequence(player, bannerState, targetPulls, stopOnFe
             for (let k = 0; k < 10; k++) {
                 if (player.currentBannerDossierTickets > 0) {
                     player.currentBannerDossierTickets--;
+                    player.totalDossierPulls++;
                 } else if (player.charTickets > 0) {
                     player.charTickets--;
                 } else {
@@ -364,6 +405,7 @@ function executeCharacterPullSequence(player, bannerState, targetPulls, stopOnFe
             // Quay lẻ x1 (được gọi khi sát mốc pity/bảo hiểm để tiết kiệm vé)
             if (player.currentBannerDossierTickets > 0) {
                 player.currentBannerDossierTickets--;
+                player.totalDossierPulls++;
             } else if (player.charTickets > 0) {
                 player.charTickets--;
             } else {
@@ -403,7 +445,7 @@ function executeWeaponPullSequence(player, bannerState, totalArsenalTicketsEarne
                 if (item.isFeatured) {
                     gotFeatured = true;
                     player.ownedFeaturedWeapons++;
-                    if (isMetaBanner(bannerIdx, totalBanners)) {
+                    if (isMetaBanner(player, bannerIdx, totalBanners)) {
                         player.ownedMetaFeaturedWeapons++;
                     }
                 } else {
@@ -415,16 +457,13 @@ function executeWeaponPullSequence(player, bannerState, totalArsenalTicketsEarne
         });
 
         if (result.milestoneReward === 'selector_box') {
-            gotFeatured = true;
-            player.ownedFeaturedWeapons++;
+            // Arms OC chỉ chọn vũ khí 6★ ngoài rate-up, không hoàn thành mục tiêu Featured.
+            player.ownedStandard6StarWeapons++;
             player.weaponMilestoneSelectors++;
-            if (isMetaBanner(bannerIdx, totalBanners)) {
-                player.ownedMetaFeaturedWeapons++;
-            }
         } else if (result.milestoneReward === 'featured_weapon') {
             gotFeatured = true;
             player.ownedFeaturedWeapons++;
-            if (isMetaBanner(bannerIdx, totalBanners)) {
+            if (isMetaBanner(player, bannerIdx, totalBanners)) {
                 player.ownedMetaFeaturedWeapons++;
             }
         }
@@ -440,7 +479,7 @@ export const strategies = {
     save_commit: {
         id: 'save_commit',
         name: 'Save & Commit',
-        desc: 'Nhân vật: Chỉ commit khi 10 free cộng tổng vé thường/Dossier đủ 120 lượt. Khi quay sẽ dừng sau cụm chứa Featured, rồi xả hết Dossier sắp hết hạn. Vũ khí: Chỉ quay khi tích lũy đủ 8 Issues (15.840 vé).',
+        desc: 'Nhân vật: Chỉ roll khi có đủ vé bảo hiểm 120 lượt (ví + Dossier). Sử dụng cụm x10 và tự động chuyển sang x1 khi gần mốc pity hoặc bảo hiểm, dừng ngay khi ra Featured. Vũ khí: Quay khi tích đủ 8 Issues (15.840 vé).',
         
         runCharacterPull(player, bannerState, ticketIncome, bannerIdx, totalBanners) {
             return [];
@@ -453,7 +492,7 @@ export const strategies = {
     save_commit_single: {
         id: 'save_commit_single',
         name: 'Save & Commit (Roll lẻ)',
-        desc: 'Nhân vật: Chỉ quay lẻ x1 khi 10 free cộng tổng vé thường/Dossier đủ 120 lượt, dừng khi ra Featured rồi xả hết Dossier sắp hết hạn. Vũ khí: Chỉ quay khi tích lũy đủ 8 Issues (15.840 vé).',
+        desc: 'Nhân vật: Điều kiện tích lũy giống Save & Commit, nhưng sử dụng roll lẻ x1 từ đầu đến cuối để tối ưu tiết kiệm vé. Vũ khí: Chỉ quay khi tích đủ 8 Issues (15.840 vé).',
         
         runCharacterPull(player, bannerState, ticketIncome, bannerIdx, totalBanners) {
             return [];
@@ -470,7 +509,7 @@ export const strategies = {
     yolo: {
         id: 'yolo',
         name: 'Yolo / Spend All',
-        desc: 'Nhân vật: Cứ có bao nhiêu vé là quay hết, nhưng dừng lại ngay lập tức nếu trúng nhân vật Featured. Vũ khí: Quay vũ khí nếu trúng nhân vật.',
+        desc: 'Nhân vật: Có bao nhiêu vé nhân vật khả dụng xả sạch bấy nhiêu, dừng ngay khi có Featured. Vũ khí: Nếu trúng nhân vật, xả sạch vé vũ khí hiện có cho đến khi trúng Featured Weapon hoặc hết vé.',
         
         runCharacterPull(player, bannerState, ticketIncome, bannerIdx, totalBanners) {
             return [];
@@ -487,7 +526,7 @@ export const strategies = {
     pull_60: {
         id: 'pull_60',
         name: 'Pull 60',
-        desc: 'Nhân vật: Chỉ quay khi tính đủ 60 lượt (để lấy vé Dossier x10). Nếu không đủ 60, cố chạm mốc 30 để nhận Urgent free, ngược lại sẽ skip để trữ vé. Vũ khí: Quay vũ khí nếu trúng nhân vật.',
+        desc: 'Nhân vật: Hướng tới mốc 60 pull để lấy 10 vé Dossier (không dừng khi trúng Featured sớm). Nếu thiếu vé, hạ mục tiêu xuống mốc 30 để nhận 10 Urgent free; nếu vẫn thiếu sẽ skip để tích lũy. Đặc biệt, nếu đạt mốc 60 mà tạch Featured, sẽ tự động nâng lên mốc 120 để lấy bảo hiểm nếu ngân sách của banner hiện tại và banner kế tiếp vẫn an toàn. Vũ khí: Quay vũ khí nếu có nhân vật.',
         
         runCharacterPull(player, bannerState, ticketIncome, bannerIdx, totalBanners) {
             return [];
@@ -504,7 +543,7 @@ export const strategies = {
     roll_meta: {
         id: 'roll_meta',
         name: 'Roll Meta',
-        desc: 'Nhân vật: 30% số banner là Meta (quay tối đa 120 roll). Banner thường chỉ commit khi bảo toàn ngân sách cho Meta kế tiếp. Vũ khí: Quay ở banner Meta, hoặc banner thường nếu ví đủ bảo hiểm 8 Issues cho cả banner hiện tại lẫn banner Meta kế tiếp.',
+        desc: 'Nhân vật: Chọn ngẫu nhiên đúng số banner Meta do người dùng cấu hình (cam kết 120 roll). Banner thường chỉ roll nếu số vé dư bảo đảm 120 roll cho banner Meta kế tiếp. Vũ khí: Quay ở banner Meta, hoặc banner thường nếu ví đủ bảo hiểm 8 Issues cho cả banner hiện tại lẫn banner Meta kế tiếp.',
         
         runCharacterPull(player, bannerState, ticketIncome, bannerIdx, totalBanners) {
             return [];
@@ -573,14 +612,16 @@ export function runSingleBannerForPlayer(strategyId, player, charBannerState, we
     let pullsRecord = [];
     const totalCharacterTicketsAvailable = player.charTickets + player.currentBannerDossierTickets;
     if (strategyId === 'save_commit') {
-        if (totalCharacterTicketsAvailable >= 110) { // Tổng vé ví + Dossier đủ 110 (cộng 10 free thành 120)
+        const costCurrent = calculateWorstCaseNetWalletSpent(player, 120, player.currentBannerDossierTickets > 0);
+        if (player.charTickets >= costCurrent) {
             const res = executeCharacterPullSequence(player, charBannerState, 120, true, bannerIdx, gotFeaturedChar, false, totalBanners);
             res.pullsRecord.forEach(item => { item.actionPhase = 'commit'; });
             pullsRecord = res.pullsRecord;
             gotFeaturedChar = gotFeaturedChar || res.gotFeatured;
         }
     } else if (strategyId === 'save_commit_single') {
-        if (totalCharacterTicketsAvailable >= 110) {
+        const costCurrent = calculateWorstCaseNetWalletSpent(player, 120, player.currentBannerDossierTickets > 0);
+        if (player.charTickets >= costCurrent) {
             const res = executeCharacterPullSequence(player, charBannerState, 120, true, bannerIdx, gotFeaturedChar, true, totalBanners);
             res.pullsRecord.forEach(item => { item.actionPhase = 'commit'; });
             pullsRecord = res.pullsRecord;
@@ -603,9 +644,26 @@ export function runSingleBannerForPlayer(strategyId, player, charBannerState, we
             res.pullsRecord.forEach(item => { item.actionPhase = 'strategy'; });
             pullsRecord = res.pullsRecord;
             gotFeaturedChar = gotFeaturedChar || res.gotFeatured;
+
+            // Nếu đạt mốc 60 mà chưa ra limited, kiểm tra điều kiện ngân sách để nâng lên mốc 120
+            if (targetPulls === 60 && !gotFeaturedChar) {
+                // Thêm 60 roll nữa (từ 60 lên 120). Quota tối thiểu kiếm được trong 60 roll tiếp theo là 50 Quota (5 roll 5★).
+                const costCurrentAdditional = Math.max(0, 60 - Math.floor(((player.bondQuota || 0) + 50) / 25));
+                const remainingQuotaAfterCurrent = ((player.bondQuota || 0) + 50) % 25;
+                
+                // Banner tiếp theo cần mốc 60 (có 10 free + 10 Dossier vì banner này roll 120 > 60).
+                const costNext = Math.max(0, 40 - Math.floor((remainingQuotaAfterCurrent + 50) / 25));
+                
+                if (player.charTickets >= costCurrentAdditional + costNext - ticketIncome) {
+                    const res2 = executeCharacterPullSequence(player, charBannerState, 120, true, bannerIdx, gotFeaturedChar, false, totalBanners);
+                    res2.pullsRecord.forEach(item => { item.actionPhase = 'strategy_upgraded'; });
+                    pullsRecord.push(...res2.pullsRecord);
+                    gotFeaturedChar = gotFeaturedChar || res2.gotFeatured;
+                }
+            }
         }
     } else if (strategyId === 'roll_meta') {
-        const isMeta = isMetaBanner(bannerIdx, totalBanners);
+        const isMeta = isMetaBanner(player, bannerIdx, totalBanners);
         let shouldPull = false;
         
         if (isMeta) {
@@ -614,26 +672,40 @@ export function runSingleBannerForPlayer(strategyId, player, charBannerState, we
             // Banner không Meta: kiểm tra xem quay xong có tích đủ bảo hiểm 120 roll cho banner Meta tiếp theo không
             let nextMetaIdx = -1;
             for (let idx = bannerIdx + 1; idx < totalBanners; idx++) {
-                if (isMetaBanner(idx, totalBanners)) {
+                if (isMetaBanner(player, idx, totalBanners)) {
                     nextMetaIdx = idx;
                     break;
                 }
             }
 
             if (nextMetaIdx !== -1) {
-                const bannersUntilMeta = nextMetaIdx - bannerIdx;
-                const expectedEarnings = bannersUntilMeta * ticketIncome;
-                const neededAfterThis = 110 - expectedEarnings;
-                const maxCharTicketsSpentNow = Math.max(0, 110 - player.currentBannerDossierTickets);
+                const K = nextMetaIdx - bannerIdx;
+                const expectedEarnings = K * ticketIncome;
                 
-                // Điều kiện an toàn: sau khi quay banner này tốn tối đa 110 vé từ ví, 
-                // lượng vé còn dư vẫn phải bảo đảm đủ neededAfterThis khi sang banner Meta
-                if (player.charTickets >= maxCharTicketsSpentNow + Math.max(0, neededAfterThis)) {
+                // Chi phí ví tệ nhất cho banner không meta hiện tại (mốc 120)
+                const costCurrent = calculateWorstCaseNetWalletSpent(player, 120, player.currentBannerDossierTickets > 0);
+                
+                // Số Quota tối thiểu còn dư sau banner hiện tại
+                const remainingQuotaAfterCurrent = ((player.bondQuota || 0) + 110) % 25;
+                
+                // Số Quota khởi điểm ở banner Meta sau K banner (nếu K > 1 sẽ có 1 banner được nhận Dossier từ current và được quay 20 roll, tích thêm 10 Quota)
+                const quotaBeforeMeta = remainingQuotaAfterCurrent + (K > 1 ? 10 : 0);
+                
+                // Banner Meta có Dossier nếu K === 1 (Meta ở ngay banner kế tiếp)
+                const hasDossierMeta = (K === 1);
+                
+                // Chi phí ví tệ nhất cho banner Meta tiếp theo (mốc 120)
+                const grossWalletMeta = Math.max(0, 120 - 10 - (hasDossierMeta ? 10 : 0));
+                const costMeta = Math.max(0, grossWalletMeta - Math.floor((quotaBeforeMeta + 110) / 25));
+                
+                // Điều kiện an toàn: số vé ví hiện tại đủ trả cho cả banner này và banner Meta tiếp theo (sau khi cộng thêm thu nhập tích lũy)
+                if (player.charTickets >= costCurrent + costMeta - expectedEarnings) {
                     shouldPull = true;
                 }
             } else {
-                // Không có banner Meta nào tiếp theo, quay theo Save & Commit bình thường
-                if (totalCharacterTicketsAvailable >= 110) {
+                // Không có banner Meta nào tiếp theo, quay theo Save & Commit bình thường (mốc 120)
+                const costCurrent = calculateWorstCaseNetWalletSpent(player, 120, player.currentBannerDossierTickets > 0);
+                if (player.charTickets >= costCurrent) {
                     shouldPull = true;
                 }
             }
@@ -685,14 +757,14 @@ export function runSingleBannerForPlayer(strategyId, player, charBannerState, we
             weaponIssues = executeWeaponPullSequence(player, weaponBannerState, 0, gotFeaturedChar, Infinity, bannerIdx, totalBanners);
         }
     } else if (strategyId === 'roll_meta') {
-        const isMeta = isMetaBanner(bannerIdx, totalBanners);
+        const isMeta = isMetaBanner(player, bannerIdx, totalBanners);
         if (isMeta) {
             weaponIssues = executeWeaponPullSequence(player, weaponBannerState, totalArsenalTicketsEarned, gotFeaturedChar, Infinity, bannerIdx, totalBanners);
         } else {
             if (gotFeaturedChar) {
                 let nextMetaIdx = -1;
                 for (let idx = bannerIdx + 1; idx < totalBanners; idx++) {
-                    if (isMetaBanner(idx, totalBanners)) {
+                    if (isMetaBanner(player, idx, totalBanners)) {
                         nextMetaIdx = idx;
                         break;
                     }

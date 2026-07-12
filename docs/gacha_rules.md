@@ -44,6 +44,14 @@ Tài liệu này chỉ chứa luật gacha. Dữ liệu thu nhập tài nguyên 
 - Tiến độ guarantee 120 không mang sang banner khác và reset khi banner kết thúc.
 - Mỗi 240 lượt trên cùng banner nhận một token Potential của featured 6★; bộ đếm này reset khi banner kết thúc.
 
+#### Quy ước Featured động của Interactive Pull
+
+- Tab Interactive Pull cho phép tiếp tục săn nhiều bản Featured trên cùng banner và dùng chuỗi mốc cộng dồn `120 → 240 → 480 → 720 → 960...`.
+- Featured đầu tiên được bảo đảm chậm nhất ở pull 120. Sau khi đã có một bản, bản tiếp theo được bảo đảm tại tổng pull 240; từ bản thứ ba trở đi, mốc kế tiếp tăng thêm 240 pull.
+- Featured nhận lại trên cùng banner được ghi nhận là dupe/Potential và nhận 50 Bond Quota theo mô hình sở hữu hiện tại.
+- Token Potential thưởng tại mỗi mốc 240 pull vẫn được theo dõi riêng bởi bộ đếm `potentialTokensThisBanner`.
+- Strategy Simulator chỉ đặt mục tiêu một Featured trên mỗi banner, nên dừng sau khi nhận Featured và chỉ sử dụng guarantee 120 đầu tiên.
+
 ### Mốc 30 — Urgent Recruitment
 
 - Khi đạt 30 lượt quay hợp lệ trên banner hiện tại, nhận 10 lượt Urgent Recruitment miễn phí.
@@ -62,8 +70,8 @@ Tài liệu này chỉ chứa luật gacha. Dữ liệu thu nhập tài nguyên 
 
 Các giá trị dưới đây là quy ước mô hình của dự án và chưa được xác nhận từ hai trang wiki nêu ở đầu tài liệu:
 
-- Operator 5★ nhận 10 Bond Quota.
-- Standard 6★ lệch được giả định nhận 50 Bond Quota; Featured/Limited 6★ nhận 50 Quota khi là bản trùng.
+- Để mô phỏng tài khoản lâu năm đã sở hữu gần đủ pool, mọi Operator 5★ được giả định là bản trùng và nhận 10 Bond Quota.
+- Standard 6★ lệch cũng được giả định là bản trùng và nhận 50 Bond Quota; Featured/Limited 6★ chỉ nhận 50 Quota khi là bản trùng theo tập sở hữu đang theo dõi.
 - Mỗi 25 Bond Quota tự động đổi thành một vé nhân vật.
 - Vé nhận từ quy đổi được cộng ngay vào ví tại lượt phát sinh, vì vậy có thể được dùng cho các lượt tiếp theo trong cùng banner.
 - Phần Bond Quota chưa đủ 25 được giữ lại qua banner.
@@ -88,9 +96,9 @@ Các giá trị dưới đây là quy ước mô hình của dự án và chưa 
 
 ### Phần thưởng theo số Issue
 
-- Issue thứ 10: nhận một Weapon Selection Box.
-- Issue thứ 18: nhận trực tiếp vũ khí rate-up 6★ thay cho mốc hộp chọn tiếp theo.
-- Sau đó, cứ thêm tám Issue lại nhận trực tiếp vũ khí rate-up 6★: 26, 34, 42...
+- Issue thứ 10: nhận một Weapon Selection Box/Arms OC để chọn một vũ khí 6★ ngoài rate-up. Phần thưởng này không được tính là Featured Weapon.
+- Issue thứ 18: nhận trực tiếp vũ khí rate-up 6★.
+- Sau đó, cứ thêm tám Issue, phần thưởng luân phiên giữa Weapon Selection Box và rate-up 6★: Issue 26 là hộp chọn, 34 là rate-up, 42 là hộp chọn, 50 là rate-up...
 - Bộ đếm số Issue reset khi banner Issue kết thúc.
 
 ### Rebate được dùng trong simulator

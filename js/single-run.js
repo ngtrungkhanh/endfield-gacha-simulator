@@ -1,4 +1,4 @@
-import { SimulatorPlayer, runSingleBannerForPlayer, strategies } from './strategies.js';
+import { SimulatorPlayer, runSingleBannerForPlayer, strategies, generateMetaBannerIndices } from './strategies.js';
 
 function mulberry32(seed) {
     let value = seed >>> 0;
@@ -57,7 +57,9 @@ function snapshotPlayer(player) {
         weaponTicketsUsed: player.totalWeaponTicketsUsed,
         weaponSelectors: player.weaponMilestoneSelectors,
         standardPity6: player.standardCharPity.pity6,
-        standardPity5: player.standardCharPity.pity5
+        standardPity5: player.standardCharPity.pity5,
+        metaBannersSet: player.metaBannersSet ? new Set(player.metaBannersSet) : null,
+        timesHit120Guarantee: player.timesHit120Guarantee || 0
     };
 }
 
@@ -76,10 +78,13 @@ function countCharacterResults(items) {
 }
 
 function normalizeConfig(config) {
+    const numBanners = Math.min(100, Math.max(1, Math.trunc(Number(config.numBanners) || 10)));
+    const defaultMeta = Math.floor(numBanners * 0.3);
     const normalized = {
         strategyId: config.strategyId || 'save_commit',
         seed: String(config.seed || '').trim() || createRandomSeed(),
-        numBanners: Math.min(100, Math.max(1, Math.trunc(Number(config.numBanners) || 10))),
+        numBanners,
+        numMetaBanners: config.numMetaBanners !== undefined ? Math.max(0, Math.min(numBanners, Math.trunc(Number(config.numMetaBanners)))) : defaultMeta,
         startingCharTickets: Math.max(0, Math.trunc(Number(config.startingCharTickets) || 0)),
         startingWeaponTickets: Math.max(0, Math.trunc(Number(config.startingWeaponTickets) || 0)),
         incomePerBanner: Math.max(0, Math.trunc(Number(config.incomePerBanner) || 0)),
@@ -117,6 +122,9 @@ export function runSingleDetailedSimulation(config) {
     const originalRandom = Math.random;
     try {
         Math.random = mulberry32(runConfig.numericSeed);
+        const metaRandom = mulberry32(runConfig.numericSeed + 9999);
+        const metaBannersSet = generateMetaBannerIndices(runConfig.numBanners, runConfig.numMetaBanners, metaRandom);
+        player.metaBannersSet = metaBannersSet;
         for (let bannerIndex = 0; bannerIndex < runConfig.numBanners; bannerIndex++) {
             const before = snapshotPlayer(player);
             const incomingDossier = player.nextBannerDossierTickets;

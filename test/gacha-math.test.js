@@ -96,6 +96,30 @@ test('weapon featured guarantee is consumed once and 5★ is not rate-up', () =>
     assert.equal(fiveStar.isFeatured, false);
 });
 
+test('weapon milestone rewards alternate between off-rate selectors and Featured weapons', () => {
+    const state = {
+        issuesCount: 0,
+        issuesSince6: 0,
+        issuesSinceFeatured: 0,
+        featuredGuaranteeConsumed: true
+    };
+    const rewards = new Map();
+
+    useRandomSequence([]);
+    for (let issue = 1; issue <= 42; issue++) {
+        const result = rollWeaponIssue(state);
+        if (result.milestoneReward) rewards.set(issue, result.milestoneReward);
+    }
+
+    assert.deepEqual([...rewards], [
+        [10, 'selector_box'],
+        [18, 'featured_weapon'],
+        [26, 'selector_box'],
+        [34, 'featured_weapon'],
+        [42, 'selector_box']
+    ]);
+});
+
 test('expiring Dossier is consumed even when free pulls already found Featured', () => {
     const player = new SimulatorPlayer(1);
     player.nextBannerDossierTickets = 10;
@@ -144,17 +168,25 @@ test('all strategies switch to x1 only when fewer than 10 pulls remain to 30/60/
     assert.equal(shouldForceSingleNearMilestone(state, 60), false);
 });
 
-test('ownership and efficiency use unique Featured and Limited pulls', () => {
-    const player = new SimulatorPlayer(1);
-    player.ownedFeaturedCharacters = 3;
-    player.ownedFeaturedUnique = 1;
-    player.totalCharPulls = 100;
-    player.totalLimitedPulls = 40;
+test('ownership rate counts players who obtained every unique Limited and ignores dupes', () => {
+    const completed = new SimulatorPlayer(1);
+    completed.ownedFeaturedCharacters = 5;
+    completed.ownedFeaturedUnique = 2;
+    completed.ownedFeaturedDupes = 3;
+    completed.totalCharPulls = 100;
+    completed.totalLimitedPulls = 40;
 
-    const result = MonteCarloSimulator.analyzeResults([player], 2);
+    const incomplete = new SimulatorPlayer(2);
+    incomplete.ownedFeaturedCharacters = 5;
+    incomplete.ownedFeaturedUnique = 1;
+    incomplete.ownedFeaturedDupes = 4;
+    incomplete.totalCharPulls = 100;
+    incomplete.totalLimitedPulls = 40;
+
+    const result = MonteCarloSimulator.analyzeResults([completed, incomplete], 2);
     assert.equal(result.ownershipRate, 50);
-    assert.equal(result.avgPullsPerFeaturedChar, 40 / 3);
-    assert.deepEqual(result.distribution, { 1: 100 });
+    assert.equal(result.avgPullsPerFeaturedChar, 8);
+    assert.deepEqual(result.distribution, { 1: 50, 2: 50 });
 });
 
 test('dynamic featured guarantee for interactive pulling', () => {

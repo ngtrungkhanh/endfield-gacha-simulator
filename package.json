@@ -1,6 +1,6 @@
 {
   "name": "arknights-endfield-gacha-simulator",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Giả lập gacha Arknights: Endfield",
   "type": "module",
   "main": "js/app.js",

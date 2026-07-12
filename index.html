@@ -130,7 +130,7 @@
                                     <div><span data-i18n="stats.weaponTickets">Tổng vé đã tích:</span> <span id="stat-weap-tickets" style="color: var(--text-white); font-weight: 700;">0</span></div>
                                     <div><span data-i18n="stats.weaponIssues">Số Issue (x10) đã quay:</span> <span id="stat-weap-issues" style="color: var(--text-white); font-weight: 700;">0</span></div>
                                     <div><span data-i18n="stats.weaponSix">Số vũ khí 6★ trúng:</span> <span id="stat-weap-6star" style="color: var(--star-6); font-weight: 700;">0</span></div>
-                                    <div><span data-i18n="stats.weaponSelectors">Hộp chọn vũ khí (Mốc 10):</span> <span id="stat-weap-selectors" style="color: var(--star-6); font-weight: 700;">0</span></div>
+                                    <div><span data-i18n="stats.weaponSelectors">Hộp chọn vũ khí:</span> <span id="stat-weap-selectors" style="color: var(--star-6); font-weight: 700;">0</span></div>
                                 </div>
                             </div>
                             <!-- Luck Rating -->
@@ -190,6 +190,12 @@
                         <div class="form-group">
                             <label for="input-banners" data-i18n="simulator.banners">Số mùa banner:</label>
                             <input type="number" id="input-banners" min="1" max="100" step="1" value="10">
+                        </div>
+
+                        <!-- Num Meta Banners -->
+                        <div class="form-group">
+                            <label for="input-meta-banners" data-i18n="simulator.metaBanners">Số banner Meta:</label>
+                            <input type="number" id="input-meta-banners" min="0" max="100" step="1" value="3">
                         </div>
 
                         <!-- Starting Tickets -->
@@ -272,6 +278,13 @@
 
                 <!-- Results & Visualizations (Right Column) -->
                 <div class="dashboard-content" aria-live="polite" aria-busy="false">
+                    <!-- Toggle Sidebar Bar -->
+                    <div class="dashboard-actions" style="display: flex; gap: 12px; margin-bottom: 8px;">
+                        <button class="btn-secondary" id="btn-toggle-sidebar" style="padding: 8px 12px; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; height: 36px; border-radius: 6px; cursor: pointer;">
+                            <span id="toggle-sidebar-icon">◀</span>
+                            <span id="toggle-sidebar-text" data-i18n="simulator.collapseConfig">Thu gọn cấu hình</span>
+                        </button>
+                    </div>
                     <!-- Stats Cards Grid -->
                     <div class="stats-cards-grid">
                         <!-- Avg Featured Chars -->
@@ -295,35 +308,38 @@
                     <div class="table-panel glass-panel">
                         <h3 data-i18n="table.title" style="font-size: 16px; font-weight: 700; margin-bottom: 12px; color: var(--text-white);" id="table-comparison-title">Bảng so sánh chi tiết các chiến thuật</h3>
                         <p class="table-scroll-hint" data-i18n="table.scrollHint">Vuốt ngang để xem toàn bộ bảng.</p>
-                        <table class="comparison-table">
-                            <caption class="sr-only" data-i18n="table.title">Bảng so sánh chi tiết các chiến thuật</caption>
-                            <thead>
-                                <tr>
-                                    <th data-i18n="table.strategy">Chiến thuật</th>
-                                    <th data-i18n="table.charPulls">Tổng Pull Nhân Vật</th>
-                                    <th data-i18n="table.charRemaining">Vé Nhân Vật Dư</th>
-                                    <th data-i18n="table.charSix">Tổng 6★ Nhân Vật</th>
-                                    <th>Limited (New/Dupe)</th>
-                                    <th data-i18n="table.limitedLoss">Lệch Limited</th>
-                                    <th data-i18n="table.standardLoss">Lệch Standard</th>
-                                    <th data-i18n="table.efficiency">Hiệu suất Pull</th>
-                                    <th data-i18n="table.featuredRange">Featured (Max/Min) ℹ️</th>
-                                    <th data-i18n="table.metaObtained">Meta (Char/Vũ khí)</th>
-                                    <th data-i18n="table.weaponFeatured">Vũ khí 6★ Featured</th>
-                                    <th data-i18n="table.weaponSix">Tổng Vũ khí 6★</th>
-                                    <th data-i18n="table.weaponUsed">Pull Vũ Khí Dùng</th>
-                                    <th data-i18n="table.weaponRemaining">Pull Vũ Khí Dư</th>
-                                    <th data-i18n="table.ownership">Tỉ lệ sở hữu ℹ️</th>
-                                </tr>
-                            </thead>
-                            <tbody id="comparison-table-body">
-                                <tr>
-                                    <td colspan="15" style="text-align: center; color: var(--text-secondary); font-style: italic; padding: 30px;">
-                                        <span data-i18n="table.empty">Nhấn nút “Chạy giả lập” để xem kết quả so sánh...</span>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
+                        <div class="table-wrapper">
+                            <table class="comparison-table">
+                                <caption class="sr-only" data-i18n="table.title">Bảng so sánh chi tiết các chiến thuật</caption>
+                                <thead>
+                                    <tr>
+                                        <th class="tooltip-header sticky-col" data-i18n="table.strategy" data-i18n-tooltip="table.tooltip.strategy">Chiến thuật</th>
+                                        <th class="tooltip-header" data-i18n="table.charPulls" data-i18n-tooltip="table.tooltip.charPulls">Tổng Pull Nhân Vật</th>
+                                        <th class="tooltip-header" data-i18n="table.charRemaining" data-i18n-tooltip="table.tooltip.charRemaining">Vé Nhân Vật Dư</th>
+                                        <th class="tooltip-header" data-i18n="table.freeDossier" data-i18n-tooltip="table.tooltip.freeDossier">Free 30 / Dossier</th>
+                                        <th class="tooltip-header" data-i18n="table.charSix" data-i18n-tooltip="table.tooltip.charSix">Tổng 6★ Nhân Vật</th>
+                                        <th class="tooltip-header" data-i18n="table.charLim" data-i18n-tooltip="table.tooltip.charLim">Limited (New/Dupe)</th>
+                                        <th class="tooltip-header" data-i18n="table.charLoss" data-i18n-tooltip="table.tooltip.charLoss">Lệch Lim/Std</th>
+                                        <th class="tooltip-header" data-i18n="table.efficiency" data-i18n-tooltip="table.tooltip.efficiency">Hiệu suất Pull</th>
+                                        <th class="tooltip-header" data-i18n="table.featuredRange" data-i18n-tooltip="table.tooltip.featuredRange">Featured (Max/Min)</th>
+                                        <th class="tooltip-header" data-i18n="table.pity120Hit" data-i18n-tooltip="table.tooltip.pity120Hit">Chạm Pity 120</th>
+                                        <th class="tooltip-header" data-i18n="table.metaObtained" data-i18n-tooltip="table.tooltip.metaObtained">Meta (Char/Vũ khí)</th>
+                                        <th class="tooltip-header" data-i18n="table.weaponFeatured" data-i18n-tooltip="table.tooltip.weaponFeatured">Vũ khí 6★ Featured</th>
+                                        <th class="tooltip-header" data-i18n="table.weaponSix" data-i18n-tooltip="table.tooltip.weaponSix">Tổng Vũ khí 6★</th>
+                                        <th class="tooltip-header" data-i18n="table.weaponUsed" data-i18n-tooltip="table.tooltip.weaponUsed">Pull Vũ Khí Dùng</th>
+                                        <th class="tooltip-header" data-i18n="table.weaponRemaining" data-i18n-tooltip="table.tooltip.weaponRemaining">Pull Vũ Khí Dư</th>
+                                        <th class="tooltip-header" data-i18n="table.ownership" data-i18n-tooltip="table.tooltip.ownership">Đủ Limited (%)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="comparison-table-body">
+                                    <tr>
+                                        <td colspan="16" style="text-align: center; color: var(--text-secondary); font-style: italic; padding: 30px;">
+                                            <span data-i18n="table.empty">Nhấn nút “Chạy giả lập” để xem kết quả so sánh...</span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
 
                     <!-- Strategy Explanation Panel -->
@@ -351,8 +367,8 @@
                                 <p data-i18n="rule.urgent">10 lượt Urgent miễn phí...</p>
                             </div>
                             <div>
-                                <strong data-i18n="rule.ownershipTitle" style="color: var(--orange-primary);">[i] Giải thích tỉ lệ sở hữu</strong>
-                                <p data-i18n="rule.ownership">Tỉ lệ trung bình...</p>
+                                <strong data-i18n="rule.ownershipTitle" style="color: var(--orange-primary);">[i] Tỉ lệ lấy đủ Limited</strong>
+                                <p data-i18n="rule.ownership">Phần trăm người chơi nhận đủ Limited của tất cả banner; bản trùng không được tính.</p>
                             </div>
                         </div>
                     </div>
@@ -404,6 +420,10 @@
                         <div class="form-group">
                             <label for="single-banners" data-i18n="simulator.banners">Số mùa banner:</label>
                             <input type="number" id="single-banners" min="1" max="100" step="1" value="10">
+                        </div>
+                        <div class="form-group">
+                            <label for="single-meta-banners" data-i18n="simulator.metaBanners">Số banner Meta:</label>
+                            <input type="number" id="single-meta-banners" min="0" max="100" step="1" value="3">
                         </div>
                         <div class="form-group">
                             <label for="single-start-tickets" data-i18n="simulator.startCharacters">Vé nhân vật ban đầu:</label>
@@ -512,11 +532,11 @@
                 <section class="docs-section">
                     <h3 data-i18n="docs.strategiesTitle">Năm chiến thuật mô phỏng</h3>
                     <div class="docs-strategy-list">
-                        <article><span>01</span><div><strong data-i18n="strategy.save_commit.name">Save &amp; Commit</strong><p data-i18n="docs.saveCommit">Chỉ commit khi có ít nhất 110 vé trả phí/Dossier; dừng sau cụm chứa Featured hoặc tại mốc 120.</p></div></article>
+                        <article><span>01</span><div><strong data-i18n="strategy.save_commit.name">Save &amp; Commit</strong><p data-i18n="docs.saveCommit">Chỉ roll khi có đủ vé bảo hiểm 120 lượt (ví + Dossier); dừng sau cụm chứa Featured hoặc tại mốc 120.</p></div></article>
                         <article><span>02</span><div><strong data-i18n="strategy.save_commit_single.name">Save &amp; Commit (Quay lẻ)</strong><p data-i18n="docs.saveSingle">Điều kiện tích vé giống Save &amp; Commit nhưng quay từng lượt và dừng ngay khi nhận Featured.</p></div></article>
                         <article><span>03</span><div><strong data-i18n="strategy.yolo.name">Yolo / Dùng hết</strong><p data-i18n="docs.yolo">Dùng toàn bộ vé khả dụng cho đến khi nhận Featured hoặc hết tài nguyên.</p></div></article>
                         <article><span>04</span><div><strong data-i18n="strategy.pull_60.name">Mốc 60</strong><p data-i18n="docs.pull60">Ưu tiên chạm mốc 60 nếu đủ 50 vé ngoài 10 free; nếu không, cân nhắc mốc 30.</p></div></article>
-                        <article><span>05</span><div><strong data-i18n="strategy.roll_meta.name">Quay theo Meta</strong><p data-i18n="docs.rollMeta">Dành ngân sách cho khoảng 30% banner Meta và chỉ commit banner thường khi vẫn bảo toàn quỹ cho Meta kế tiếp.</p></div></article>
+                        <article><span>05</span><div><strong data-i18n="strategy.roll_meta.name">Quay theo Meta</strong><p data-i18n="docs.rollMeta">Chọn ngẫu nhiên đúng số banner Meta đã cấu hình và chỉ commit banner thường khi vẫn bảo toàn quỹ cho Meta kế tiếp.</p></div></article>
                     </div>
                 </section>
 

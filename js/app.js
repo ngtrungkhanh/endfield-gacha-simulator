@@ -4,7 +4,7 @@ import { rollCharacter, rollWeaponIssue, calculateArsenalTicketsRebate } from '.
 import { runSingleDetailedSimulation } from './single-run.js';
 import { MonteCarloSimulator } from './simulator.js';
 import { strategies } from './strategies.js';
-import { drawDistributionChart, drawComparisonChart } from './chart-helper.js';
+import { drawDistributionChart, drawWeaponDistributionChart } from './chart-helper.js';
 import {
     applyTranslations,
     formatNumber,
@@ -16,7 +16,7 @@ import {
     t
 } from './i18n.js';
 
-var interactiveCharTickets = 120;
+var interactiveCharTickets = 0;
 var interactiveWeaponTickets = 0;
 var interactiveBondQuota = 0;
 var interactiveFreeLimitedTickets = 0;
@@ -135,6 +135,7 @@ function saveSimulatorSettings() {
       mode: "banners",
       players: document.getElementById("input-players").value,
       banners: document.getElementById("input-banners").value,
+      metaBanners: document.getElementById("input-meta-banners").value,
       startTickets: document.getElementById("input-start-tickets").value,
       startWeaponTickets: document.getElementById("input-start-weapon-tickets").value,
       totalPulls: 0,
@@ -156,6 +157,7 @@ function loadSimulatorSettings() {
       if (settings.version === SCHEMA_VERSION) {
         document.getElementById("input-players").value = settings.players;
         document.getElementById("input-banners").value = settings.banners;
+        document.getElementById("input-meta-banners").value = settings.metaBanners !== undefined ? settings.metaBanners : Math.floor(settings.banners * 0.3);
         document.getElementById("input-start-tickets").value = settings.startTickets;
         document.getElementById("input-start-weapon-tickets").value = settings.startWeaponTickets || 0;
         document.getElementById("input-base-char").value = settings.baseChar;
@@ -208,7 +210,7 @@ document.addEventListener("DOMContentLoaded", () => {
   loadSimulatorLastResults();
   updateInteractiveUI();
   calculateVersionIncome();
-  document.getElementById("build-info").textContent = t("app.version", { version: "1.1.0", commit: "1980e69" });
+  document.getElementById("build-info").textContent = t("app.version", { version: __APP_VERSION__, commit: __BUILD_COMMIT__ });
   subscribe(() => {
     applyTranslations();
     updateLocaleControls();
@@ -217,7 +219,7 @@ document.addEventListener("DOMContentLoaded", () => {
     updateSingleRunIncome();
     loadSimulatorLastResults();
     if (lastSingleRun) renderSingleRun(lastSingleRun);
-    document.getElementById("build-info").textContent = t("app.version", { version: "1.1.0", commit: "1980e69" });
+    document.getElementById("build-info").textContent = t("app.version", { version: __APP_VERSION__, commit: __BUILD_COMMIT__ });
   });
 });
 function updateLocaleControls() {
@@ -318,7 +320,7 @@ function updateInteractiveUI() {
   } else {
     document.getElementById("stat-char-avg-pull").innerText = "--";
   }
-  document.getElementById("stat-weap-tickets").innerText = interactiveStats.weapTicketsAccumulated;
+  document.getElementById("stat-weap-tickets").innerText = interactiveStats.weapTicketsUsed;
   document.getElementById("stat-weap-issues").innerText = interactiveStats.weapIssues;
   document.getElementById("stat-weap-6star").innerText = interactiveStats.weap6star;
   document.getElementById("stat-weap-selectors").innerText = interactiveStats.weapSelectors;
@@ -360,8 +362,15 @@ function updateLuckRating() {
   const badge = document.getElementById("stat-luck-badge");
   const desc = document.getElementById("stat-luck-desc");
   const totalPulls = interactiveStats.charTotal;
+  
+  badge.className = "";
+  badge.style.color = "";
+  badge.style.borderColor = "";
+  badge.style.background = "";
+  
   if (totalPulls < 20) {
     badge.innerText = t("luck.unknown");
+    badge.className = "stat-luck-badge";
     badge.style.color = "var(--text-secondary)";
     badge.style.borderColor = "var(--border-color)";
     badge.style.background = "rgba(255, 255, 255, 0.02)";
@@ -373,42 +382,30 @@ function updateLuckRating() {
     const avg = sum / interactiveStats.charPullsFor6starList.length;
     if (avg < 40) {
       badge.innerText = t("luck.great");
-      badge.style.color = "#ffb800";
-      badge.style.borderColor = "#ffb800";
-      badge.style.background = "rgba(255, 184, 0, 0.05)";
+      badge.className = "stat-luck-badge luck-great";
       desc.innerText = t("luck.greatDesc", { average: formatNumber(avg, { maximumFractionDigits: 1 }) });
     } else if (avg < 64) {
       badge.innerText = t("luck.good");
-      badge.style.color = "#ff6b00";
-      badge.style.borderColor = "#ff6b00";
-      badge.style.background = "rgba(255, 107, 0, 0.05)";
+      badge.className = "stat-luck-badge luck-good";
       desc.innerText = t("luck.goodDesc", { average: formatNumber(avg, { maximumFractionDigits: 1 }) });
     } else if (avg <= 72) {
       badge.innerText = t("luck.normal");
-      badge.style.color = "#0077b6";
-      badge.style.borderColor = "#0077b6";
-      badge.style.background = "rgba(0, 119, 182, 0.05)";
+      badge.className = "stat-luck-badge luck-normal";
       desc.innerText = t("luck.normalDesc", { average: formatNumber(avg, { maximumFractionDigits: 1 }) });
     } else {
       badge.innerText = t("luck.bad");
-      badge.style.color = "#e63946";
-      badge.style.borderColor = "#e63946";
-      badge.style.background = "rgba(230, 57, 70, 0.05)";
+      badge.className = "stat-luck-badge luck-bad";
       desc.innerText = t("luck.badDesc", { average: formatNumber(avg, { maximumFractionDigits: 1 }) });
     }
   } else {
     const currentPulls = interactiveCharPity.pity6;
     if (currentPulls >= 66) {
       badge.innerText = t("luck.veryBad");
-      badge.style.color = "#e63946";
-      badge.style.borderColor = "#e63946";
-      badge.style.background = "rgba(230, 57, 70, 0.05)";
+      badge.className = "stat-luck-badge luck-bad";
       desc.innerText = t("luck.noSixBad", { count: formatNumber(currentPulls) });
     } else {
       badge.innerText = t("luck.normal");
-      badge.style.color = "#0077b6";
-      badge.style.borderColor = "#0077b6";
-      badge.style.background = "rgba(0, 119, 182, 0.05)";
+      badge.className = "stat-luck-badge luck-normal";
       desc.innerText = t("luck.noSixNormal", { count: formatNumber(currentPulls) });
     }
   }
@@ -540,8 +537,8 @@ function initInteractiveGacha() {
     if (interactiveDossierTickets > 0) {
       interactiveDossierTickets--;
       isDossier = true;
-    } else if (interactiveCharTickets > 0) {
-      interactiveCharTickets--;
+    } else {
+      interactiveCharTickets++;
     }
     revealBoard.innerHTML = "";
     const result = rollCharacter(interactiveCharPity, false);
@@ -556,7 +553,7 @@ function initInteractiveGacha() {
         if (confirm(t("pull.promptNextBanner"))) {
           switchInteractiveBanner();
         }
-      }, 300);
+      }, 1200);
     }
 
     updateInteractiveUI();
@@ -570,8 +567,8 @@ function initInteractiveGacha() {
       if (interactiveDossierTickets > 0) {
         interactiveDossierTickets--;
         isDossier = true;
-      } else if (interactiveCharTickets > 0) {
-        interactiveCharTickets--;
+      } else {
+        interactiveCharTickets++;
       }
       const result = rollCharacter(interactiveCharPity, false);
       result.batchSlot = i + 1;
@@ -589,18 +586,13 @@ function initInteractiveGacha() {
         if (confirm(t("pull.promptNextBanner"))) {
           switchInteractiveBanner();
         }
-      }, 300);
+      }, 1200);
     }
 
     updateInteractiveUI();
     saveInteractiveState();
   });
   document.getElementById("btn-weapon-issue").addEventListener("click", () => {
-    if (interactiveWeaponTickets < 1980) {
-      alert(t("error.weaponTickets"));
-      return;
-    }
-    interactiveWeaponTickets -= 1980;
     interactiveStats.weapTicketsUsed += 1980;
     revealBoard.innerHTML = "";
     const result = rollWeaponIssue(interactiveWeaponPity);
@@ -617,20 +609,28 @@ function initInteractiveGacha() {
       renderInteractiveCard(item);
     });
     if (result.milestoneReward === "selector_box") {
-      alert(t("milestone.issue10"));
-      interactiveStats.weapSelectors++;
-      interactiveStats.weap6star++;
-      interactiveInventory.unshift({ rarity: 6, isFeatured: true, type: "weapon", note: "weaponSelector10" });
+      setTimeout(() => {
+        alert(t("milestone.issue10"));
+        interactiveStats.weapSelectors++;
+        interactiveStats.weap6star++;
+        interactiveInventory.unshift({ rarity: 6, isFeatured: false, type: "weapon", note: "weaponSelector10" });
+        updateInteractiveUI();
+        saveInteractiveState();
+      }, 1200);
     } else if (result.milestoneReward === "featured_weapon") {
-      alert(t("milestone.weaponFeatured"));
-      interactiveStats.weap6star++;
-      interactiveInventory.unshift({ rarity: 6, isFeatured: true, type: "weapon", note: "weaponMilestone" });
+      setTimeout(() => {
+        alert(t("milestone.weaponFeatured"));
+        interactiveStats.weap6star++;
+        interactiveInventory.unshift({ rarity: 6, isFeatured: true, type: "weapon", note: "weaponMilestone" });
+        updateInteractiveUI();
+        saveInteractiveState();
+      }, 1200);
     }
     updateInteractiveUI();
     saveInteractiveState();
   });
   document.getElementById("btn-reset-interactive").addEventListener("click", () => {
-    interactiveCharTickets = 120;
+    interactiveCharTickets = 0;
     interactiveWeaponTickets = 0;
     interactiveBondQuota = 0;
     interactiveFreeLimitedTickets = 0;
@@ -711,62 +711,75 @@ var checkDuplicateAndAwardQuota = (result) => {
     interactiveStats.totalBondQuotaEarned = (interactiveStats.totalBondQuotaEarned || 0) + award;
     if (interactiveBondQuota >= 25) {
       const exchange = Math.floor(interactiveBondQuota / 25);
-      interactiveCharTickets += exchange;
+      interactiveCharTickets -= exchange;
       interactiveBondQuota -= exchange * 25;
     }
   }
   interactiveOwnedCharactersSet.add(charId);
 };
 function checkInteractiveMilestones() {
-  if (interactiveCharPity.bannerPullsCount >= 30 && !interactiveStats.milestone30Triggered) {
-    interactiveStats.milestone30Triggered = true;
-    alert(t("milestone.pull30"));
-    let hasHighRarity = false;
-    for (let k = 0; k < 10; k++) {
-      const force5Star = k === 9 && !hasHighRarity;
-      const urgentResult = rollCharacter(interactiveCharPity, true, force5Star);
-      if (urgentResult.rarity >= 5) {
-        hasHighRarity = true;
-      }
-      urgentResult.type = "character";
-      urgentResult.batchSlot = k + 1;
-      checkDuplicateAndAwardQuota(urgentResult);
-      interactiveStats.charUrgent++;
-      if (urgentResult.rarity === 6) {
-        interactiveStats.char6star++;
-        if (urgentResult.isFeatured) {
-          interactiveStats.char6starFeatured++;
-        } else {
-          interactiveStats.charLosing5050++;
-          if (urgentResult.isLechLimited) {
-            interactiveStats.char6starLechLimited = (interactiveStats.char6starLechLimited || 0) + 1;
-          }
+  setTimeout(() => {
+    if (interactiveCharPity.bannerPullsCount >= 30 && !interactiveStats.milestone30Triggered) {
+      interactiveStats.milestone30Triggered = true;
+      alert(t("milestone.pull30"));
+      let hasHighRarity = false;
+      for (let k = 0; k < 10; k++) {
+        const force5Star = k === 9 && !hasHighRarity;
+        const urgentResult = rollCharacter(interactiveCharPity, true, force5Star);
+        if (urgentResult.rarity >= 5) {
+          hasHighRarity = true;
         }
-      } else if (urgentResult.rarity === 5) {
-        interactiveStats.char5star++;
+        urgentResult.type = "character";
+        urgentResult.batchSlot = k + 1;
+        checkDuplicateAndAwardQuota(urgentResult);
+        interactiveStats.charUrgent++;
+        if (urgentResult.rarity === 6) {
+          interactiveStats.char6star++;
+          if (urgentResult.isFeatured) {
+            interactiveStats.char6starFeatured++;
+          } else {
+            interactiveStats.charLosing5050++;
+            if (urgentResult.isLechLimited) {
+              interactiveStats.char6starLechLimited = (interactiveStats.char6starLechLimited || 0) + 1;
+            }
+          }
+        } else if (urgentResult.rarity === 5) {
+          interactiveStats.char5star++;
+        }
+        const rebate = calculateArsenalTicketsRebate([urgentResult]);
+        interactiveWeaponTickets += rebate;
+        interactiveStats.weapTicketsAccumulated += rebate;
+        interactiveInventory.unshift(urgentResult);
+        renderInteractiveCard(urgentResult, "Urgent Opt");
       }
-      const rebate = calculateArsenalTicketsRebate([urgentResult]);
-      interactiveWeaponTickets += rebate;
-      interactiveStats.weapTicketsAccumulated += rebate;
-      interactiveInventory.unshift(urgentResult);
-      renderInteractiveCard(urgentResult, "Urgent Opt");
+      updateInteractiveUI();
+      saveInteractiveState();
     }
-  }
-  if (interactiveCharPity.bannerPullsCount >= 60 && !interactiveStats.milestone60Triggered) {
-    interactiveStats.milestone60Triggered = true;
-    alert(t("milestone.pull60"));
-    interactiveNextBannerDossierTickets += 10;
-  }
-  while (interactiveCharPity.bannerPullsCount >= (interactiveCharPity.potentialTokensThisBanner + 1) * 240) {
-    interactiveCharPity.potentialTokensThisBanner++;
-    interactiveStats.potentialTokens++;
-    alert(t("milestone.pull240"));
-  }
+    if (interactiveCharPity.bannerPullsCount >= 60 && !interactiveStats.milestone60Triggered) {
+      interactiveStats.milestone60Triggered = true;
+      alert(t("milestone.pull60"));
+      interactiveNextBannerDossierTickets += 10;
+      updateInteractiveUI();
+      saveInteractiveState();
+    }
+    let potentialAlerted = false;
+    while (interactiveCharPity.bannerPullsCount >= (interactiveCharPity.potentialTokensThisBanner + 1) * 240) {
+      interactiveCharPity.potentialTokensThisBanner++;
+      interactiveStats.potentialTokens++;
+      potentialAlerted = true;
+    }
+    if (potentialAlerted) {
+      alert(t("milestone.pull240"));
+      updateInteractiveUI();
+      saveInteractiveState();
+    }
+  }, 1200);
 }
 function initSimulatorControls() {
   const inputs = [
     "input-players",
     "input-banners",
+    "input-meta-banners",
     "input-start-tickets",
     "input-start-weapon-tickets",
     "input-base-char",
@@ -781,6 +794,14 @@ function initSimulatorControls() {
       });
     }
   });
+  const bannersInput = document.getElementById("input-banners");
+  if (bannersInput) {
+    bannersInput.addEventListener("input", () => {
+      const val = Math.max(1, Math.trunc(Number(bannersInput.value) || 0));
+      document.getElementById("input-meta-banners").value = Math.floor(val * 0.3);
+      saveSimulatorSettings();
+    });
+  }
   document.getElementById("toggle-monthly").addEventListener("change", () => {
     calculateVersionIncome();
     saveSimulatorSettings();
@@ -789,10 +810,48 @@ function initSimulatorControls() {
     calculateVersionIncome();
     saveSimulatorSettings();
   });
+
+  // Initialize Sidebar Toggle
+  const toggleBtn = document.getElementById("btn-toggle-sidebar");
+  const simLayout = document.querySelector(".simulator-layout");
+  const toggleIcon = document.getElementById("toggle-sidebar-icon");
+  const toggleText = document.getElementById("toggle-sidebar-text");
+  
+  if (toggleBtn && simLayout) {
+    try {
+      const isCollapsed = localStorage.getItem("a9e_gacha_sim_sidebar_collapsed") === "true";
+      if (isCollapsed) {
+        simLayout.classList.add("sidebar-collapsed");
+        if (toggleIcon) toggleIcon.innerText = "▶";
+        if (toggleText) {
+          toggleText.innerText = t("simulator.expandConfig") || "Mở rộng cấu hình";
+          toggleText.dataset.i18n = "simulator.expandConfig";
+        }
+      }
+    } catch (e) {}
+
+    toggleBtn.addEventListener("click", () => {
+      const collapsed = simLayout.classList.toggle("sidebar-collapsed");
+      try {
+        localStorage.setItem("a9e_gacha_sim_sidebar_collapsed", String(collapsed));
+      } catch (e) {}
+      
+      if (toggleIcon) {
+        toggleIcon.innerText = collapsed ? "▶" : "◀";
+      }
+      if (toggleText) {
+        const key = collapsed ? "simulator.expandConfig" : "simulator.collapseConfig";
+        toggleText.innerText = t(key);
+        toggleText.dataset.i18n = key;
+      }
+    });
+  }
+
   calculateVersionIncome();
   document.getElementById("btn-run-simulation").addEventListener("click", () => {
     const numPlayers = Number(document.getElementById("input-players").value);
     const numBanners = Number(document.getElementById("input-banners").value);
+    const numMetaBanners = Number(document.getElementById("input-meta-banners").value);
     const startingCharTickets = Number(document.getElementById("input-start-tickets").value);
     const startingWeaponTickets = Number(document.getElementById("input-start-weapon-tickets").value);
     const totalPulls = Number(document.getElementById("input-total-pulls").value);
@@ -811,6 +870,7 @@ function initSimulatorControls() {
         mode: "banners",
         numPlayers,
         numBanners,
+        numMetaBanners,
         totalPulls: 0,
         startingCharTickets,
         startingWeaponTickets,
@@ -840,6 +900,7 @@ function initSimulatorControls() {
     resetSimBtn.addEventListener("click", () => {
       document.getElementById("input-players").value = 10000;
       document.getElementById("input-banners").value = 10;
+      document.getElementById("input-meta-banners").value = 3;
       document.getElementById("input-start-tickets").value = 80;
       document.getElementById("input-start-weapon-tickets").value = 0;
       document.getElementById("input-base-char").value = 36;
@@ -876,7 +937,7 @@ function displaySimulatorResults(results, numBanners) {
   if (scRes) {
     document.getElementById("card-avg-featured").innerText = scRes.avgFeaturedChars.toFixed(2);
     const eff = scRes.avgPullsPerFeaturedChar;
-    document.getElementById("card-avg-efficiency").innerText = Number.isFinite(eff) ? `${eff.toFixed(1)} pull` : "N/A";
+    document.getElementById("card-avg-efficiency").innerText = Number.isFinite(eff) ? `${eff.toFixed(1)}` : "N/A";
     document.getElementById("card-avg-weapons").innerText = scRes.avgFeaturedWeapons.toFixed(2);
   }
   const tableBody = document.getElementById("comparison-table-body");
@@ -890,28 +951,29 @@ function displaySimulatorResults(results, numBanners) {
     const total6StarChar = res.avgFeaturedChars + res.avgLechLimited + res.avgStandard6Stars;
     const total6StarWeap = res.avgFeaturedWeapons + res.avgStandard6StarWeapons;
     tr.innerHTML = `
-          <td>
+          <td class="sticky-col">
               <span class="strategy-badge badge-${strategyId}">${strategyInfo ? strategyName(strategyId) : strategyId}</span>
           </td>
-          <td>${res.avgCharPulls.toFixed(0)} pull</td>
+          <td>${res.avgCharPulls.toFixed(0)}</td>
           <td>${formatNumber(res.avgUnspentChar, { maximumFractionDigits: 1 })}</td>
+          <td>${res.avgUrgentPulls.toFixed(1)} / ${res.avgDossierPulls.toFixed(1)}</td>
           <td style="font-weight: 700; color: #ffcc00;">${total6StarChar.toFixed(2)}</td>
           <td>${(res.avgFeaturedUnique || 0).toFixed(2)} / ${(res.avgFeaturedDupes || 0).toFixed(2)}</td>
-          <td>${(res.avgLechLimited || 0).toFixed(2)}</td>
-          <td>${(res.avgStandard6Stars || 0).toFixed(2)}</td>
-          <td>${Number.isFinite(eff) ? `${eff.toFixed(1)} pull/char` : "N/A"}</td>
+          <td>${(res.avgLechLimited || 0).toFixed(1)} / ${(res.avgStandard6Stars || 0).toFixed(1)}</td>
+          <td>${Number.isFinite(eff) ? eff.toFixed(1) : "N/A"}</td>
           <td style="font-weight: 600; color: #ffb800;">${res.bestLuckChar} / ${res.worstLuckChar}</td>
+          <td>${(res.avgTimesHit120Guarantee || 0).toFixed(2)}</td>
           <td>${res.avgMetaFeaturedChars.toFixed(2)} / ${res.avgMetaFeaturedWeapons.toFixed(2)}</td>
           <td>${res.avgFeaturedWeapons.toFixed(2)}</td>
           <td style="font-weight: 700; color: #00b4d8;">${total6StarWeap.toFixed(2)}</td>
-          <td>${res.avgWeaponPulls.toFixed(0)} pull</td>
-          <td>${(res.avgUnspentWeapon / 198).toFixed(1)} pull</td>
+          <td>${res.avgWeaponPulls.toFixed(0)}</td>
+          <td>${(res.avgUnspentWeapon / 198).toFixed(1)}</td>
           <td style="font-weight: 700; color: var(--orange-primary);">${res.ownershipRate.toFixed(1)}%</td>
       `;
     tableBody.appendChild(tr);
   });
   drawDistributionChart("chart-distribution", results, strategies);
-  drawComparisonChart("chart-efficiency", results, strategies);
+  drawWeaponDistributionChart("chart-efficiency", results, strategies);
 }
 function escapeHtml(value) {
   return String(value).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;");
@@ -925,6 +987,13 @@ function initSingleRunControls() {
     control.addEventListener(control.type === "checkbox" ? "change" : "input", updateSingleRunIncome);
   });
   updateSingleRunIncome();
+  const singleBannersInput = document.getElementById("single-banners");
+  if (singleBannersInput) {
+    singleBannersInput.addEventListener("input", () => {
+      const val = Math.max(1, Math.trunc(Number(singleBannersInput.value) || 0));
+      document.getElementById("single-meta-banners").value = Math.floor(val * 0.3);
+    });
+  }
   document.getElementById("btn-random-seed").addEventListener("click", () => {
     seedInput.value = createRandomSeed();
     seedInput.focus();
@@ -941,6 +1010,7 @@ function initSingleRunControls() {
           strategyId: document.getElementById("single-strategy").value,
           seed: seedInput.value,
           numBanners: Number(document.getElementById("single-banners").value),
+          numMetaBanners: Number(document.getElementById("single-meta-banners").value),
           startingCharTickets: Number(document.getElementById("single-start-tickets").value),
           startingWeaponTickets: Number(document.getElementById("single-start-weapons").value),
           incomePerBanner: getSingleRunIncome().characters,
@@ -1196,7 +1266,7 @@ function renderSingleRun(run) {
           </div>
       </div>
       <div class="single-summary-grid">
-          <div><span>${t("single.featuredChars")}</span><strong>${summary.featuredCharacters}</strong><small>${summary.featuredUnique} unique \xB7 ${summary.featuredDupes} dupe</small></div>
+          <div><span>${t("single.featuredChars")}</span><strong>${summary.featuredCharacters}</strong><small>${summary.featuredUnique} unique \xB7 ${summary.featuredDupes} dupe<br>${t("single.pity120Hits", { count: summary.timesHit120Guarantee || 0 })}</small></div>
           <div><span>${t("single.featuredWeapons")}</span><strong>${summary.featuredWeapons}</strong><small>${summary.standardWeapons} off-banner 6\u2605</small></div>
           <div><span>${t("single.characterPulls")}</span><strong>${formatNumber(summary.totalCharPulls)}</strong><small>${summary.totalUrgentPulls} Urgent</small></div>
           <div><span>${t("single.walletLeft")}</span><strong>${formatNumber(summary.charTickets)}</strong><small>${formatNumber(summary.arsenalTickets)} Arsenal</small></div>
