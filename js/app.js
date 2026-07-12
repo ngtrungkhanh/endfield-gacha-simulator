@@ -901,6 +901,7 @@ function displaySimulatorResults(results, numBanners) {
           <td>${(res.avgStandard6Stars || 0).toFixed(2)}</td>
           <td>${Number.isFinite(eff) ? `${eff.toFixed(1)} pull/char` : "N/A"}</td>
           <td style="font-weight: 600; color: #ffb800;">${res.bestLuckChar} / ${res.worstLuckChar}</td>
+          <td>${res.avgMetaFeaturedChars.toFixed(2)} / ${res.avgMetaFeaturedWeapons.toFixed(2)}</td>
           <td>${res.avgFeaturedWeapons.toFixed(2)}</td>
           <td style="font-weight: 700; color: #00b4d8;">${total6StarWeap.toFixed(2)}</td>
           <td>${res.avgWeaponPulls.toFixed(0)} pull</td>

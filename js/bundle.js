@@ -14684,6 +14684,8 @@
       this.ownedFeaturedWeapons = 0;
       this.ownedStandard6StarWeapons = 0;
       this.owned5StarWeapons = 0;
+      this.ownedMetaFeaturedCharacters = 0;
+      this.ownedMetaFeaturedWeapons = 0;
       this.totalWeaponPulls = 0;
       this.weaponMilestoneSelectors = 0;
     }
@@ -14767,7 +14769,7 @@
     }
     return pullsRecord;
   }
-  function executeFreeLimitedRolls(player, bannerState, bannerIdx) {
+  function executeFreeLimitedRolls(player, bannerState, bannerIdx, totalBanners = 10) {
     const pullsRecord = [];
     let gotFeatured = false;
     let gotFeaturedThisBanner = false;
@@ -14790,6 +14792,9 @@
         if (result.isFeatured) {
           gotFeatured = true;
           player.ownedFeaturedCharacters++;
+          if (isMetaBanner(bannerIdx, totalBanners)) {
+            player.ownedMetaFeaturedCharacters++;
+          }
           if (!gotFeaturedThisBanner) {
             player.ownedFeaturedUnique++;
             gotFeaturedThisBanner = true;
@@ -14830,7 +14835,7 @@
     const distanceTo120 = 120 - bannerState.pullsSinceFeatured;
     return !bannerState.milestone30Triggered && distanceTo30 > 0 && distanceTo30 < 10 || !bannerState.milestone60Triggered && distanceTo60 > 0 && distanceTo60 < 10 || bannerState.guarantee120Consumed !== true && distanceTo120 > 0 && distanceTo120 < 10;
   }
-  function executeCharacterPullSequence(player, bannerState, targetPulls, stopOnFeatured, bannerIdx, gotFeaturedThisBanner = false, forceSingleRoll = false) {
+  function executeCharacterPullSequence(player, bannerState, targetPulls, stopOnFeatured, bannerIdx, gotFeaturedThisBanner = false, forceSingleRoll = false, totalBanners = 10) {
     const pullsRecord = [];
     let gotFeatured = gotFeaturedThisBanner;
     let currentBannerPulls = bannerState.bannerPullsCount;
@@ -14857,6 +14862,9 @@
         if (result.isFeatured) {
           gotFeatured = true;
           player.ownedFeaturedCharacters++;
+          if (isMetaBanner(bannerIdx, totalBanners)) {
+            player.ownedMetaFeaturedCharacters++;
+          }
           if (!gotFeaturedThisBanner) {
             player.ownedFeaturedUnique++;
             gotFeaturedThisBanner = true;
@@ -14931,7 +14939,7 @@
     }
     return { pullsRecord, gotFeatured };
   }
-  function executeWeaponPullSequence(player, bannerState, totalArsenalTicketsEarned, gotFeaturedChar, maxSpend = Infinity) {
+  function executeWeaponPullSequence(player, bannerState, totalArsenalTicketsEarned, gotFeaturedChar, maxSpend = Infinity, bannerIdx = 0, totalBanners = 10) {
     player.arsenalTickets += totalArsenalTicketsEarned;
     if (!gotFeaturedChar) {
       return [];
@@ -14951,6 +14959,9 @@
           if (item.isFeatured) {
             gotFeatured = true;
             player.ownedFeaturedWeapons++;
+            if (isMetaBanner(bannerIdx, totalBanners)) {
+              player.ownedMetaFeaturedWeapons++;
+            }
           } else {
             player.ownedStandard6StarWeapons++;
           }
@@ -14962,9 +14973,15 @@
         gotFeatured = true;
         player.ownedFeaturedWeapons++;
         player.weaponMilestoneSelectors++;
+        if (isMetaBanner(bannerIdx, totalBanners)) {
+          player.ownedMetaFeaturedWeapons++;
+        }
       } else if (result.milestoneReward === "featured_weapon") {
         gotFeatured = true;
         player.ownedFeaturedWeapons++;
+        if (isMetaBanner(bannerIdx, totalBanners)) {
+          player.ownedMetaFeaturedWeapons++;
+        }
       }
     }
     return issuesRecord;
@@ -15062,7 +15079,7 @@
     weaponBannerState.featuredGuaranteeConsumed = false;
     player.charTickets += ticketIncome;
     const stdPulls = executeStandardBannerRolls(player, 15, bannerIdx);
-    const freeLimResults = executeFreeLimitedRolls(player, charBannerState, bannerIdx);
+    const freeLimResults = executeFreeLimitedRolls(player, charBannerState, bannerIdx, totalBanners);
     let gotFeaturedChar = freeLimResults.gotFeatured;
     const allCharPulls = [...freeLimResults.pullsRecord];
     const decisionState = {
@@ -15079,7 +15096,7 @@
     const totalCharacterTicketsAvailable = player.charTickets + player.currentBannerDossierTickets;
     if (strategyId === "save_commit") {
       if (totalCharacterTicketsAvailable >= 110) {
-        const res = executeCharacterPullSequence(player, charBannerState, 120, true, bannerIdx, gotFeaturedChar);
+        const res = executeCharacterPullSequence(player, charBannerState, 120, true, bannerIdx, gotFeaturedChar, false, totalBanners);
         res.pullsRecord.forEach((item) => {
           item.actionPhase = "commit";
         });
@@ -15088,7 +15105,7 @@
       }
     } else if (strategyId === "save_commit_single") {
       if (totalCharacterTicketsAvailable >= 110) {
-        const res = executeCharacterPullSequence(player, charBannerState, 120, true, bannerIdx, gotFeaturedChar, true);
+        const res = executeCharacterPullSequence(player, charBannerState, 120, true, bannerIdx, gotFeaturedChar, true, totalBanners);
         res.pullsRecord.forEach((item) => {
           item.actionPhase = "commit";
         });
@@ -15096,7 +15113,7 @@
         gotFeaturedChar = gotFeaturedChar || res.gotFeatured;
       }
     } else if (strategyId === "yolo") {
-      const res = executeCharacterPullSequence(player, charBannerState, Infinity, true, bannerIdx, gotFeaturedChar);
+      const res = executeCharacterPullSequence(player, charBannerState, Infinity, true, bannerIdx, gotFeaturedChar, false, totalBanners);
       res.pullsRecord.forEach((item) => {
         item.actionPhase = "strategy";
       });
@@ -15110,7 +15127,7 @@
         targetPulls = 30;
       }
       if (targetPulls > 0) {
-        const res = executeCharacterPullSequence(player, charBannerState, targetPulls, false, bannerIdx, gotFeaturedChar);
+        const res = executeCharacterPullSequence(player, charBannerState, targetPulls, false, bannerIdx, gotFeaturedChar, false, totalBanners);
         res.pullsRecord.forEach((item) => {
           item.actionPhase = "strategy";
         });
@@ -15145,7 +15162,7 @@
         }
       }
       if (shouldPull) {
-        const res = executeCharacterPullSequence(player, charBannerState, 120, true, bannerIdx, gotFeaturedChar);
+        const res = executeCharacterPullSequence(player, charBannerState, 120, true, bannerIdx, gotFeaturedChar, false, totalBanners);
         res.pullsRecord.forEach((item) => {
           item.actionPhase = "strategy";
         });
@@ -15155,7 +15172,7 @@
     }
     if (player.currentBannerDossierTickets > 0) {
       const dossierTarget = charBannerState.bannerPullsCount + player.currentBannerDossierTickets;
-      const res = executeCharacterPullSequence(player, charBannerState, dossierTarget, false, bannerIdx, gotFeaturedChar, strategyId === "save_commit_single");
+      const res = executeCharacterPullSequence(player, charBannerState, dossierTarget, false, bannerIdx, gotFeaturedChar, strategyId === "save_commit_single", totalBanners);
       res.pullsRecord.forEach((item) => {
         item.actionPhase = "dossier";
       });
@@ -15166,7 +15183,7 @@
     if (currentPullsCount >= 20 && currentPullsCount < 30 && !gotFeaturedChar) {
       const neededTo30 = 30 - currentPullsCount;
       if (player.charTickets >= neededTo30) {
-        const res = executeCharacterPullSequence(player, charBannerState, 30, true, bannerIdx, gotFeaturedChar, strategyId === "save_commit_single");
+        const res = executeCharacterPullSequence(player, charBannerState, 30, true, bannerIdx, gotFeaturedChar, strategyId === "save_commit_single", totalBanners);
         res.pullsRecord.forEach((item) => {
           item.actionPhase = "optimize30";
         });
@@ -15182,12 +15199,12 @@
     if (strategyId === "save_commit" || strategyId === "save_commit_single") {
       player.arsenalTickets += totalArsenalTicketsEarned;
       if (gotFeaturedChar && player.arsenalTickets >= 15840) {
-        weaponIssues = executeWeaponPullSequence(player, weaponBannerState, 0, gotFeaturedChar);
+        weaponIssues = executeWeaponPullSequence(player, weaponBannerState, 0, gotFeaturedChar, Infinity, bannerIdx, totalBanners);
       }
     } else if (strategyId === "roll_meta") {
       const isMeta = isMetaBanner(bannerIdx, totalBanners);
       if (isMeta) {
-        weaponIssues = executeWeaponPullSequence(player, weaponBannerState, totalArsenalTicketsEarned, gotFeaturedChar);
+        weaponIssues = executeWeaponPullSequence(player, weaponBannerState, totalArsenalTicketsEarned, gotFeaturedChar, Infinity, bannerIdx, totalBanners);
       } else {
         if (gotFeaturedChar) {
           let nextMetaIdx = -1;
@@ -15203,13 +15220,13 @@
             const currentTickets = player.arsenalTickets + totalArsenalTicketsEarned;
             if (currentTickets >= 15840 && currentTickets - 15840 + expectedFutureEarnings >= 15840) {
               const maxSpend = currentTickets - 15840 + expectedFutureEarnings;
-              weaponIssues = executeWeaponPullSequence(player, weaponBannerState, totalArsenalTicketsEarned, gotFeaturedChar, maxSpend);
+              weaponIssues = executeWeaponPullSequence(player, weaponBannerState, totalArsenalTicketsEarned, gotFeaturedChar, maxSpend, bannerIdx, totalBanners);
             } else {
               player.arsenalTickets += totalArsenalTicketsEarned;
             }
           } else {
             if (player.arsenalTickets + totalArsenalTicketsEarned >= 15840) {
-              weaponIssues = executeWeaponPullSequence(player, weaponBannerState, totalArsenalTicketsEarned, gotFeaturedChar);
+              weaponIssues = executeWeaponPullSequence(player, weaponBannerState, totalArsenalTicketsEarned, gotFeaturedChar, Infinity, bannerIdx, totalBanners);
             } else {
               player.arsenalTickets += totalArsenalTicketsEarned;
             }
@@ -15219,7 +15236,7 @@
         }
       }
     } else {
-      weaponIssues = executeWeaponPullSequence(player, weaponBannerState, totalArsenalTicketsEarned, gotFeaturedChar);
+      weaponIssues = executeWeaponPullSequence(player, weaponBannerState, totalArsenalTicketsEarned, gotFeaturedChar, Infinity, bannerIdx, totalBanners);
     }
     return {
       standardPulls: stdPulls,
@@ -15475,6 +15492,7 @@
     static analyzeResults(players, numBanners) {
       const numPlayers = players.length;
       let sumFeaturedChars = 0;
+      let sumMetaFeaturedChars = 0;
       let sumFeaturedUnique = 0;
       let sumFeaturedDupes = 0;
       let sumLechLimited = 0;
@@ -15488,6 +15506,7 @@
       let sumUnspentChar = 0;
       let sumUnspentWeapon = 0;
       let sumFeaturedWeapons = 0;
+      let sumMetaFeaturedWeapons = 0;
       let sumStandard6StarWeapons = 0;
       let sum5StarWeapons = 0;
       let sumWeaponPulls = 0;
@@ -15501,6 +15520,7 @@
       const distribution = {};
       players.forEach((player) => {
         sumFeaturedChars += player.ownedFeaturedCharacters;
+        sumMetaFeaturedChars += player.ownedMetaFeaturedCharacters || 0;
         sumFeaturedUnique += player.ownedFeaturedUnique || 0;
         sumFeaturedDupes += player.ownedFeaturedDupes || 0;
         sumLechLimited += player.ownedLechLimited || 0;
@@ -15514,6 +15534,7 @@
         sumUnspentChar += player.charTickets;
         sumUnspentWeapon += player.arsenalTickets;
         sumFeaturedWeapons += player.ownedFeaturedWeapons;
+        sumMetaFeaturedWeapons += player.ownedMetaFeaturedWeapons || 0;
         sumStandard6StarWeapons += player.ownedStandard6StarWeapons;
         sum5StarWeapons += player.owned5StarWeapons;
         sumWeaponPulls += player.totalWeaponPulls;
@@ -15537,6 +15558,7 @@
       return {
         // Thống kê Nhân vật (Trung bình mỗi người chơi)
         avgFeaturedChars: averageFeaturedChars,
+        avgMetaFeaturedChars: sumMetaFeaturedChars / numPlayers,
         avgFeaturedUnique: averageFeaturedUnique,
         avgFeaturedDupes: sumFeaturedDupes / numPlayers,
         avgLechLimited: sumLechLimited / numPlayers,
@@ -15557,6 +15579,7 @@
         avgPullsPerFeaturedChar: averageFeaturedChars > 0 ? sumLimitedPulls / sumFeaturedChars : Infinity,
         // Thống kê Vũ khí (Trung bình mỗi người chơi)
         avgFeaturedWeapons: sumFeaturedWeapons / numPlayers,
+        avgMetaFeaturedWeapons: sumMetaFeaturedWeapons / numPlayers,
         avgStandard6StarWeapons: sumStandard6StarWeapons / numPlayers,
         avg5StarWeapons: sum5StarWeapons / numPlayers,
         avgWeaponPulls: sumWeaponPulls / numPlayers,
@@ -15763,6 +15786,7 @@
       "table.standardLoss": "L\u1EC7ch Standard",
       "table.efficiency": "Hi\u1EC7u su\u1EA5t Pull",
       "table.featuredRange": "Featured (Max/Min) \u2139\uFE0F",
+      "table.metaObtained": "Meta (Char/V\u0169 kh\xED)",
       "table.weaponFeatured": "V\u0169 kh\xED 6\u2605 Featured",
       "table.weaponSix": "T\u1ED5ng V\u0169 kh\xED 6\u2605",
       "table.weaponUsed": "Pull V\u0169 Kh\xED D\xF9ng",
@@ -16029,6 +16053,7 @@
       "table.standardLoss": "Off-banner Standard",
       "table.efficiency": "Pull Efficiency",
       "table.featuredRange": "Featured (Max/Min) \u2139\uFE0F",
+      "table.metaObtained": "Meta (Char/Weapon)",
       "table.weaponFeatured": "Featured 6\u2605 Weapons",
       "table.weaponSix": "Total 6\u2605 Weapons",
       "table.weaponUsed": "Weapon Pulls Used",
@@ -17296,6 +17321,7 @@
           <td>${(res.avgStandard6Stars || 0).toFixed(2)}</td>
           <td>${Number.isFinite(eff) ? `${eff.toFixed(1)} pull/char` : "N/A"}</td>
           <td style="font-weight: 600; color: #ffb800;">${res.bestLuckChar} / ${res.worstLuckChar}</td>
+          <td>${res.avgMetaFeaturedChars.toFixed(2)} / ${res.avgMetaFeaturedWeapons.toFixed(2)}</td>
           <td>${res.avgFeaturedWeapons.toFixed(2)}</td>
           <td style="font-weight: 700; color: #00b4d8;">${total6StarWeap.toFixed(2)}</td>
           <td>${res.avgWeaponPulls.toFixed(0)} pull</td>

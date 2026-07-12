@@ -110,6 +110,7 @@ export class MonteCarloSimulator {
         const numPlayers = players.length;
         
         let sumFeaturedChars = 0;
+        let sumMetaFeaturedChars = 0;
         let sumFeaturedUnique = 0;
         let sumFeaturedDupes = 0;
         let sumLechLimited = 0;
@@ -124,6 +125,7 @@ export class MonteCarloSimulator {
         let sumUnspentWeapon = 0;
 
         let sumFeaturedWeapons = 0;
+        let sumMetaFeaturedWeapons = 0;
         let sumStandard6StarWeapons = 0;
         let sum5StarWeapons = 0;
         let sumWeaponPulls = 0;
@@ -143,6 +145,7 @@ export class MonteCarloSimulator {
 
         players.forEach(player => {
             sumFeaturedChars += player.ownedFeaturedCharacters;
+            sumMetaFeaturedChars += player.ownedMetaFeaturedCharacters || 0;
             sumFeaturedUnique += player.ownedFeaturedUnique || 0;
             sumFeaturedDupes += player.ownedFeaturedDupes || 0;
             sumLechLimited += player.ownedLechLimited || 0;
@@ -157,6 +160,7 @@ export class MonteCarloSimulator {
             sumUnspentWeapon += player.arsenalTickets;
 
             sumFeaturedWeapons += player.ownedFeaturedWeapons;
+            sumMetaFeaturedWeapons += player.ownedMetaFeaturedWeapons || 0;
             sumStandard6StarWeapons += player.ownedStandard6StarWeapons;
             sum5StarWeapons += player.owned5StarWeapons;
             sumWeaponPulls += player.totalWeaponPulls;
@@ -189,6 +193,7 @@ export class MonteCarloSimulator {
         return {
             // Thống kê Nhân vật (Trung bình mỗi người chơi)
             avgFeaturedChars: averageFeaturedChars,
+            avgMetaFeaturedChars: sumMetaFeaturedChars / numPlayers,
             avgFeaturedUnique: averageFeaturedUnique,
             avgFeaturedDupes: sumFeaturedDupes / numPlayers,
             avgLechLimited: sumLechLimited / numPlayers,
@@ -214,6 +219,7 @@ export class MonteCarloSimulator {
 
             // Thống kê Vũ khí (Trung bình mỗi người chơi)
             avgFeaturedWeapons: sumFeaturedWeapons / numPlayers,
+            avgMetaFeaturedWeapons: sumMetaFeaturedWeapons / numPlayers,
             avgStandard6StarWeapons: sumStandard6StarWeapons / numPlayers,
             avg5StarWeapons: sum5StarWeapons / numPlayers,
             avgWeaponPulls: sumWeaponPulls / numPlayers,
