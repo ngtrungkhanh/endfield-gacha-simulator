@@ -32,6 +32,7 @@ test('reference seed matches the documented detailed run totals', () => {
     assert.equal(run.summary.featuredWeapons, 6);
     assert.equal(run.summary.totalCharPulls, 820);
     assert.equal(run.summary.totalUrgentPulls, 90);
+    assert.equal(run.summary.totalDossierPulls, 50);
     assert.equal(run.summary.totalWeaponPulls, 310);
     assert.equal(run.summary.charTickets, 60);
     assert.equal(run.summary.arsenalTickets, 16440);

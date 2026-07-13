@@ -53,6 +53,7 @@ function snapshotPlayer(player) {
         totalCharPulls: player.totalCharPulls,
         totalLimitedPulls: player.totalLimitedPulls,
         totalUrgentPulls: player.totalUrgentPulls,
+        totalDossierPulls: player.totalDossierPulls,
         totalWeaponPulls: player.totalWeaponPulls,
         weaponTicketsUsed: player.totalWeaponTicketsUsed,
         weaponSelectors: player.weaponMilestoneSelectors,

@@ -2,6 +2,12 @@ import Chart from 'chart.js/auto';
 window.Chart = Chart;
 import { rollCharacter, rollWeaponIssue, calculateArsenalTicketsRebate } from './gacha-math.js';
 import { createRandomSeed, runSingleDetailedSimulation } from './single-run.js';
+import {
+    buildCharacterPullGroups,
+    calculatePullArsenal,
+    featuredCharacterHits,
+    featuredWeaponHits
+} from './single-run-view.js';
 import { MonteCarloSimulator } from './simulator.js';
 import { strategies } from './strategies.js';
 import { drawDistributionChart, drawWeaponDistributionChart } from './chart-helper.js';
@@ -202,6 +208,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initLocaleSwitcher();
   initTabSwitcher();
   initDocsDialog();
+  initTableTooltips();
   initInteractiveGacha();
   initSimulatorControls();
   initSingleRunControls();
@@ -950,30 +957,93 @@ function displaySimulatorResults(results, numBanners) {
     if (strategyId === "save_commit") tr.className = "selected-row";
     const total6StarChar = res.avgFeaturedChars + res.avgLechLimited + res.avgStandard6Stars;
     const total6StarWeap = res.avgFeaturedWeapons + res.avgStandard6StarWeapons;
+    const totalCharacterPulls = res.avgCharPulls + res.avgUrgentPulls;
+    const regularCharacterPulls = res.avgCharPulls - res.avgDossierPulls;
     tr.innerHTML = `
           <td class="sticky-col">
               <span class="strategy-badge badge-${strategyId}">${strategyInfo ? strategyName(strategyId) : strategyId}</span>
           </td>
-          <td>${res.avgCharPulls.toFixed(0)}</td>
-          <td>${formatNumber(res.avgUnspentChar, { maximumFractionDigits: 1 })}</td>
-          <td>${res.avgUrgentPulls.toFixed(1)} / ${res.avgDossierPulls.toFixed(1)}</td>
-          <td style="font-weight: 700; color: #ffcc00;">${total6StarChar.toFixed(2)}</td>
-          <td>${(res.avgFeaturedUnique || 0).toFixed(2)} / ${(res.avgFeaturedDupes || 0).toFixed(2)}</td>
-          <td>${(res.avgLechLimited || 0).toFixed(1)} / ${(res.avgStandard6Stars || 0).toFixed(1)}</td>
-          <td>${Number.isFinite(eff) ? eff.toFixed(1) : "N/A"}</td>
-          <td style="font-weight: 600; color: #ffb800;">${res.bestLuckChar} / ${res.worstLuckChar}</td>
-          <td>${(res.avgTimesHit120Guarantee || 0).toFixed(2)}</td>
-          <td>${res.avgMetaFeaturedChars.toFixed(2)} / ${res.avgMetaFeaturedWeapons.toFixed(2)}</td>
-          <td>${res.avgFeaturedWeapons.toFixed(2)}</td>
-          <td style="font-weight: 700; color: #00b4d8;">${total6StarWeap.toFixed(2)}</td>
-          <td>${res.avgWeaponPulls.toFixed(0)}</td>
-          <td>${(res.avgUnspentWeapon / 198).toFixed(1)}</td>
-          <td style="font-weight: 700; color: var(--orange-primary);">${res.ownershipRate.toFixed(1)}%</td>
+          <td class="metric-cell">
+              <strong class="metric-main accent-pulls">${totalCharacterPulls.toFixed(0)}</strong>
+              <span class="metric-detail">${t("table.metric.regularOnly", { count: regularCharacterPulls.toFixed(1) })}</span>
+              <span class="metric-detail urgent-detail">${t("table.metric.urgentOnly", { count: res.avgUrgentPulls.toFixed(1) })}</span>
+              <span class="metric-detail dossier-detail">${t("table.metric.dossierOnly", { count: res.avgDossierPulls.toFixed(1) })}</span>
+          </td>
+          <td class="metric-cell compact">
+              <strong class="metric-main accent-wallet">${formatNumber(res.avgUnspentChar, { maximumFractionDigits: 1 })}</strong>
+              <span class="metric-detail">${t("table.metric.remainingPulls")}</span>
+          </td>
+          <td class="metric-cell">
+              <strong class="metric-main accent-six">${t("table.metric.sixCompact", { count: total6StarChar.toFixed(2) })}</strong>
+              <span class="metric-detail featured-detail">${t("table.metric.featuredUnique", { count: (res.avgFeaturedUnique || 0).toFixed(2) })}</span>
+              <span class="metric-detail featured-detail">${t("table.metric.featuredDupes", { count: (res.avgFeaturedDupes || 0).toFixed(2) })}</span>
+              <span class="metric-detail">${t("table.metric.charOffrate", {
+    limited: (res.avgLechLimited || 0).toFixed(1),
+    standard: (res.avgStandard6Stars || 0).toFixed(1)
+  })}</span>
+          </td>
+          <td class="metric-cell">
+              <strong class="metric-main accent-efficiency">${t("table.metric.efficiency", { value: Number.isFinite(eff) ? eff.toFixed(1) : "N/A" })}</strong>
+              <span class="metric-detail">${t("table.metric.pity120", { value: (res.avgTimesHit120Guarantee || 0).toFixed(2) })}</span>
+          </td>
+          <td class="metric-cell compact">
+              <strong class="metric-main accent-range">${res.bestLuckChar}\u2013${res.worstLuckChar}</strong>
+              <span class="metric-detail">${t("table.metric.highLow")}</span>
+          </td>
+          <td class="metric-cell compact">
+              <strong class="metric-main accent-meta">${t("table.metric.metaChar", { count: res.avgMetaFeaturedChars.toFixed(2) })}</strong>
+              <span class="metric-detail">${t("table.metric.metaWeapon", { count: res.avgMetaFeaturedWeapons.toFixed(2) })}</span>
+          </td>
+          <td class="metric-cell">
+              <strong class="metric-main accent-weapon">${t("table.metric.sixCompact", { count: total6StarWeap.toFixed(2) })}</strong>
+              <span class="metric-detail featured-detail">${t("table.metric.featuredCompact", { count: res.avgFeaturedWeapons.toFixed(2) })}</span>
+              <span class="metric-detail arsenal-detail">${t("table.metric.arsenalRemaining", { count: formatNumber(res.avgUnspentWeapon, { maximumFractionDigits: 0 }) })}</span>
+          </td>
+          <td class="metric-cell">
+              <strong class="metric-main">${t("table.metric.weaponUsed", { count: res.avgWeaponPulls.toFixed(0) })}</strong>
+              <span class="metric-detail">${t("table.metric.weaponIssues", { count: (res.avgWeaponPulls / 10).toFixed(1) })}</span>
+          </td>
+          <td class="metric-cell compact">
+              <strong class="metric-main accent-ownership">${res.ownershipRate.toFixed(1)}%</strong>
+              <span class="metric-detail">${t("table.metric.completed")}</span>
+          </td>
       `;
     tableBody.appendChild(tr);
   });
   drawDistributionChart("chart-distribution", results, strategies);
   drawWeaponDistributionChart("chart-efficiency", results, strategies);
+}
+function initTableTooltips() {
+  const headers = document.querySelectorAll(".comparison-table .tooltip-header");
+  if (!headers.length) return;
+  const tooltip = document.createElement("div");
+  tooltip.className = "table-tooltip-portal";
+  tooltip.setAttribute("role", "tooltip");
+  document.body.appendChild(tooltip);
+  const hide = () => tooltip.classList.remove("visible");
+  const show = (header) => {
+    const content = header.dataset.tooltip;
+    if (!content) return;
+    tooltip.textContent = content;
+    tooltip.classList.add("visible");
+    const rect = header.getBoundingClientRect();
+    const tooltipRect = tooltip.getBoundingClientRect();
+    const margin = 8;
+    const left = Math.min(window.innerWidth - tooltipRect.width - margin, Math.max(margin, rect.left + rect.width / 2 - tooltipRect.width / 2));
+    const below = rect.bottom + margin;
+    const top = below + tooltipRect.height <= window.innerHeight - margin ? below : Math.max(margin, rect.top - tooltipRect.height - margin);
+    tooltip.style.left = `${left}px`;
+    tooltip.style.top = `${top}px`;
+  };
+  headers.forEach((header) => {
+    header.tabIndex = 0;
+    header.addEventListener("mouseenter", () => show(header));
+    header.addEventListener("mouseleave", hide);
+    header.addEventListener("focus", () => show(header));
+    header.addEventListener("blur", hide);
+  });
+  window.addEventListener("scroll", hide, true);
+  window.addEventListener("resize", hide);
 }
 function escapeHtml(value) {
   return String(value).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;");
@@ -1048,45 +1118,10 @@ function updateSingleRunIncome() {
     arsenal: formatNumber(income.arsenal)
   });
 }
-function readableSingleRunName(item) {
-  if (!item.characterId) return "";
-  if (item.isFeatured) return `Featured_Char_B${Number(item.characterId.split("_").at(-1)) + 1}`;
-  return item.characterId.replace("char_5_", "Operator_5\u2605_").replace("std_6_", "Standard_6\u2605_").replace("lim_6_", "Limited_6\u2605_");
-}
 function singlePullType(item) {
   if (item.rarity !== 6) return "";
   if (item.isFeatured) return t("single.featured");
   return item.isLechLimited ? t("single.offLimited") : t("single.offStandard");
-}
-function singlePullEvent(item, pool, pullNumber) {
-  const exchange = item.quotaTicketsExchanged ? t("single.exchangeDetail", { tickets: item.quotaTicketsExchanged }) : "";
-  const quota = item.quotaEarned ? t("single.quotaDetail", { quota: item.quotaEarned, exchange }) : "";
-  const ownership = item.characterId ? item.isDuplicate ? t("single.dupe") : t("single.new") : "";
-  const type = singlePullType(item);
-  const details = [ownership, type].filter(Boolean).join(" \xB7 ");
-  const detail = details || quota ? ` <span class="event-meta">[${escapeHtml(details)}${quota}]</span>` : "";
-  const name = readableSingleRunName(item);
-  let pityDetail = "";
-  if (Number.isFinite(item.standardPity6After)) {
-    pityDetail = t("single.pityStandardDetail", { pity: item.standardPity6After });
-  } else {
-    const featured = item.guarantee120ConsumedAfter ? t("single.completed") : `${item.pullsSinceFeaturedAfter}/120`;
-    pityDetail = t(item.isUrgent ? "single.pityUrgentDetail" : "single.pityLimitedDetail", {
-      pity: item.pity6After,
-      featured
-    });
-  }
-  return `<li class="pull-event rarity-${item.rarity}"><div>${t("single.pullLine", {
-    pool,
-    pull: pullNumber,
-    rarity: `${item.rarity}\u2605`,
-    name: escapeHtml(name),
-    detail
-  })}</div><small class="pity-snapshot">${pityDetail}</small></li>`;
-}
-function notablePulls(items, pool, numberForItem = (_, index2) => index2 + 1) {
-  const notable = items.map((item, index2) => ({ item, pull: numberForItem(item, index2) })).filter((entry) => entry.item.rarity >= 5).map((entry) => singlePullEvent(entry.item, pool, entry.pull));
-  return notable.length ? `<ul class="event-list">${notable.join("")}</ul>` : `<p class="muted-line">${t("single.noNotable")}</p>`;
 }
 function singleDecisionText(strategyId, decision) {
   if (strategyId === "yolo") return t("single.yoloDecision");
@@ -1102,35 +1137,88 @@ function phaseLabel(phase) {
     optimize30: t("single.phaseOptimize")
   }[phase] || t("single.strategyPhase");
 }
-function paidTimeline(banner) {
-  const items = banner.result.charPulls.filter((item) => item.actionPhase !== "free");
-  if (!items.length) return `<p class="muted-line">${t("single.noPaidPulls")}</p>`;
-  const events = [];
-  let currentPhase = "";
-  let urgentIndex = 0;
-  let inUrgent = false;
-  for (const item of items) {
-    if (item.actionPhase !== currentPhase) {
-      currentPhase = item.actionPhase;
-      events.push(`<li class="timeline-label">${phaseLabel(currentPhase)}</li>`);
-    }
-    if (item.isUrgent) {
-      if (!inUrgent) {
-        inUrgent = true;
-        urgentIndex = 0;
-        events.push(`<li class="milestone-event">${t("single.milestone30")}</li>`);
-      }
-      urgentIndex++;
-      if (item.rarity >= 5) events.push(singlePullEvent(item, "Urgent", urgentIndex));
-      continue;
-    }
-    inUrgent = false;
-    if (item.pity6Before === 65) events.push(`<li class="milestone-event soft">${t("single.softPity")}</li>`);
-    if (item.rarity >= 5) events.push(singlePullEvent(item, "Limited", item.bannerPullsCountAfter));
-    if (item.bannerPullsCountAfter === 60) events.push(`<li class="milestone-event">${t("single.milestone60")}</li>`);
-    if (item.bannerPullsCountAfter === 120) events.push(`<li class="milestone-event featured">${t("single.milestone120")}</li>`);
+function pullGroupLabel(group) {
+  if (group.kind === "standard") return t("single.groupStandard", { count: group.entries.length });
+  if (group.kind === "free") return t("single.groupFree", { count: group.entries.length });
+  if (group.kind === "urgent") return t("single.groupUrgent", { count: group.entries.length });
+  if (group.kind === "single") return t("single.groupSingle", { count: group.entries.length });
+  const batches = group.batchIds.size || Math.max(1, Math.ceil(group.entries.length / 10));
+  return batches === 1 ? "x10" : t("single.groupTen", { count: batches });
+}
+function pullGroupRange(group) {
+  const start = group.entries[0].pull;
+  const end = group.entries.at(-1).pull;
+  const pool = group.kind === "standard" ? "Standard" : group.kind === "urgent" ? "Urgent" : "Limited";
+  return `${pool} #${start}${end === start ? "" : `\u2013${end}`}`;
+}
+function pullEventChip(entry) {
+  const item = entry.item;
+  const type = singlePullType(item);
+  const pity = item.rarity === 6 && !item.isUrgent
+    ? ` \xB7 ${t("single.hitPity", { pity: Number.isFinite(item.standardPity6Before) ? item.standardPity6Before + 1 : item.pity6Before + 1 })}`
+    : "";
+  const detail = type ? ` \xB7 ${type}` : "";
+  return `<span class="pull-result rarity-${item.rarity}"><b>${item.rarity}\u2605</b> #${entry.pull}${detail}${pity}</span>`;
+}
+function pullGroupMilestones(group) {
+  const pulls = new Set(group.entries.filter((entry) => !entry.item.isUrgent).map((entry) => entry.pull));
+  const milestones = [];
+  if (pulls.has(30)) milestones.push(`<span class="milestone-chip">${t("single.milestone30Short")}</span>`);
+  if (pulls.has(60)) milestones.push(`<span class="milestone-chip">${t("single.milestone60Short")}</span>`);
+  if (pulls.has(120)) milestones.push(`<span class="milestone-chip featured">${t("single.milestone120Short")}</span>`);
+  return milestones.join("");
+}
+function renderPullGroup(group) {
+  const items = group.entries.map((entry) => entry.item);
+  const last = items.at(-1);
+  const notable = group.entries.filter((entry) => entry.item.rarity >= 5).map(pullEventChip);
+  const quotaEarned = items.reduce((sum, item) => sum + (item.quotaEarned || 0), 0);
+  const quotaTickets = items.reduce((sum, item) => sum + (item.quotaTicketsExchanged || 0), 0);
+  const quotaEnd = Number.isFinite(last.bondQuotaAfter) ? last.bondQuotaAfter : 0;
+  const walletEnd = Number.isFinite(last.charTicketsAfterQuota) ? formatNumber(last.charTicketsAfterQuota) : "\u2014";
+  const arsenalEarned = calculatePullArsenal(items);
+  const phase = ["standard", "free", "urgent"].includes(group.kind) ? "" : `<span class="phase-chip">${phaseLabel(group.phase)}</span>`;
+  const quotaExchange = quotaTickets ? ` \u2192 ${t("single.exchangedTickets", { count: quotaTickets })}` : "";
+  let pity80 = last.pity6After;
+  let featured120 = last.guarantee120ConsumedAfter ? "\u2713" : `${last.pullsSinceFeaturedAfter}/120`;
+  if (group.kind === "standard") {
+    pity80 = last.standardPity6After;
+    featured120 = null;
   }
-  return `<ul class="event-list paid-events">${events.join("")}</ul>`;
+  return `<article class="pull-group ${group.kind}">
+      <div class="pull-group-heading">
+          <div><strong>${pullGroupLabel(group)}</strong><span>${pullGroupRange(group)}</span>${phase}</div>
+          <div class="pull-results">${notable.length ? notable.join("") : `<span class="no-notable">${t("single.noNotableShort")}</span>`}${pullGroupMilestones(group)}</div>
+      </div>
+      <div class="pull-group-stats">
+          <span class="stat-quota"><b>Bond</b> +${quotaEarned}${quotaExchange} \xB7 ${t("single.remainingShort", { value: quotaEnd })}</span>
+          <span class="stat-arsenal"><b>Arsenal</b> +${formatNumber(arsenalEarned)}</span>
+          <span class="stat-wallet"><b>${t("single.ticketShort")}</b> ${walletEnd}</span>
+          <span class="stat-pity"><b>${t("single.pityAfterShort")}</b> 6\u2605 ${pity80}/80${featured120 === null ? "" : ` \xB7 120 ${featured120}`}</span>
+      </div>
+  </article>`;
+}
+function renderCharacterTimeline(banner) {
+  return `<div class="pull-group-list">${buildCharacterPullGroups(banner).map(renderPullGroup).join("")}</div>`;
+}
+function characterSummary(banner) {
+  const hits = featuredCharacterHits(banner.result.charPulls);
+  if (!hits.length) return `<span class="summary-result"><b>${t("single.operatorAbbr")}</b> ${t("single.notObtainedShort")}</span>`;
+  const positions = hits.map((hit) => hit.urgent
+    ? `Urgent #${hit.pull}`
+    : `#${hit.pull} \xB7 ${t("single.hitPity", { pity: hit.pity })}`).join(", ");
+  return `<span class="summary-result success"><b>${t("single.operatorAbbr")}</b> Featured${hits.length > 1 ? ` \xD7${hits.length}` : ""} <em>(${positions})</em></span>`;
+}
+function weaponSummary(banner) {
+  const hits = featuredWeaponHits(banner.result.weaponIssues);
+  if (!hits.length) {
+    const status = banner.result.weaponIssues.length ? t("single.notObtainedShort") : t("single.notRolledShort");
+    return `<span class="summary-result weapon"><b>${t("single.weaponAbbr")}</b> ${status}</span>`;
+  }
+  const positions = hits.map((hit) => hit.milestone
+    ? t("single.weaponMilestonePosition", { issue: hit.issue })
+    : t("single.weaponPosition", { issue: hit.issue, pull: hit.pull })).join(", ");
+  return `<span class="summary-result weapon success"><b>${t("single.weaponAbbr")}</b> Featured${hits.length > 1 ? ` \xD7${hits.length}` : ""} <em>(${positions})</em></span>`;
 }
 function renderWeaponIssues(banner) {
   if (!banner.result.weaponIssues.length) return `<p class="muted-line">${t("single.noWeaponIssues")}</p>`;
@@ -1142,30 +1230,38 @@ function renderWeaponIssues(banner) {
     return `<article class="issue-card ${featured ? "has-featured" : ""}">
           <strong>${t("single.issue", { index: index2 + 1 })}</strong>
           <span>${t("single.issueSummary", { six, five, milestone })}</span>
-          <div class="issue-pips" aria-hidden="true">${issue.items.map((item) => `<i class="rarity-${item.rarity} ${item.isFeatured ? "featured" : ""}"></i>`).join("")}</div>
+          <div class="issue-pips" aria-hidden="true">${issue.items.filter((item) => item.rarity >= 5).map((item) => `<i class="rarity-${item.rarity} ${item.isFeatured ? "featured" : ""}"></i>`).join("")}</div>
       </article>`;
   }).join("")}</div>`;
 }
 function renderSingleBanner(banner, run) {
   const decision = banner.result.decisionState;
-  const freeLimited = banner.regularLimited.slice(0, 10);
   const featuredProgress = banner.charPityAfter.guarantee120Consumed ? t("single.completed") : `${banner.charPityAfter.pullsSinceFeatured}/120`;
-  const status = banner.result.gotFeaturedChar ? t("single.featuredObtained") : t("single.featuredMissed");
-  const weaponStatus = banner.newFeaturedWeapons ? t("single.weaponObtained") : t("single.weaponMissed");
   const quotaSpent = banner.quotaTickets * 25;
+  const openingTickets = banner.before.charTickets + run.config.incomePerBanner;
+  const arsenalIncome = banner.result.arsenalTicketsRebate + run.config.weaponIncomePerBanner;
+  const pullsTotal = banner.result.standardPulls.length + banner.regularLimited.length + banner.urgent.length;
   return `<details class="banner-trace glass-panel" ${banner.index === 1 ? "open" : ""}>
       <summary>
           <span class="banner-index">${String(banner.index).padStart(2, "0")}</span>
-          <span class="banner-summary-main">
-              <strong>${t("single.banner", { index: banner.index })}</strong>
-              <small>${t("single.pullsBreakdown", {
+          <span class="banner-summary-content">
+              <span class="banner-summary-top">
+                  <strong>${t("single.banner", { index: banner.index })}</strong>
+                  <span class="banner-summary-results">${characterSummary(banner)}${weaponSummary(banner)}</span>
+              </span>
+              <span class="banner-summary-meta">
+                  <span><b>${formatNumber(pullsTotal)}</b> ${t("single.pullCountShort")}</span>
+                  <span>${t("single.pullsBreakdown", {
     standard: banner.result.standardPulls.length,
     limited: banner.regularLimited.length,
     urgent: banner.urgent.length
-  })}</small>
+  })}</span>
+                  <span><b>${t("single.ticketShort")}</b> ${formatNumber(openingTickets)}\u2192${formatNumber(banner.after.charTickets)}</span>
+                  <span><b>Bond</b> ${banner.before.bondQuota}\u2192${banner.after.bondQuota}</span>
+                  <span><b>Arsenal</b> +${formatNumber(arsenalIncome)}${banner.weaponTicketsSpent ? ` \xB7 \u2212${formatNumber(banner.weaponTicketsSpent)}` : ""} \u2192 ${formatNumber(banner.after.arsenalTickets)}</span>
+              </span>
+              <span class="banner-summary-pity"><b>${t("single.pityClosingShort")}</b> 6\u2605 ${banner.charPityAfter.pity6}/80 \xB7 120 ${banner.charPityAfter.guarantee120Consumed ? "\u2713" : `${banner.charPityAfter.pullsSinceFeatured}/120`} \xB7 Standard ${banner.after.standardPity6}/80</span>
           </span>
-          <span class="trace-status ${banner.result.gotFeaturedChar ? "success" : ""}">${status}</span>
-          <span class="trace-status weapon ${banner.newFeaturedWeapons ? "success" : ""}">${weaponStatus}</span>
       </summary>
       <div class="banner-trace-body">
           <section class="trace-section opening-section">
@@ -1186,16 +1282,7 @@ function renderSingleBanner(banner, run) {
 
           <section class="trace-section timeline-section">
               <h4>${t("single.timeline")}</h4>
-              <div class="phase-block">
-                  <h5><span>01</span>${t("single.standardPhase")}</h5>
-                  ${notablePulls(banner.result.standardPulls, "Standard")}
-              </div>
-              <div class="phase-block">
-                  <h5><span>02</span>${t("single.freePhase")}</h5>
-                  ${notablePulls(freeLimited, "Limited")}
-              </div>
-              <div class="phase-block decision-block">
-                  <h5><span>03</span>${t("single.strategyPhase")}</h5>
+              <div class="timeline-decision">
                   <p>${t("single.decision", {
     tickets: decision.charTickets,
     dossier: decision.dossierTickets,
@@ -1203,8 +1290,8 @@ function renderSingleBanner(banner, run) {
     guarantee: decision.guarantee120Consumed ? t("single.completed") : `${decision.pullsSinceFeatured}/120`
   })}</p>
                   <p class="decision-callout">${singleDecisionText(run.config.strategyId, decision)}</p>
-                  ${paidTimeline(banner)}
               </div>
+              ${renderCharacterTimeline(banner)}
           </section>
 
           <section class="trace-section ledger-section">
@@ -1268,8 +1355,12 @@ function renderSingleRun(run) {
       <div class="single-summary-grid">
           <div><span>${t("single.featuredChars")}</span><strong>${summary.featuredCharacters}</strong><small>${summary.featuredUnique} unique \xB7 ${summary.featuredDupes} dupe<br>${t("single.pity120Hits", { count: summary.timesHit120Guarantee || 0 })}</small></div>
           <div><span>${t("single.featuredWeapons")}</span><strong>${summary.featuredWeapons}</strong><small>${summary.standardWeapons} off-banner 6\u2605</small></div>
-          <div><span>${t("single.characterPulls")}</span><strong>${formatNumber(summary.totalCharPulls)}</strong><small>${summary.totalUrgentPulls} Urgent</small></div>
-          <div><span>${t("single.walletLeft")}</span><strong>${formatNumber(summary.charTickets)}</strong><small>${formatNumber(summary.arsenalTickets)} Arsenal</small></div>
+          <div><span>${t("single.characterPulls")}</span><strong>${formatNumber(summary.totalCharPulls + summary.totalUrgentPulls)}</strong><small>${t("single.pullSources", {
+    regular: formatNumber(summary.totalCharPulls - summary.totalDossierPulls),
+    urgent: formatNumber(summary.totalUrgentPulls),
+    dossier: formatNumber(summary.totalDossierPulls)
+  })}</small></div>
+          <div><span>${t("single.walletLeft")}</span><strong>${t("single.remainingPulls", { count: formatNumber(summary.charTickets) })}</strong><small>${formatNumber(summary.arsenalTickets)} Arsenal</small></div>
       </div>
   </section>
   <div class="banner-trace-list">${run.banners.map((banner) => renderSingleBanner(banner, run)).join("")}</div>`;

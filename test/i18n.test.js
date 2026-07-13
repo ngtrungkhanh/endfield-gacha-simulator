@@ -86,3 +86,13 @@ test('single-run paid options exist and Interactive Pull has no Free Banner cont
     assert.doesNotMatch(html, /id="wallet-dossier-tickets"/);
     assert.doesNotMatch(html, /id="wallet-next-dossier-tickets"/);
 });
+
+test('strategy comparison table uses the compact ten-column layout', () => {
+    const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+    const table = html.match(/<table class="comparison-table">([\s\S]*?)<\/table>/)?.[1] || '';
+    const headerRow = table.match(/<thead>[\s\S]*?<tr>([\s\S]*?)<\/tr>/)?.[1] || '';
+    assert.equal((headerRow.match(/<th\b/g) || []).length, 10);
+    assert.match(table, /colspan="10"/);
+    assert.match(headerRow, /data-i18n="table\.charResults"/);
+    assert.match(headerRow, /data-i18n="table\.weaponResults"/);
+});

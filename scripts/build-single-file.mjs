@@ -4,6 +4,8 @@ import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+const packageJson = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
+const outputName = `A9EGacha_${packageJson.version}.html`;
 
 // 1. Run build-offline.mjs to ensure we have the latest minified production files in dist/
 console.log('Building production assets...');
@@ -35,7 +37,7 @@ if (!jsPattern.test(html)) {
 }
 html = html.replace(jsPattern, `<script>${js}</script>`);
 
-// 5. Write to single file A9EGacha.html in the root
-const outputPath = join(root, 'A9EGacha.html');
+// 5. Write a versioned single-file release in the root.
+const outputPath = join(root, outputName);
 writeFileSync(outputPath, html, 'utf8');
 console.log(`Successfully created single file release: ${outputPath}`);

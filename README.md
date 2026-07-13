@@ -1,4 +1,4 @@
-# Arknights: Endfield Gacha Simulator v1.2.3
+# Arknights: Endfield Gacha Simulator v1.2.4
 
 Trình giả lập gacha dành cho **Arknights: Endfield**, hỗ trợ quay tương tác và mô phỏng Monte Carlo để so sánh các chiến thuật sử dụng tài nguyên qua nhiều banner.
 
@@ -29,7 +29,7 @@ An offline-first Vietnamese/English gacha simulator for **Arknights: Endfield**,
 ### 4. Thiết kế kỹ thuật & Offline-First
 - Chuyển đổi toàn bộ giao diện giữa tiếng Việt và tiếng Anh tức thời mà không cần reload.
 - Lưu trữ cấu hình và kết quả gần nhất trong `localStorage`.
-- Đóng gói toàn bộ tài nguyên (JS, CSS, Chart.js) thành một file HTML duy nhất **`A9EGacha.html`** có thể chạy trực tiếp qua giao diện file (`file://`) hoàn toàn không cần kết nối mạng hay server.
+- Đóng gói toàn bộ tài nguyên (JS, CSS, Chart.js) thành một file HTML duy nhất **`A9EGacha_1.2.4.html`** có thể chạy trực tiếp qua giao diện file (`file://`) hoàn toàn không cần kết nối mạng hay server.
 
 ---
 
@@ -60,8 +60,8 @@ npm run watch
 npm run package
 ```
 Sau khi hoàn tất, file HTML độc lập sẽ được tạo tại:
-- Thư mục gốc: `A9EGacha.html`
-- Thư mục phát hành: `release/A9EGacha.html` (đi kèm mã băm SHA-256 để kiểm chứng toàn vẹn).
+- Thư mục gốc: `A9EGacha_1.2.4.html`
+- Thư mục phát hành: `release/A9EGacha_1.2.4.html` (đi kèm mã băm SHA-256 để kiểm chứng toàn vẹn).
 
 ---
 

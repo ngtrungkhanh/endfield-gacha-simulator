@@ -203,6 +203,7 @@ test('ownership rate counts players who obtained every unique Limited and ignore
     completed.ownedFeaturedDupes = 3;
     completed.totalCharPulls = 100;
     completed.totalLimitedPulls = 40;
+    completed.totalUrgentPulls = 10;
 
     const incomplete = new SimulatorPlayer(2);
     incomplete.ownedFeaturedCharacters = 5;
@@ -210,10 +211,11 @@ test('ownership rate counts players who obtained every unique Limited and ignore
     incomplete.ownedFeaturedDupes = 4;
     incomplete.totalCharPulls = 100;
     incomplete.totalLimitedPulls = 40;
+    incomplete.totalUrgentPulls = 10;
 
     const result = MonteCarloSimulator.analyzeResults([completed, incomplete], 2);
     assert.equal(result.ownershipRate, 50);
-    assert.equal(result.avgPullsPerFeaturedChar, 8);
+    assert.equal(result.avgPullsPerFeaturedChar, 10);
     assert.deepEqual(result.distribution, { 1: 50, 2: 50 });
 });
 

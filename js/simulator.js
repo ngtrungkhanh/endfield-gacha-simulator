@@ -234,9 +234,10 @@ export class MonteCarloSimulator {
             bestLuckChar: maxFeaturedChars,
             worstLuckChar: minFeaturedChars,
             
-            // Hiệu suất vé nhân vật (Số vé trung bình để ra 1 Featured)
+            // Hiệu suất banner Limited: tính cả pull có pity và Urgent, loại Standard.
+            // Featured ở mẫu số bao gồm cả bản mới và bản trùng (dupe).
             avgPullsPerFeaturedChar: averageFeaturedChars > 0 
-                ? sumLimitedPulls / sumFeaturedChars
+                ? (sumLimitedPulls + sumUrgentPulls) / sumFeaturedChars
                 : Infinity,
 
             // Thống kê Vũ khí (Trung bình mỗi người chơi)

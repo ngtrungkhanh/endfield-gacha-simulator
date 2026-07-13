@@ -15355,6 +15355,7 @@
       totalCharPulls: player.totalCharPulls,
       totalLimitedPulls: player.totalLimitedPulls,
       totalUrgentPulls: player.totalUrgentPulls,
+      totalDossierPulls: player.totalDossierPulls,
       totalWeaponPulls: player.totalWeaponPulls,
       weaponTicketsUsed: player.totalWeaponTicketsUsed,
       weaponSelectors: player.weaponMilestoneSelectors,
@@ -15469,6 +15470,122 @@
       banners,
       summary: snapshotPlayer(player)
     };
+  }
+
+  // js/single-run-view.js
+  var MILESTONE_PULLS = /* @__PURE__ */ new Set([30, 60, 120]);
+  function calculatePullArsenal(items) {
+    return items.reduce((total, item) => {
+      if (item.rarity === 6) return total + 2e3;
+      if (item.rarity === 5) return total + 200;
+      return total + 20;
+    }, 0);
+  }
+  function createGroup(kind, phase, entry) {
+    return {
+      kind,
+      phase,
+      entries: [entry],
+      batchIds: new Set(entry.item.rollBatchId === null || entry.item.rollBatchId === void 0 ? [] : [entry.item.rollBatchId]),
+      triggerPull: kind === "urgent" ? entry.item.bannerPullsCountAfter : null
+    };
+  }
+  function canAppend(group, kind, phase) {
+    if (!group || group.kind !== kind || group.phase !== phase) return false;
+    if (kind === "single" && group.entries.length >= 10) return false;
+    if (kind !== "urgent") {
+      const previousPull = group.entries.at(-1)?.pull;
+      if (MILESTONE_PULLS.has(previousPull)) return false;
+    }
+    return true;
+  }
+  function addEntry(groups, kind, phase, entry) {
+    let group = groups.at(-1);
+    if (!canAppend(group, kind, phase)) {
+      group = createGroup(kind, phase, entry);
+      groups.push(group);
+      return;
+    }
+    group.entries.push(entry);
+    if (entry.item.rollBatchId !== null && entry.item.rollBatchId !== void 0) {
+      group.batchIds.add(entry.item.rollBatchId);
+    }
+  }
+  function buildCharacterPullGroups(banner) {
+    const groups = [];
+    const standard = banner.result.standardPulls || [];
+    if (standard.length) {
+      groups.push({
+        kind: "standard",
+        phase: "standard",
+        entries: standard.map((item, index2) => ({ item, pull: index2 + 1 })),
+        batchIds: /* @__PURE__ */ new Set(),
+        triggerPull: null
+      });
+    }
+    let urgentPull = 0;
+    let wasUrgent = false;
+    for (const item of banner.result.charPulls || []) {
+      if (item.isUrgent) {
+        if (!wasUrgent) urgentPull = 0;
+        urgentPull++;
+        addEntry(groups, "urgent", item.actionPhase || "urgent", { item, pull: urgentPull });
+        wasUrgent = true;
+        continue;
+      }
+      wasUrgent = false;
+      const kind = item.actionPhase === "free" ? "free" : item.rollMode === "x1" ? "single" : "ten";
+      addEntry(groups, kind, item.actionPhase || "strategy", {
+        item,
+        pull: item.bannerPullsCountAfter
+      });
+    }
+    return groups;
+  }
+  function featuredCharacterHits(items) {
+    const hits = [];
+    let urgentPull = 0;
+    let wasUrgent = false;
+    for (const item of items || []) {
+      if (item.isUrgent) {
+        if (!wasUrgent) urgentPull = 0;
+        urgentPull++;
+        wasUrgent = true;
+      } else {
+        wasUrgent = false;
+      }
+      if (!item.isFeatured || item.rarity !== 6) continue;
+      hits.push({
+        urgent: item.isUrgent === true,
+        pull: item.isUrgent ? urgentPull : item.bannerPullsCountAfter,
+        pity: item.isUrgent ? null : item.pity6Before + 1
+      });
+    }
+    return hits;
+  }
+  function featuredWeaponHits(issues) {
+    const hits = [];
+    for (let issueIndex = 0; issueIndex < (issues || []).length; issueIndex++) {
+      const issue = issues[issueIndex];
+      for (let itemIndex = 0; itemIndex < issue.items.length; itemIndex++) {
+        const item = issue.items[itemIndex];
+        if (item.rarity === 6 && item.isFeatured) {
+          hits.push({
+            issue: issueIndex + 1,
+            pull: issueIndex * 10 + itemIndex + 1,
+            milestone: false
+          });
+        }
+      }
+      if (issue.milestoneReward === "featured_weapon") {
+        hits.push({
+          issue: issueIndex + 1,
+          pull: null,
+          milestone: true
+        });
+      }
+    }
+    return hits;
   }
 
   // js/simulator.js
@@ -15656,8 +15773,9 @@
         // Cực trị nhân vật
         bestLuckChar: maxFeaturedChars,
         worstLuckChar: minFeaturedChars,
-        // Hiệu suất vé nhân vật (Số vé trung bình để ra 1 Featured)
-        avgPullsPerFeaturedChar: averageFeaturedChars > 0 ? sumLimitedPulls / sumFeaturedChars : Infinity,
+        // Hiệu suất banner Limited: tính cả pull có pity và Urgent, loại Standard.
+        // Featured ở mẫu số bao gồm cả bản mới và bản trùng (dupe).
+        avgPullsPerFeaturedChar: averageFeaturedChars > 0 ? (sumLimitedPulls + sumUrgentPulls) / sumFeaturedChars : Infinity,
         // Thống kê Vũ khí (Trung bình mỗi người chơi)
         avgFeaturedWeapons: sumFeaturedWeapons / numPlayers,
         avgMetaFeaturedWeapons: sumMetaFeaturedWeapons / numPlayers,
@@ -15804,6 +15922,8 @@
       "single.featuredWeapons": "Featured Weapon",
       "single.characterPulls": "Pull nh\xE2n v\u1EADt",
       "single.walletLeft": "V\xED c\xF2n l\u1EA1i",
+      "single.pullSources": "{regular} pull \xB7 {urgent} Urgent \xB7 {dossier} Dossier",
+      "single.remainingPulls": "{count} pull",
       "single.banner": "Banner {index}",
       "single.opening": "T\xE0i nguy\xEAn \u0111\u1EA7u banner",
       "single.timeline": "Timeline nh\xE2n v\u1EADt",
@@ -15857,6 +15977,28 @@
       "single.endWallet": "{tickets} v\xE9 \xB7 {dossier} Dossier k\u1EBF ti\u1EBFp \xB7 {arsenal} Arsenal \xB7 {quota} Quota",
       "single.endPity": "Pity cu\u1ED1i: Limited {limited}/80 \xB7 Featured {featured} \xB7 Standard {standard}/80",
       "single.completed": "\u0110\xE3 ho\xE0n th\xE0nh",
+      "single.groupStandard": "Standard mi\u1EC5n ph\xED \xD7{count}",
+      "single.groupFree": "Limited mi\u1EC5n ph\xED \xD7{count}",
+      "single.groupUrgent": "Urgent \xD7{count}",
+      "single.groupSingle": "Roll l\u1EBB \xD7{count}",
+      "single.groupTen": "x10 \xD7{count}",
+      "single.noNotableShort": "Kh\xF4ng c\xF3 5\u2605/6\u2605",
+      "single.hitPity": "pity {pity}",
+      "single.milestone30Short": "M\u1ED1c 30 \xB7 +10 Urgent",
+      "single.milestone60Short": "M\u1ED1c 60 \xB7 +10 Dossier",
+      "single.milestone120Short": "M\u1ED1c 120 \xB7 Featured",
+      "single.exchangedTickets": "\u0111\u1ED5i {count} v\xE9",
+      "single.remainingShort": "d\u01B0 {value}",
+      "single.ticketShort": "V\xE9 NV",
+      "single.pityAfterShort": "Pity sau",
+      "single.pityClosingShort": "Pity cu\u1ED1i",
+      "single.pullCountShort": "pull",
+      "single.operatorAbbr": "NV",
+      "single.weaponAbbr": "VK",
+      "single.notObtainedShort": "Ch\u01B0a tr\xFAng",
+      "single.notRolledShort": "Kh\xF4ng quay",
+      "single.weaponPosition": "Issue {issue} \xB7 pull #{pull}",
+      "single.weaponMilestonePosition": "qu\xE0 m\u1ED1c Issue {issue}",
       "summary.featured": "Nh\xE2n v\u1EADt Featured tr\xFAng",
       "summary.efficiency": "Hi\u1EC7u su\u1EA5t (Pull/Featured)",
       "summary.weapon": "Featured Weapon nh\u1EADn \u0111\u01B0\u1EE3c",
@@ -15865,15 +16007,17 @@
       "table.charPulls": "Pulls NV",
       "table.freeDossier": "Free 30 / Dossier",
       "table.charRemaining": "V\xE9 NV D\u01B0",
+      "table.charResults": "K\u1EBFt qu\u1EA3 NV",
       "table.charSix": "6\u2605 NV",
       "table.charLim": "M\u1EDBi/Tr\xF9ng",
       "table.featured": "Featured",
       "table.charLoss": "L\u1EC7ch Lim/Std",
       "table.efficiency": "Hi\u1EC7u su\u1EA5t",
-      "table.featuredRange": "C\u1EF1c tr\u1ECB NV",
+      "table.featuredRange": "C\u1EF1c tr\u1ECB Limited",
       "table.pity120Hit": "M\u1ED1c 120",
       "table.metaObtained": "Meta (NV/VK)",
       "table.weaponFeatured": "VK Featured",
+      "table.weaponResults": "K\u1EBFt qu\u1EA3 VK",
       "table.weaponSix": "6\u2605 VK",
       "table.weaponUsed": "Pulls VK",
       "table.weaponRemaining": "Pull VK D\u01B0",
@@ -15883,21 +16027,53 @@
       "table.empty": "Nh\u1EA5n n\xFAt \u201CCh\u1EA1y gi\u1EA3 l\u1EADp\u201D \u0111\u1EC3 xem k\u1EBFt qu\u1EA3 so s\xE1nh...",
       "table.scrollHint": "B\u1EA3ng t\u1EF1 \u0111\u1ED9ng \u0111i\u1EC1u ch\u1EC9nh chi\u1EC1u r\u1ED9ng \u0111\u1EC3 hi\u1EC3n th\u1ECB \u0111\u1EA7y \u0111\u1EE7.",
       "table.tooltip.strategy": "Chi\u1EBFn thu\u1EADt gacha m\xF4 ph\u1ECFng",
-      "table.tooltip.charPulls": "T\u1ED5ng s\u1ED1 l\u01B0\u1EE3t quay banner nh\xE2n v\u1EADt",
+      "table.tooltip.charPulls": "T\u1ED5ng m\u1ECDi pull nh\xE2n v\u1EADt, g\u1ED3m pull th\u01B0\u1EDDng, Urgent v\xE0 Dossier; Standard n\u1EB1m trong nh\xF3m pull th\u01B0\u1EDDng",
       "table.tooltip.freeDossier": "S\u1ED1 pull free m\u1ED1c 30 (Urgent) / S\u1ED1 pull s\u1EED d\u1EE5ng v\xE9 Dossier",
       "table.tooltip.charRemaining": "S\u1ED1 v\xE9 nh\xE2n v\u1EADt c\xF2n d\u01B0 sau chu k\u1EF3",
       "table.tooltip.charSix": "T\u1ED5ng s\u1ED1 nh\xE2n v\u1EADt 6\u2605 nh\u1EADn \u0111\u01B0\u1EE3c (bao g\u1ED3m c\u1EA3 l\u1EC7ch)",
+      "table.tooltip.charResults": "T\u1ED5ng 6\u2605 nh\xE2n v\u1EADt, Featured m\u1EDBi/tr\xF9ng v\xE0 s\u1ED1 l\u1EA7n l\u1EC7ch Limited/Standard",
       "table.tooltip.charLim": "S\u1ED1 nh\xE2n v\u1EADt gi\u1EDBi h\u1EA1n \u0111\u1ED9c nh\u1EA5t / s\u1ED1 b\u1EA3n tr\xF9ng (dupe) s\u1EDF h\u1EEFu",
       "table.tooltip.charLoss": "S\u1ED1 l\u1EA7n l\u1EC7ch rate ra nh\xE2n v\u1EADt gi\u1EDBi h\u1EA1n c\u0169 / nh\xE2n v\u1EADt th\u01B0\u1EDDng (Standard)",
-      "table.tooltip.efficiency": "Hi\u1EC7u su\u1EA5t: S\u1ED1 pull trung b\xECnh \u0111\u1EC3 nh\u1EADn 1 Featured Operator",
-      "table.tooltip.featuredRange": "S\u1ED1 nh\xE2n v\u1EADt gi\u1EDBi h\u1EA1n nhi\u1EC1u nh\u1EA5t / \xEDt nh\u1EA5t thu \u0111\u01B0\u1EE3c trong c\xE1c l\u01B0\u1EE3t test",
+      "table.tooltip.efficiency": "S\u1ED1 pull Limited trung b\xECnh \u0111\u1EC3 nh\u1EADn 1 Featured Operator: g\u1ED3m pull c\xF3 pity v\xE0 Urgent, kh\xF4ng g\u1ED3m Standard; Featured dupe v\u1EABn \u0111\u01B0\u1EE3c t\xEDnh",
+      "table.tooltip.featuredRange": "S\u1ED1 Featured Limited cao nh\u1EA5t / th\u1EA5p nh\u1EA5t m\xE0 m\u1ED9t ng\u01B0\u1EDDi ch\u01A1i nh\u1EADn \u0111\u01B0\u1EE3c trong c\xE1c l\u01B0\u1EE3t m\xF4 ph\u1ECFng",
       "table.tooltip.pity120Hit": "T\u1ED5ng s\u1ED1 l\u1EA7n ch\u1EA1m b\u1EA3o hi\u1EC3m c\u1EE9ng 120 l\u01B0\u1EE3t",
       "table.tooltip.metaObtained": "S\u1ED1 nh\xE2n v\u1EADt Meta v\xE0 V\u0169 kh\xED Meta s\u1EDF h\u1EEFu \u0111\u01B0\u1EE3c",
       "table.tooltip.weaponFeatured": "S\u1ED1 v\u0169 kh\xED 6\u2605 gi\u1EDBi h\u1EA1n nh\u1EADn \u0111\u01B0\u1EE3c",
+      "table.tooltip.weaponResults": "Featured/T\u1ED5ng v\u0169 kh\xED 6\u2605 nh\u1EADn \u0111\u01B0\u1EE3c v\xE0 s\u1ED1 Arsenal c\xF2n d\u01B0",
       "table.tooltip.weaponSix": "T\u1ED5ng s\u1ED1 v\u0169 kh\xED 6\u2605 nh\u1EADn \u0111\u01B0\u1EE3c (bao g\u1ED3m c\u1EA3 l\u1EC7ch)",
-      "table.tooltip.weaponUsed": "T\u1ED5ng s\u1ED1 v\xE9 v\u0169 kh\xED (Arsenal) \u0111\xE3 chi ti\xEAu",
+      "table.tooltip.weaponUsed": "S\u1ED1 pull v\u0169 kh\xED v\xE0 s\u1ED1 Weapon Issue \u0111\xE3 th\u1EF1c hi\u1EC7n",
       "table.tooltip.weaponRemaining": "S\u1ED1 pull v\u0169 kh\xED c\xF2n d\u01B0 sau chu k\u1EF3",
       "table.tooltip.ownership": "Ph\u1EA7n tr\u0103m ng\u01B0\u1EDDi ch\u01A1i nh\u1EADn \u0111\u1EE7 to\xE0n b\u1ED9 Limited \u0111\u1ED9c nh\u1EA5t c\u1EE7a m\u1ECDi banner trong chu k\u1EF3; b\u1EA3n tr\xF9ng kh\xF4ng \u0111\u01B0\u1EE3c t\xEDnh",
+      "table.metric.charBreakdown": "{regular} th\u01B0\u1EDDng \xB7 {urgent} Urgent \xB7 {dossier} Dossier",
+      "table.metric.regularPulls": "{count} pull th\u01B0\u1EDDng",
+      "table.metric.bonusPulls": "{urgent} Urgent \xB7 {dossier} Dossier",
+      "table.metric.regularOnly": "{count} th\u01B0\u1EDDng",
+      "table.metric.urgentOnly": "{count} Urgent",
+      "table.metric.dossierOnly": "{count} Dossier",
+      "table.metric.remainingPulls": "pull c\xF2n l\u1EA1i",
+      "table.metric.totalSix": "{count} t\u1ED5ng 6\u2605",
+      "table.metric.sixCompact": "{count} 6\u2605",
+      "table.metric.featuredCompact": "Feature: {count}",
+      "table.metric.charFeatured": "F: {unique} m\u1EDBi / {dupes} tr\xF9ng",
+      "table.metric.featuredUnique": "M\u1EDBi: {count}",
+      "table.metric.featuredDupes": "Tr\xF9ng: {count}",
+      "table.metric.charOffrate": "L\u1EC7ch {limited} Lim / {standard} Std",
+      "table.metric.efficiency": "{value} pull/F",
+      "table.metric.rangePity": "C\u1EF1c tr\u1ECB {best}\u2013{worst} \xB7 120: {pity}",
+      "table.metric.range": "C\u1EF1c tr\u1ECB {best}\u2013{worst}",
+      "table.metric.highLow": "cao\u2013th\u1EA5p",
+      "table.metric.pity120": "M\u1ED1c 120: {value}",
+      "table.metric.metaTypes": "NV / VK",
+      "table.metric.metaChar": "NV {count}",
+      "table.metric.metaWeapon": "VK {count}",
+      "table.metric.weaponSix": "{featured} / {total} Featured/T\u1ED5ng 6\u2605",
+      "table.metric.weaponFeatured": "{count} Featured",
+      "table.metric.arsenalRemaining": "Arsenal d\u01B0: {count}",
+      "table.metric.weaponSelector": "{count} Selector",
+      "table.metric.weaponUsed": "{count} pull",
+      "table.metric.weaponIssues": "{count} Issue",
+      "table.metric.weaponRemaining": "{count} pull d\u01B0",
+      "table.metric.completed": "ho\xE0n th\xE0nh",
       "simulator.collapseConfig": "Thu g\u1ECDn c\u1EA5u h\xECnh",
       "simulator.expandConfig": "M\u1EDF r\u1ED9ng c\u1EA5u h\xECnh",
       "strategy.helpTitle": "Gi\u1EA3i th\xEDch c\xE1c chi\u1EBFn thu\u1EADt Gacha",
@@ -16097,6 +16273,8 @@
       "single.featuredWeapons": "Featured Weapons",
       "single.characterPulls": "Character pulls",
       "single.walletLeft": "Wallet remaining",
+      "single.pullSources": "{regular} pulls \xB7 {urgent} Urgent \xB7 {dossier} Dossier",
+      "single.remainingPulls": "{count} pulls",
       "single.banner": "Banner {index}",
       "single.opening": "Opening resources",
       "single.timeline": "Character timeline",
@@ -16150,6 +16328,28 @@
       "single.endWallet": "{tickets} tickets \xB7 {dossier} next Dossier \xB7 {arsenal} Arsenal \xB7 {quota} Quota",
       "single.endPity": "Closing pity: Limited {limited}/80 \xB7 Featured {featured} \xB7 Standard {standard}/80",
       "single.completed": "Completed",
+      "single.groupStandard": "Free Standard \xD7{count}",
+      "single.groupFree": "Free Limited \xD7{count}",
+      "single.groupUrgent": "Urgent \xD7{count}",
+      "single.groupSingle": "Single pulls \xD7{count}",
+      "single.groupTen": "x10 \xD7{count}",
+      "single.noNotableShort": "No 5\u2605/6\u2605",
+      "single.hitPity": "pity {pity}",
+      "single.milestone30Short": "Pull 30 \xB7 +10 Urgent",
+      "single.milestone60Short": "Pull 60 \xB7 +10 Dossier",
+      "single.milestone120Short": "Pull 120 \xB7 Featured",
+      "single.exchangedTickets": "exchange {count} ticket(s)",
+      "single.remainingShort": "{value} left",
+      "single.ticketShort": "Char tickets",
+      "single.pityAfterShort": "Pity after",
+      "single.pityClosingShort": "Closing pity",
+      "single.pullCountShort": "pulls",
+      "single.operatorAbbr": "OP",
+      "single.weaponAbbr": "WP",
+      "single.notObtainedShort": "Not obtained",
+      "single.notRolledShort": "Not rolled",
+      "single.weaponPosition": "Issue {issue} \xB7 pull #{pull}",
+      "single.weaponMilestonePosition": "Issue {issue} milestone",
       "summary.featured": "Featured characters obtained",
       "summary.efficiency": "Efficiency (Pulls/Featured)",
       "summary.weapon": "Featured weapons obtained",
@@ -16158,15 +16358,17 @@
       "table.charPulls": "Char Pulls",
       "table.freeDossier": "Free 30 / Dossier",
       "table.charRemaining": "Char Tickets Left",
+      "table.charResults": "Char Results",
       "table.charSix": "6\u2605 Char",
       "table.charLim": "New/Dupe",
       "table.featured": "Featured",
       "table.charLoss": "Off-banner Lim/Std",
       "table.efficiency": "Efficiency",
-      "table.featuredRange": "Char Max/Min",
+      "table.featuredRange": "Limited Range",
       "table.pity120Hit": "120 Pitys",
       "table.metaObtained": "Meta (Char/Weap)",
       "table.weaponFeatured": "Feat Weap",
+      "table.weaponResults": "Weapon Results",
       "table.weaponSix": "6\u2605 Weap",
       "table.weaponUsed": "Weap Pulls",
       "table.weaponRemaining": "Weap Pulls Left",
@@ -16176,21 +16378,53 @@
       "table.empty": "Run the simulation to view the comparison...",
       "table.scrollHint": "The table automatically adjusts width to fit the screen.",
       "table.tooltip.strategy": "Simulated gacha strategy name",
-      "table.tooltip.charPulls": "Total number of pulls performed on character banners",
+      "table.tooltip.charPulls": "All character pulls, including regular, Urgent, and Dossier pulls; Standard is included in regular pulls",
       "table.tooltip.freeDossier": "Free pulls from milestone 30 (Urgent) / Pulls using Dossier tickets",
       "table.tooltip.charRemaining": "Character tickets remaining in wallet after all banners",
       "table.tooltip.charSix": "Average total number of 6\u2605 characters obtained",
+      "table.tooltip.charResults": "Total 6\u2605 characters, new/duplicate Featured characters, and off-rate Limited/Standard results",
       "table.tooltip.charLim": "Unique featured characters owned / version duplicates (dupes) owned",
       "table.tooltip.charLoss": "Off-banner limited / standard character draws",
-      "table.tooltip.efficiency": "Pulls per Featured: Average number of pulls to obtain 1 Featured Operator",
-      "table.tooltip.featuredRange": "Maximum / minimum featured characters obtained across all players",
+      "table.tooltip.efficiency": "Average Limited pulls per Featured Operator: includes pity-counting and Urgent pulls, excludes Standard; Featured dupes still count",
+      "table.tooltip.featuredRange": "Highest / lowest number of Featured Limited characters obtained by one player across simulation runs",
       "table.tooltip.pity120Hit": "Average times hitting the hard featured guarantee at pull 120",
       "table.tooltip.metaObtained": "Average number of Meta characters and Meta weapons obtained",
       "table.tooltip.weaponFeatured": "Average number of featured 6\u2605 weapons obtained",
+      "table.tooltip.weaponResults": "Featured/total 6\u2605 weapons obtained and remaining Arsenal",
       "table.tooltip.weaponSix": "Average total 6\u2605 weapons obtained (featured + standard)",
-      "table.tooltip.weaponUsed": "Total Arsenal weapon tickets spent",
+      "table.tooltip.weaponUsed": "Weapon pulls and Weapon Issues performed",
       "table.tooltip.weaponRemaining": "Weapon pulls remaining in wallet after all banners",
       "table.tooltip.ownership": "Percentage of players who obtained every unique Limited featured across all banners in the cycle; duplicates do not count",
+      "table.metric.charBreakdown": "{regular} regular \xB7 {urgent} Urgent \xB7 {dossier} Dossier",
+      "table.metric.regularPulls": "{count} regular pulls",
+      "table.metric.bonusPulls": "{urgent} Urgent \xB7 {dossier} Dossier",
+      "table.metric.regularOnly": "{count} regular",
+      "table.metric.urgentOnly": "{count} Urgent",
+      "table.metric.dossierOnly": "{count} Dossier",
+      "table.metric.remainingPulls": "pulls remaining",
+      "table.metric.totalSix": "{count} total 6\u2605",
+      "table.metric.sixCompact": "{count} 6\u2605",
+      "table.metric.featuredCompact": "Feature: {count}",
+      "table.metric.charFeatured": "F: {unique} new / {dupes} dupes",
+      "table.metric.featuredUnique": "New: {count}",
+      "table.metric.featuredDupes": "Dupes: {count}",
+      "table.metric.charOffrate": "Off-rate {limited} Lim / {standard} Std",
+      "table.metric.efficiency": "{value} pulls/F",
+      "table.metric.rangePity": "Range {best}\u2013{worst} \xB7 120: {pity}",
+      "table.metric.range": "Range {best}\u2013{worst}",
+      "table.metric.highLow": "high\u2013low",
+      "table.metric.pity120": "Pull 120: {value}",
+      "table.metric.metaTypes": "Char / Weap",
+      "table.metric.metaChar": "Char {count}",
+      "table.metric.metaWeapon": "Weap {count}",
+      "table.metric.weaponSix": "{featured} / {total} Featured/Total 6\u2605",
+      "table.metric.weaponFeatured": "{count} Featured",
+      "table.metric.arsenalRemaining": "Arsenal left: {count}",
+      "table.metric.weaponSelector": "{count} Selectors",
+      "table.metric.weaponUsed": "{count} pulls",
+      "table.metric.weaponIssues": "{count} Issues",
+      "table.metric.weaponRemaining": "{count} pulls left",
+      "table.metric.completed": "completed",
       "simulator.collapseConfig": "Collapse config",
       "simulator.expandConfig": "Expand config",
       "strategy.helpTitle": "Gacha strategy explanations",
@@ -16854,6 +17088,7 @@
     initLocaleSwitcher();
     initTabSwitcher();
     initDocsDialog();
+    initTableTooltips();
     initInteractiveGacha();
     initSimulatorControls();
     initSingleRunControls();
@@ -16862,7 +17097,7 @@
     loadSimulatorLastResults();
     updateInteractiveUI();
     calculateVersionIncome();
-    document.getElementById("build-info").textContent = t("app.version", { version: "1.2.3", commit: "f3d87e2" });
+    document.getElementById("build-info").textContent = t("app.version", { version: "1.2.4", commit: "b3d43cb" });
     subscribe(() => {
       applyTranslations();
       updateLocaleControls();
@@ -16871,7 +17106,7 @@
       updateSingleRunIncome();
       loadSimulatorLastResults();
       if (lastSingleRun) renderSingleRun(lastSingleRun);
-      document.getElementById("build-info").textContent = t("app.version", { version: "1.2.3", commit: "f3d87e2" });
+      document.getElementById("build-info").textContent = t("app.version", { version: "1.2.4", commit: "b3d43cb" });
     });
   });
   function updateLocaleControls() {
@@ -17588,30 +17823,93 @@
       if (strategyId === "save_commit") tr.className = "selected-row";
       const total6StarChar = res.avgFeaturedChars + res.avgLechLimited + res.avgStandard6Stars;
       const total6StarWeap = res.avgFeaturedWeapons + res.avgStandard6StarWeapons;
+      const totalCharacterPulls = res.avgCharPulls + res.avgUrgentPulls;
+      const regularCharacterPulls = res.avgCharPulls - res.avgDossierPulls;
       tr.innerHTML = `
           <td class="sticky-col">
               <span class="strategy-badge badge-${strategyId}">${strategyInfo ? strategyName(strategyId) : strategyId}</span>
           </td>
-          <td>${res.avgCharPulls.toFixed(0)}</td>
-          <td>${formatNumber2(res.avgUnspentChar, { maximumFractionDigits: 1 })}</td>
-          <td>${res.avgUrgentPulls.toFixed(1)} / ${res.avgDossierPulls.toFixed(1)}</td>
-          <td style="font-weight: 700; color: #ffcc00;">${total6StarChar.toFixed(2)}</td>
-          <td>${(res.avgFeaturedUnique || 0).toFixed(2)} / ${(res.avgFeaturedDupes || 0).toFixed(2)}</td>
-          <td>${(res.avgLechLimited || 0).toFixed(1)} / ${(res.avgStandard6Stars || 0).toFixed(1)}</td>
-          <td>${Number.isFinite(eff) ? eff.toFixed(1) : "N/A"}</td>
-          <td style="font-weight: 600; color: #ffb800;">${res.bestLuckChar} / ${res.worstLuckChar}</td>
-          <td>${(res.avgTimesHit120Guarantee || 0).toFixed(2)}</td>
-          <td>${res.avgMetaFeaturedChars.toFixed(2)} / ${res.avgMetaFeaturedWeapons.toFixed(2)}</td>
-          <td>${res.avgFeaturedWeapons.toFixed(2)}</td>
-          <td style="font-weight: 700; color: #00b4d8;">${total6StarWeap.toFixed(2)}</td>
-          <td>${res.avgWeaponPulls.toFixed(0)}</td>
-          <td>${(res.avgUnspentWeapon / 198).toFixed(1)}</td>
-          <td style="font-weight: 700; color: var(--orange-primary);">${res.ownershipRate.toFixed(1)}%</td>
+          <td class="metric-cell">
+              <strong class="metric-main accent-pulls">${totalCharacterPulls.toFixed(0)}</strong>
+              <span class="metric-detail">${t("table.metric.regularOnly", { count: regularCharacterPulls.toFixed(1) })}</span>
+              <span class="metric-detail urgent-detail">${t("table.metric.urgentOnly", { count: res.avgUrgentPulls.toFixed(1) })}</span>
+              <span class="metric-detail dossier-detail">${t("table.metric.dossierOnly", { count: res.avgDossierPulls.toFixed(1) })}</span>
+          </td>
+          <td class="metric-cell compact">
+              <strong class="metric-main accent-wallet">${formatNumber2(res.avgUnspentChar, { maximumFractionDigits: 1 })}</strong>
+              <span class="metric-detail">${t("table.metric.remainingPulls")}</span>
+          </td>
+          <td class="metric-cell">
+              <strong class="metric-main accent-six">${t("table.metric.sixCompact", { count: total6StarChar.toFixed(2) })}</strong>
+              <span class="metric-detail featured-detail">${t("table.metric.featuredUnique", { count: (res.avgFeaturedUnique || 0).toFixed(2) })}</span>
+              <span class="metric-detail featured-detail">${t("table.metric.featuredDupes", { count: (res.avgFeaturedDupes || 0).toFixed(2) })}</span>
+              <span class="metric-detail">${t("table.metric.charOffrate", {
+        limited: (res.avgLechLimited || 0).toFixed(1),
+        standard: (res.avgStandard6Stars || 0).toFixed(1)
+      })}</span>
+          </td>
+          <td class="metric-cell">
+              <strong class="metric-main accent-efficiency">${t("table.metric.efficiency", { value: Number.isFinite(eff) ? eff.toFixed(1) : "N/A" })}</strong>
+              <span class="metric-detail">${t("table.metric.pity120", { value: (res.avgTimesHit120Guarantee || 0).toFixed(2) })}</span>
+          </td>
+          <td class="metric-cell compact">
+              <strong class="metric-main accent-range">${res.bestLuckChar}\u2013${res.worstLuckChar}</strong>
+              <span class="metric-detail">${t("table.metric.highLow")}</span>
+          </td>
+          <td class="metric-cell compact">
+              <strong class="metric-main accent-meta">${t("table.metric.metaChar", { count: res.avgMetaFeaturedChars.toFixed(2) })}</strong>
+              <span class="metric-detail">${t("table.metric.metaWeapon", { count: res.avgMetaFeaturedWeapons.toFixed(2) })}</span>
+          </td>
+          <td class="metric-cell">
+              <strong class="metric-main accent-weapon">${t("table.metric.sixCompact", { count: total6StarWeap.toFixed(2) })}</strong>
+              <span class="metric-detail featured-detail">${t("table.metric.featuredCompact", { count: res.avgFeaturedWeapons.toFixed(2) })}</span>
+              <span class="metric-detail arsenal-detail">${t("table.metric.arsenalRemaining", { count: formatNumber2(res.avgUnspentWeapon, { maximumFractionDigits: 0 }) })}</span>
+          </td>
+          <td class="metric-cell">
+              <strong class="metric-main">${t("table.metric.weaponUsed", { count: res.avgWeaponPulls.toFixed(0) })}</strong>
+              <span class="metric-detail">${t("table.metric.weaponIssues", { count: (res.avgWeaponPulls / 10).toFixed(1) })}</span>
+          </td>
+          <td class="metric-cell compact">
+              <strong class="metric-main accent-ownership">${res.ownershipRate.toFixed(1)}%</strong>
+              <span class="metric-detail">${t("table.metric.completed")}</span>
+          </td>
       `;
       tableBody.appendChild(tr);
     });
     drawDistributionChart("chart-distribution", results, strategies);
     drawWeaponDistributionChart("chart-efficiency", results, strategies);
+  }
+  function initTableTooltips() {
+    const headers = document.querySelectorAll(".comparison-table .tooltip-header");
+    if (!headers.length) return;
+    const tooltip = document.createElement("div");
+    tooltip.className = "table-tooltip-portal";
+    tooltip.setAttribute("role", "tooltip");
+    document.body.appendChild(tooltip);
+    const hide = () => tooltip.classList.remove("visible");
+    const show = (header) => {
+      const content = header.dataset.tooltip;
+      if (!content) return;
+      tooltip.textContent = content;
+      tooltip.classList.add("visible");
+      const rect = header.getBoundingClientRect();
+      const tooltipRect = tooltip.getBoundingClientRect();
+      const margin = 8;
+      const left = Math.min(window.innerWidth - tooltipRect.width - margin, Math.max(margin, rect.left + rect.width / 2 - tooltipRect.width / 2));
+      const below = rect.bottom + margin;
+      const top = below + tooltipRect.height <= window.innerHeight - margin ? below : Math.max(margin, rect.top - tooltipRect.height - margin);
+      tooltip.style.left = `${left}px`;
+      tooltip.style.top = `${top}px`;
+    };
+    headers.forEach((header) => {
+      header.tabIndex = 0;
+      header.addEventListener("mouseenter", () => show(header));
+      header.addEventListener("mouseleave", hide);
+      header.addEventListener("focus", () => show(header));
+      header.addEventListener("blur", hide);
+    });
+    window.addEventListener("scroll", hide, true);
+    window.addEventListener("resize", hide);
   }
   function escapeHtml(value) {
     return String(value).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;");
@@ -17686,45 +17984,10 @@
       arsenal: formatNumber2(income.arsenal)
     });
   }
-  function readableSingleRunName(item) {
-    if (!item.characterId) return "";
-    if (item.isFeatured) return `Featured_Char_B${Number(item.characterId.split("_").at(-1)) + 1}`;
-    return item.characterId.replace("char_5_", "Operator_5\u2605_").replace("std_6_", "Standard_6\u2605_").replace("lim_6_", "Limited_6\u2605_");
-  }
   function singlePullType(item) {
     if (item.rarity !== 6) return "";
     if (item.isFeatured) return t("single.featured");
     return item.isLechLimited ? t("single.offLimited") : t("single.offStandard");
-  }
-  function singlePullEvent(item, pool, pullNumber) {
-    const exchange = item.quotaTicketsExchanged ? t("single.exchangeDetail", { tickets: item.quotaTicketsExchanged }) : "";
-    const quota = item.quotaEarned ? t("single.quotaDetail", { quota: item.quotaEarned, exchange }) : "";
-    const ownership = item.characterId ? item.isDuplicate ? t("single.dupe") : t("single.new") : "";
-    const type = singlePullType(item);
-    const details = [ownership, type].filter(Boolean).join(" \xB7 ");
-    const detail = details || quota ? ` <span class="event-meta">[${escapeHtml(details)}${quota}]</span>` : "";
-    const name = readableSingleRunName(item);
-    let pityDetail = "";
-    if (Number.isFinite(item.standardPity6After)) {
-      pityDetail = t("single.pityStandardDetail", { pity: item.standardPity6After });
-    } else {
-      const featured = item.guarantee120ConsumedAfter ? t("single.completed") : `${item.pullsSinceFeaturedAfter}/120`;
-      pityDetail = t(item.isUrgent ? "single.pityUrgentDetail" : "single.pityLimitedDetail", {
-        pity: item.pity6After,
-        featured
-      });
-    }
-    return `<li class="pull-event rarity-${item.rarity}"><div>${t("single.pullLine", {
-      pool,
-      pull: pullNumber,
-      rarity: `${item.rarity}\u2605`,
-      name: escapeHtml(name),
-      detail
-    })}</div><small class="pity-snapshot">${pityDetail}</small></li>`;
-  }
-  function notablePulls(items, pool, numberForItem = (_, index2) => index2 + 1) {
-    const notable = items.map((item, index2) => ({ item, pull: numberForItem(item, index2) })).filter((entry) => entry.item.rarity >= 5).map((entry) => singlePullEvent(entry.item, pool, entry.pull));
-    return notable.length ? `<ul class="event-list">${notable.join("")}</ul>` : `<p class="muted-line">${t("single.noNotable")}</p>`;
   }
   function singleDecisionText(strategyId, decision) {
     if (strategyId === "yolo") return t("single.yoloDecision");
@@ -17740,35 +18003,82 @@
       optimize30: t("single.phaseOptimize")
     }[phase] || t("single.strategyPhase");
   }
-  function paidTimeline(banner) {
-    const items = banner.result.charPulls.filter((item) => item.actionPhase !== "free");
-    if (!items.length) return `<p class="muted-line">${t("single.noPaidPulls")}</p>`;
-    const events = [];
-    let currentPhase = "";
-    let urgentIndex = 0;
-    let inUrgent = false;
-    for (const item of items) {
-      if (item.actionPhase !== currentPhase) {
-        currentPhase = item.actionPhase;
-        events.push(`<li class="timeline-label">${phaseLabel(currentPhase)}</li>`);
-      }
-      if (item.isUrgent) {
-        if (!inUrgent) {
-          inUrgent = true;
-          urgentIndex = 0;
-          events.push(`<li class="milestone-event">${t("single.milestone30")}</li>`);
-        }
-        urgentIndex++;
-        if (item.rarity >= 5) events.push(singlePullEvent(item, "Urgent", urgentIndex));
-        continue;
-      }
-      inUrgent = false;
-      if (item.pity6Before === 65) events.push(`<li class="milestone-event soft">${t("single.softPity")}</li>`);
-      if (item.rarity >= 5) events.push(singlePullEvent(item, "Limited", item.bannerPullsCountAfter));
-      if (item.bannerPullsCountAfter === 60) events.push(`<li class="milestone-event">${t("single.milestone60")}</li>`);
-      if (item.bannerPullsCountAfter === 120) events.push(`<li class="milestone-event featured">${t("single.milestone120")}</li>`);
+  function pullGroupLabel(group) {
+    if (group.kind === "standard") return t("single.groupStandard", { count: group.entries.length });
+    if (group.kind === "free") return t("single.groupFree", { count: group.entries.length });
+    if (group.kind === "urgent") return t("single.groupUrgent", { count: group.entries.length });
+    if (group.kind === "single") return t("single.groupSingle", { count: group.entries.length });
+    const batches = group.batchIds.size || Math.max(1, Math.ceil(group.entries.length / 10));
+    return batches === 1 ? "x10" : t("single.groupTen", { count: batches });
+  }
+  function pullGroupRange(group) {
+    const start = group.entries[0].pull;
+    const end = group.entries.at(-1).pull;
+    const pool = group.kind === "standard" ? "Standard" : group.kind === "urgent" ? "Urgent" : "Limited";
+    return `${pool} #${start}${end === start ? "" : `\u2013${end}`}`;
+  }
+  function pullEventChip(entry) {
+    const item = entry.item;
+    const type = singlePullType(item);
+    const pity = item.rarity === 6 && !item.isUrgent ? ` \xB7 ${t("single.hitPity", { pity: Number.isFinite(item.standardPity6Before) ? item.standardPity6Before + 1 : item.pity6Before + 1 })}` : "";
+    const detail = type ? ` \xB7 ${type}` : "";
+    return `<span class="pull-result rarity-${item.rarity}"><b>${item.rarity}\u2605</b> #${entry.pull}${detail}${pity}</span>`;
+  }
+  function pullGroupMilestones(group) {
+    const pulls = new Set(group.entries.filter((entry) => !entry.item.isUrgent).map((entry) => entry.pull));
+    const milestones = [];
+    if (pulls.has(30)) milestones.push(`<span class="milestone-chip">${t("single.milestone30Short")}</span>`);
+    if (pulls.has(60)) milestones.push(`<span class="milestone-chip">${t("single.milestone60Short")}</span>`);
+    if (pulls.has(120)) milestones.push(`<span class="milestone-chip featured">${t("single.milestone120Short")}</span>`);
+    return milestones.join("");
+  }
+  function renderPullGroup(group) {
+    const items = group.entries.map((entry) => entry.item);
+    const last = items.at(-1);
+    const notable = group.entries.filter((entry) => entry.item.rarity >= 5).map(pullEventChip);
+    const quotaEarned = items.reduce((sum, item) => sum + (item.quotaEarned || 0), 0);
+    const quotaTickets = items.reduce((sum, item) => sum + (item.quotaTicketsExchanged || 0), 0);
+    const quotaEnd = Number.isFinite(last.bondQuotaAfter) ? last.bondQuotaAfter : 0;
+    const walletEnd = Number.isFinite(last.charTicketsAfterQuota) ? formatNumber2(last.charTicketsAfterQuota) : "\u2014";
+    const arsenalEarned = calculatePullArsenal(items);
+    const phase = ["standard", "free", "urgent"].includes(group.kind) ? "" : `<span class="phase-chip">${phaseLabel(group.phase)}</span>`;
+    const quotaExchange = quotaTickets ? ` \u2192 ${t("single.exchangedTickets", { count: quotaTickets })}` : "";
+    let pity80 = last.pity6After;
+    let featured120 = last.guarantee120ConsumedAfter ? "\u2713" : `${last.pullsSinceFeaturedAfter}/120`;
+    if (group.kind === "standard") {
+      pity80 = last.standardPity6After;
+      featured120 = null;
     }
-    return `<ul class="event-list paid-events">${events.join("")}</ul>`;
+    return `<article class="pull-group ${group.kind}">
+      <div class="pull-group-heading">
+          <div><strong>${pullGroupLabel(group)}</strong><span>${pullGroupRange(group)}</span>${phase}</div>
+          <div class="pull-results">${notable.length ? notable.join("") : `<span class="no-notable">${t("single.noNotableShort")}</span>`}${pullGroupMilestones(group)}</div>
+      </div>
+      <div class="pull-group-stats">
+          <span class="stat-quota"><b>Bond</b> +${quotaEarned}${quotaExchange} \xB7 ${t("single.remainingShort", { value: quotaEnd })}</span>
+          <span class="stat-arsenal"><b>Arsenal</b> +${formatNumber2(arsenalEarned)}</span>
+          <span class="stat-wallet"><b>${t("single.ticketShort")}</b> ${walletEnd}</span>
+          <span class="stat-pity"><b>${t("single.pityAfterShort")}</b> 6\u2605 ${pity80}/80${featured120 === null ? "" : ` \xB7 120 ${featured120}`}</span>
+      </div>
+  </article>`;
+  }
+  function renderCharacterTimeline(banner) {
+    return `<div class="pull-group-list">${buildCharacterPullGroups(banner).map(renderPullGroup).join("")}</div>`;
+  }
+  function characterSummary(banner) {
+    const hits = featuredCharacterHits(banner.result.charPulls);
+    if (!hits.length) return `<span class="summary-result"><b>${t("single.operatorAbbr")}</b> ${t("single.notObtainedShort")}</span>`;
+    const positions2 = hits.map((hit) => hit.urgent ? `Urgent #${hit.pull}` : `#${hit.pull} \xB7 ${t("single.hitPity", { pity: hit.pity })}`).join(", ");
+    return `<span class="summary-result success"><b>${t("single.operatorAbbr")}</b> Featured${hits.length > 1 ? ` \xD7${hits.length}` : ""} <em>(${positions2})</em></span>`;
+  }
+  function weaponSummary(banner) {
+    const hits = featuredWeaponHits(banner.result.weaponIssues);
+    if (!hits.length) {
+      const status = banner.result.weaponIssues.length ? t("single.notObtainedShort") : t("single.notRolledShort");
+      return `<span class="summary-result weapon"><b>${t("single.weaponAbbr")}</b> ${status}</span>`;
+    }
+    const positions2 = hits.map((hit) => hit.milestone ? t("single.weaponMilestonePosition", { issue: hit.issue }) : t("single.weaponPosition", { issue: hit.issue, pull: hit.pull })).join(", ");
+    return `<span class="summary-result weapon success"><b>${t("single.weaponAbbr")}</b> Featured${hits.length > 1 ? ` \xD7${hits.length}` : ""} <em>(${positions2})</em></span>`;
   }
   function renderWeaponIssues(banner) {
     if (!banner.result.weaponIssues.length) return `<p class="muted-line">${t("single.noWeaponIssues")}</p>`;
@@ -17780,30 +18090,38 @@
       return `<article class="issue-card ${featured ? "has-featured" : ""}">
           <strong>${t("single.issue", { index: index2 + 1 })}</strong>
           <span>${t("single.issueSummary", { six, five, milestone })}</span>
-          <div class="issue-pips" aria-hidden="true">${issue.items.map((item) => `<i class="rarity-${item.rarity} ${item.isFeatured ? "featured" : ""}"></i>`).join("")}</div>
+          <div class="issue-pips" aria-hidden="true">${issue.items.filter((item) => item.rarity >= 5).map((item) => `<i class="rarity-${item.rarity} ${item.isFeatured ? "featured" : ""}"></i>`).join("")}</div>
       </article>`;
     }).join("")}</div>`;
   }
   function renderSingleBanner(banner, run) {
     const decision = banner.result.decisionState;
-    const freeLimited = banner.regularLimited.slice(0, 10);
     const featuredProgress = banner.charPityAfter.guarantee120Consumed ? t("single.completed") : `${banner.charPityAfter.pullsSinceFeatured}/120`;
-    const status = banner.result.gotFeaturedChar ? t("single.featuredObtained") : t("single.featuredMissed");
-    const weaponStatus = banner.newFeaturedWeapons ? t("single.weaponObtained") : t("single.weaponMissed");
     const quotaSpent = banner.quotaTickets * 25;
+    const openingTickets = banner.before.charTickets + run.config.incomePerBanner;
+    const arsenalIncome = banner.result.arsenalTicketsRebate + run.config.weaponIncomePerBanner;
+    const pullsTotal = banner.result.standardPulls.length + banner.regularLimited.length + banner.urgent.length;
     return `<details class="banner-trace glass-panel" ${banner.index === 1 ? "open" : ""}>
       <summary>
           <span class="banner-index">${String(banner.index).padStart(2, "0")}</span>
-          <span class="banner-summary-main">
-              <strong>${t("single.banner", { index: banner.index })}</strong>
-              <small>${t("single.pullsBreakdown", {
+          <span class="banner-summary-content">
+              <span class="banner-summary-top">
+                  <strong>${t("single.banner", { index: banner.index })}</strong>
+                  <span class="banner-summary-results">${characterSummary(banner)}${weaponSummary(banner)}</span>
+              </span>
+              <span class="banner-summary-meta">
+                  <span><b>${formatNumber2(pullsTotal)}</b> ${t("single.pullCountShort")}</span>
+                  <span>${t("single.pullsBreakdown", {
       standard: banner.result.standardPulls.length,
       limited: banner.regularLimited.length,
       urgent: banner.urgent.length
-    })}</small>
+    })}</span>
+                  <span><b>${t("single.ticketShort")}</b> ${formatNumber2(openingTickets)}\u2192${formatNumber2(banner.after.charTickets)}</span>
+                  <span><b>Bond</b> ${banner.before.bondQuota}\u2192${banner.after.bondQuota}</span>
+                  <span><b>Arsenal</b> +${formatNumber2(arsenalIncome)}${banner.weaponTicketsSpent ? ` \xB7 \u2212${formatNumber2(banner.weaponTicketsSpent)}` : ""} \u2192 ${formatNumber2(banner.after.arsenalTickets)}</span>
+              </span>
+              <span class="banner-summary-pity"><b>${t("single.pityClosingShort")}</b> 6\u2605 ${banner.charPityAfter.pity6}/80 \xB7 120 ${banner.charPityAfter.guarantee120Consumed ? "\u2713" : `${banner.charPityAfter.pullsSinceFeatured}/120`} \xB7 Standard ${banner.after.standardPity6}/80</span>
           </span>
-          <span class="trace-status ${banner.result.gotFeaturedChar ? "success" : ""}">${status}</span>
-          <span class="trace-status weapon ${banner.newFeaturedWeapons ? "success" : ""}">${weaponStatus}</span>
       </summary>
       <div class="banner-trace-body">
           <section class="trace-section opening-section">
@@ -17824,16 +18142,7 @@
 
           <section class="trace-section timeline-section">
               <h4>${t("single.timeline")}</h4>
-              <div class="phase-block">
-                  <h5><span>01</span>${t("single.standardPhase")}</h5>
-                  ${notablePulls(banner.result.standardPulls, "Standard")}
-              </div>
-              <div class="phase-block">
-                  <h5><span>02</span>${t("single.freePhase")}</h5>
-                  ${notablePulls(freeLimited, "Limited")}
-              </div>
-              <div class="phase-block decision-block">
-                  <h5><span>03</span>${t("single.strategyPhase")}</h5>
+              <div class="timeline-decision">
                   <p>${t("single.decision", {
       tickets: decision.charTickets,
       dossier: decision.dossierTickets,
@@ -17841,8 +18150,8 @@
       guarantee: decision.guarantee120Consumed ? t("single.completed") : `${decision.pullsSinceFeatured}/120`
     })}</p>
                   <p class="decision-callout">${singleDecisionText(run.config.strategyId, decision)}</p>
-                  ${paidTimeline(banner)}
               </div>
+              ${renderCharacterTimeline(banner)}
           </section>
 
           <section class="trace-section ledger-section">
@@ -17906,8 +18215,12 @@
       <div class="single-summary-grid">
           <div><span>${t("single.featuredChars")}</span><strong>${summary.featuredCharacters}</strong><small>${summary.featuredUnique} unique \xB7 ${summary.featuredDupes} dupe<br>${t("single.pity120Hits", { count: summary.timesHit120Guarantee || 0 })}</small></div>
           <div><span>${t("single.featuredWeapons")}</span><strong>${summary.featuredWeapons}</strong><small>${summary.standardWeapons} off-banner 6\u2605</small></div>
-          <div><span>${t("single.characterPulls")}</span><strong>${formatNumber2(summary.totalCharPulls)}</strong><small>${summary.totalUrgentPulls} Urgent</small></div>
-          <div><span>${t("single.walletLeft")}</span><strong>${formatNumber2(summary.charTickets)}</strong><small>${formatNumber2(summary.arsenalTickets)} Arsenal</small></div>
+          <div><span>${t("single.characterPulls")}</span><strong>${formatNumber2(summary.totalCharPulls + summary.totalUrgentPulls)}</strong><small>${t("single.pullSources", {
+      regular: formatNumber2(summary.totalCharPulls - summary.totalDossierPulls),
+      urgent: formatNumber2(summary.totalUrgentPulls),
+      dossier: formatNumber2(summary.totalDossierPulls)
+    })}</small></div>
+          <div><span>${t("single.walletLeft")}</span><strong>${t("single.remainingPulls", { count: formatNumber2(summary.charTickets) })}</strong><small>${formatNumber2(summary.arsenalTickets)} Arsenal</small></div>
       </div>
   </section>
   <div class="banner-trace-list">${run.banners.map((banner) => renderSingleBanner(banner, run)).join("")}</div>`;

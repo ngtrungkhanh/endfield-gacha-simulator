@@ -8,7 +8,9 @@ import test from 'node:test';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const dist = join(root, 'dist');
-const singleHtmlPath = join(root, 'release', 'A9EGacha.html');
+const packageJson = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
+const releaseName = `A9EGacha_${packageJson.version}.html`;
+const singleHtmlPath = join(root, 'release', releaseName);
 const allowlist = [
     'css/style.css',
     'index.html',
