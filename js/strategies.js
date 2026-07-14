@@ -145,6 +145,7 @@ function executeStandardBannerRolls(player, rollsCount, bannerIdx) {
         pullsRecord.push(result);
         
         processCharacterDuplicateAndQuota(player, result, bannerIdx);
+        result.dossierTicketsAfter = player.currentBannerDossierTickets;
         
         if (result.rarity === 6) {
             player.ownedStandard6Stars++;
@@ -183,6 +184,7 @@ function executeFreeLimitedRolls(player, bannerState, bannerIdx, totalBanners = 
         pullsRecord.push(result);
         
         processCharacterDuplicateAndQuota(player, result, bannerIdx);
+        result.dossierTicketsAfter = player.currentBannerDossierTickets;
         
         if (result.rarity === 6) {
             if (result.isFeatured) {
@@ -309,6 +311,7 @@ function executeCharacterPullSequence(player, bannerState, targetPulls, stopOnFe
         pullsRecord.push(result);
         
         processCharacterDuplicateAndQuota(player, result, bannerIdx);
+        result.dossierTicketsAfter = player.currentBannerDossierTickets;
         
         if (result.rarity === 6) {
             if (result.isFeatured) {
@@ -419,6 +422,52 @@ function executeCharacterPullSequence(player, bannerState, targetPulls, stopOnFe
     }
 
     return { pullsRecord, gotFeatured };
+}
+
+/**
+ * Thực hiện các quy tắc chắc chắn phải roll trước khi chiến thuật được phép kiểm tra ngân sách.
+ * Mỗi quy tắc nằm độc lập trong danh sách để có thể bỏ/thêm một mốc mà không đổi thứ tự chung:
+ * toàn bộ roll bắt buộc -> budget check -> chiến thuật.
+ */
+function executePreBudgetGuaranteedRolls(player, bannerState, gotFeaturedChar, strategyId, bannerIdx, totalBanners, options) {
+    const pullsRecord = [];
+    let gotFeatured = gotFeaturedChar;
+    let walletPullsSpent = 0;
+
+    const rules = [
+        {
+            id: 'optimize30',
+            enabled: options.optimizeDossierToUrgent !== false,
+            shouldRun: () => bannerState.bannerPullsCount >= 20 &&
+                bannerState.bannerPullsCount < 30 &&
+                !gotFeatured &&
+                player.charTickets >= 30 - bannerState.bannerPullsCount,
+            targetPulls: 30,
+            forceSingleRoll: strategyId === 'save_commit_single'
+        }
+    ];
+
+    for (const rule of rules) {
+        if (!rule.enabled || !rule.shouldRun()) continue;
+
+        const pullsBefore = bannerState.bannerPullsCount;
+        const res = executeCharacterPullSequence(
+            player,
+            bannerState,
+            rule.targetPulls,
+            false,
+            bannerIdx,
+            gotFeatured,
+            rule.forceSingleRoll,
+            totalBanners
+        );
+        res.pullsRecord.forEach(item => { item.actionPhase = rule.id; });
+        pullsRecord.push(...res.pullsRecord);
+        walletPullsSpent += bannerState.bannerPullsCount - pullsBefore;
+        gotFeatured = gotFeatured || res.gotFeatured;
+    }
+
+    return { pullsRecord, gotFeatured, walletPullsSpent };
 }
 
 // Helper thực hiện vòng quay vũ khí hợp nhất
@@ -561,7 +610,7 @@ export const strategies = {
 /**
  * Hàm điều phối việc chạy 1 banner đơn lẻ cho 1 người chơi
  */
-export function runSingleBannerForPlayer(strategyId, player, charBannerState, weaponBannerState, ticketIncome, weaponIncomeNonGacha = 0, bannerIdx = 0, totalBanners = 1) {
+export function runSingleBannerForPlayer(strategyId, player, charBannerState, weaponBannerState, ticketIncome, weaponIncomeNonGacha = 0, bannerIdx = 0, totalBanners = 1, options = {}) {
     const strategy = strategies[strategyId];
     if (!strategy) {
         throw new Error(`Strategy ${strategyId} is not defined.`);
@@ -600,10 +649,56 @@ export function runSingleBannerForPlayer(strategyId, player, charBannerState, we
     const freeLimResults = executeFreeLimitedRolls(player, charBannerState, bannerIdx, totalBanners);
     let gotFeaturedChar = freeLimResults.gotFeatured;
     const allCharPulls = [...freeLimResults.pullsRecord];
+
+    // 4. Dossier của banner trước hết hạn trong banner này, nên người chơi dùng hết
+    // ngay sau phần Limited miễn phí rồi mới cân nhắc chi vé trong ví.
+    const dossierPullsAtStart = player.currentBannerDossierTickets;
+    if (dossierPullsAtStart > 0) {
+        const dossierTarget = charBannerState.bannerPullsCount + dossierPullsAtStart;
+        const res = executeCharacterPullSequence(
+            player,
+            charBannerState,
+            dossierTarget,
+            false,
+            bannerIdx,
+            gotFeaturedChar,
+            strategyId === 'save_commit_single',
+            totalBanners
+        );
+        res.pullsRecord.forEach(item => { item.actionPhase = 'dossier'; });
+        allCharPulls.push(...res.pullsRecord);
+        gotFeaturedChar = gotFeaturedChar || res.gotFeatured;
+    }
+
+    // 5. Chạy hết các mốc chắc chắn roll trước budget. Ví dụ: từ 20 lên 30 rồi nhận
+    // 10 Urgent. Tắt riêng rule optimize30 sẽ khiến budget được chụp ngay tại mốc 20.
+    const preBudgetResult = executePreBudgetGuaranteedRolls(
+        player,
+        charBannerState,
+        gotFeaturedChar,
+        strategyId,
+        bannerIdx,
+        totalBanners,
+        options
+    );
+    allCharPulls.push(...preBudgetResult.pullsRecord);
+    gotFeaturedChar = gotFeaturedChar || preBudgetResult.gotFeatured;
+
+    // 6. Sau toàn bộ lượt bắt buộc, nhẩm phần chi phí ví còn lại để chạm mốc 120.
+    // hasDossier vẫn phản ánh 10 lượt Dossier vừa dùng trong phép tính tổng chi phí banner.
+    const worstCaseWalletCost120 = Math.max(
+        0,
+        calculateWorstCaseNetWalletSpent(player, 120, dossierPullsAtStart > 0) - preBudgetResult.walletPullsSpent
+    );
     const decisionState = {
         charTickets: player.charTickets,
         dossierTickets: player.currentBannerDossierTickets,
         totalAvailable: player.charTickets + player.currentBannerDossierTickets,
+        dossierPullsUsed: dossierPullsAtStart,
+        preBudgetWalletPullsUsed: preBudgetResult.walletPullsSpent,
+        worstCaseWalletCost120,
+        walletShortfall120: Math.max(0, worstCaseWalletCost120 - player.charTickets),
+        canAfford120: player.charTickets >= worstCaseWalletCost120,
         pity6: charBannerState.pity6,
         pity5: charBannerState.pity5,
         pullsSinceFeatured: charBannerState.pullsSinceFeatured,
@@ -611,20 +706,18 @@ export function runSingleBannerForPlayer(strategyId, player, charBannerState, we
         guarantee120Consumed: charBannerState.guarantee120Consumed === true
     };
 
-    // 4. Quyết định quay tiếp bằng tài nguyên trong ví dựa trên chiến thuật
+    // 7. Quyết định quay tiếp bằng tài nguyên trong ví dựa trên chiến thuật
     let pullsRecord = [];
-    const totalCharacterTicketsAvailable = player.charTickets + player.currentBannerDossierTickets;
+    const totalCharacterTicketsAvailable = player.charTickets;
     if (strategyId === 'save_commit') {
-        const costCurrent = calculateWorstCaseNetWalletSpent(player, 120, player.currentBannerDossierTickets > 0);
-        if (player.charTickets >= costCurrent) {
+        if (decisionState.canAfford120) {
             const res = executeCharacterPullSequence(player, charBannerState, 120, true, bannerIdx, gotFeaturedChar, false, totalBanners);
             res.pullsRecord.forEach(item => { item.actionPhase = 'commit'; });
             pullsRecord = res.pullsRecord;
             gotFeaturedChar = gotFeaturedChar || res.gotFeatured;
         }
     } else if (strategyId === 'save_commit_single') {
-        const costCurrent = calculateWorstCaseNetWalletSpent(player, 120, player.currentBannerDossierTickets > 0);
-        if (player.charTickets >= costCurrent) {
+        if (decisionState.canAfford120) {
             const res = executeCharacterPullSequence(player, charBannerState, 120, true, bannerIdx, gotFeaturedChar, true, totalBanners);
             res.pullsRecord.forEach(item => { item.actionPhase = 'commit'; });
             pullsRecord = res.pullsRecord;
@@ -637,9 +730,11 @@ export function runSingleBannerForPlayer(strategyId, player, charBannerState, we
         gotFeaturedChar = gotFeaturedChar || res.gotFeatured;
     } else if (strategyId === 'pull_60') {
         let targetPulls = 0;
-        if (totalCharacterTicketsAvailable >= 50) { // Tổng vé ví + Dossier đủ mốc 60
+        const pullsNeededTo60 = Math.max(0, 60 - charBannerState.bannerPullsCount);
+        const pullsNeededTo30 = Math.max(0, 30 - charBannerState.bannerPullsCount);
+        if (totalCharacterTicketsAvailable >= pullsNeededTo60) { // Đủ vé ví để chạm mốc 60 sau phần free/Dossier
             targetPulls = 60;
-        } else if (totalCharacterTicketsAvailable >= 20) { // Tổng vé ví + Dossier đủ mốc 30
+        } else if (totalCharacterTicketsAvailable >= pullsNeededTo30) { // Đủ vé ví để chạm mốc 30
             targetPulls = 30;
         }
         if (targetPulls > 0) {
@@ -686,7 +781,7 @@ export function runSingleBannerForPlayer(strategyId, player, charBannerState, we
                 const expectedEarnings = K * ticketIncome;
                 
                 // Chi phí ví tệ nhất cho banner không meta hiện tại (mốc 120)
-                const costCurrent = calculateWorstCaseNetWalletSpent(player, 120, player.currentBannerDossierTickets > 0);
+                const costCurrent = decisionState.worstCaseWalletCost120;
                 
                 // Số Quota tối thiểu còn dư sau banner hiện tại
                 const remainingQuotaAfterCurrent = ((player.bondQuota || 0) + 110) % 25;
@@ -707,7 +802,7 @@ export function runSingleBannerForPlayer(strategyId, player, charBannerState, we
                 }
             } else {
                 // Không có banner Meta nào tiếp theo, quay theo Save & Commit bình thường (mốc 120)
-                const costCurrent = calculateWorstCaseNetWalletSpent(player, 120, player.currentBannerDossierTickets > 0);
+                const costCurrent = decisionState.worstCaseWalletCost120;
                 if (player.charTickets >= costCurrent) {
                     shouldPull = true;
                 }
@@ -718,29 +813,6 @@ export function runSingleBannerForPlayer(strategyId, player, charBannerState, we
             const res = executeCharacterPullSequence(player, charBannerState, 120, true, bannerIdx, gotFeaturedChar, false, totalBanners);
             res.pullsRecord.forEach(item => { item.actionPhase = 'strategy'; });
             pullsRecord = res.pullsRecord;
-            gotFeaturedChar = gotFeaturedChar || res.gotFeatured;
-        }
-    }
-
-    // Dossier khả dụng sẽ hết hạn sau banner này nên luôn phải được dùng hết,
-    // kể cả khi chiến thuật skip hoặc đã trúng Featured trong lượt miễn phí/lượt trước đó.
-    if (player.currentBannerDossierTickets > 0) {
-        const dossierTarget = charBannerState.bannerPullsCount + player.currentBannerDossierTickets;
-        const res = executeCharacterPullSequence(player, charBannerState, dossierTarget, false, bannerIdx, gotFeaturedChar, strategyId === 'save_commit_single', totalBanners);
-        res.pullsRecord.forEach(item => { item.actionPhase = 'dossier'; });
-        pullsRecord.push(...res.pullsRecord);
-        gotFeaturedChar = gotFeaturedChar || res.gotFeatured;
-    }
-
-    // TỐI ƯU MỐC 30: Nếu số lượt quay đã đạt từ 20 đến 29 (do có 10 free + 10 Dossier) và chưa ra Featured,
-    // người chơi sẽ bỏ thêm vé từ ví để đạt đúng mốc 30 roll nhằm lấy 10 roll Urgent Recruitment miễn phí.
-    const currentPullsCount = charBannerState.bannerPullsCount;
-    if (currentPullsCount >= 20 && currentPullsCount < 30 && !gotFeaturedChar) {
-        const neededTo30 = 30 - currentPullsCount;
-        if (player.charTickets >= neededTo30) {
-            const res = executeCharacterPullSequence(player, charBannerState, 30, true, bannerIdx, gotFeaturedChar, strategyId === 'save_commit_single', totalBanners);
-            res.pullsRecord.forEach(item => { item.actionPhase = 'optimize30'; });
-            pullsRecord.push(...res.pullsRecord);
             gotFeaturedChar = gotFeaturedChar || res.gotFeatured;
         }
     }

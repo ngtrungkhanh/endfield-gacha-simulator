@@ -44,10 +44,15 @@ function updateChartDistributionRange(chart) {
         maxOwned = 0;
     }
 
+    // Giữ đúng loại dữ liệu của biểu đồ khi bật/tắt dataset trong legend.
+    // Trước đây bước này luôn dùng nhãn nhân vật nên biểu đồ vũ khí bị đổi
+    // thành "character/nhân vật" sau lần tương tác đầu tiên.
+    const labelKey = chart.options._distributionLabelKey || 'chart.distribution.label';
+
     // Rebuild nhãn trục X
     const labels = [];
     for (let i = minOwned; i <= maxOwned; i++) {
-        labels.push(t('chart.distribution.label', { count: formatNumber(i) }));
+        labels.push(t(labelKey, { count: formatNumber(i) }));
     }
     chart.data.labels = labels;
 
@@ -152,6 +157,7 @@ export function drawDistributionChart(canvasId, results, strategiesConfig) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            _distributionLabelKey: 'chart.distribution.label',
             plugins: {
                 title: {
                     display: true,
@@ -316,7 +322,7 @@ export function drawWeaponDistributionChart(canvasId, results, strategiesConfig)
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            _isWeapon: true,
+            _distributionLabelKey: 'chart.weaponDistribution.label',
             plugins: {
                 title: {
                     display: true,

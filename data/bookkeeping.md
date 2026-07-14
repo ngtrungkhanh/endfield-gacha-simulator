@@ -1,5 +1,8 @@
 # Endfield Bookkeeping — toàn bộ dữ liệu workbook
 
+> [!IMPORTANT]
+> Đây là dữ liệu raw được ghi nhận từ nội dung ingame và lưu trữ lâu dài nhằm phục vụ nghiên cứu, đối chiếu nguồn, tái kiểm tra giả định và kiểm chứng kết quả mô phỏng sau này. Không rút gọn, chuẩn hóa lại hoặc thay thế các giá trị gốc trong file này. Mọi bảng tóm tắt hay dữ liệu đã xử lý phải được tạo ở file riêng và dẫn nguồn về đây.
+
 - Nguồn: [Endfield Bookkeeping](https://docs.google.com/spreadsheets/d/1zGNuQ53R7c190RG40dHxcHv8tJuT3cBaclm8CjI-luY/edit?gid=0#gid=0)
 - Ngày trích xuất: 2026-07-11 (Asia/Saigon)
 - Giá trị `LAST UPDATED` hiển thị trong workbook: 2026-07-10

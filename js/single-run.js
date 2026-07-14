@@ -171,9 +171,15 @@ export function runSingleDetailedSimulation(config) {
         Math.random = originalRandom;
     }
 
+    const summary = snapshotPlayer(player);
+    summary.offBannerStandard6 = banners.reduce(
+        (total, banner) => total + banner.limitedCounts.standard6,
+        0
+    );
+
     return {
         config: runConfig,
         banners,
-        summary: snapshotPlayer(player)
+        summary
     };
 }

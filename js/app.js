@@ -59,6 +59,9 @@ var interactiveStats = {
   pullsInCurrent6StarCycle: 0,
   charPullsFor6starList: [],
   // Danh sách số lượt roll để ra mỗi 6★
+  pullsInCurrentLimitedCycle: 0,
+  charPullsForLimitedList: [],
+  // Danh sách số lượt roll để ra mỗi Limited (Featured hoặc lệch Limited)
   milestone30Triggered: false,
   milestone60Triggered: false,
   potentialTokens: 0,
@@ -118,6 +121,12 @@ function loadInteractiveState() {
         Object.assign(interactiveStats, state.stats);
         if (typeof interactiveStats.charDossier === 'undefined') {
           interactiveStats.charDossier = 0;
+        }
+        if (!Number.isFinite(interactiveStats.pullsInCurrentLimitedCycle)) {
+          interactiveStats.pullsInCurrentLimitedCycle = 0;
+        }
+        if (!Array.isArray(interactiveStats.charPullsForLimitedList)) {
+          interactiveStats.charPullsForLimitedList = [];
         }
         interactiveOwnedCharactersSet = new Set(state.ownedCharacters || []);
       } else {
@@ -222,6 +231,7 @@ document.addEventListener("DOMContentLoaded", () => {
     applyTranslations();
     updateLocaleControls();
     updateInteractiveUI();
+    updateInteractiveCardTranslations();
     calculateVersionIncome();
     updateSingleRunIncome();
     loadSimulatorLastResults();
@@ -314,16 +324,23 @@ function updateInteractiveUI() {
   document.getElementById("stat-char-6star-lim-dupe").innerText = limDupe;
   document.getElementById("stat-char-6star-lech-lim").innerText = lechLim;
   const totalCharacterResults = interactiveStats.charTotal + interactiveStats.charUrgent;
-  const char6Rate = totalCharacterResults > 0 ? (interactiveStats.char6star / totalCharacterResults * 100).toFixed(1) : "0.0";
-  document.getElementById("stat-char-6star-rate").innerText = `${char6Rate}%`;
+  const percentText = (count, total) => `${formatNumber(total > 0 ? count / total * 100 : 0, {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1
+  })}%`;
+  document.getElementById("stat-char-6star-rate").innerText = percentText(interactiveStats.char6star, totalCharacterResults);
+  document.getElementById("stat-char-6star-lim-new-rate").innerText = percentText(limNew, interactiveStats.char6star);
+  document.getElementById("stat-char-6star-lim-dupe-rate").innerText = percentText(limDupe, interactiveStats.char6star);
+  document.getElementById("stat-char-6star-lech-lim-rate").innerText = percentText(lechLim, interactiveStats.char6star);
   document.getElementById("stat-char-5star").innerText = interactiveStats.char5star;
   document.getElementById("stat-char-potential").innerText = interactiveStats.potentialTokens || 0;
-  const char5Rate = totalCharacterResults > 0 ? (interactiveStats.char5star / totalCharacterResults * 100).toFixed(1) : "0.0";
-  document.getElementById("stat-char-5star-rate").innerText = `${char5Rate}%`;
-  if (interactiveStats.charPullsFor6starList.length > 0) {
-    const sum = interactiveStats.charPullsFor6starList.reduce((a, b) => a + b, 0);
-    const avg = sum / interactiveStats.charPullsFor6starList.length;
-    document.getElementById("stat-char-avg-pull").innerText = `${avg.toFixed(1)} roll`;
+  document.getElementById("stat-char-5star-rate").innerText = percentText(interactiveStats.char5star, totalCharacterResults);
+  if (interactiveStats.charPullsForLimitedList.length > 0) {
+    const sum = interactiveStats.charPullsForLimitedList.reduce((a, b) => a + b, 0);
+    const avg = sum / interactiveStats.charPullsForLimitedList.length;
+    document.getElementById("stat-char-avg-pull").innerText = t("stats.averageValue", {
+      value: formatNumber(avg, { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+    });
   } else {
     document.getElementById("stat-char-avg-pull").innerText = "--";
   }
@@ -341,7 +358,6 @@ function updateInteractiveUI() {
   interactiveInventory.forEach((item) => {
     const div = document.createElement("div");
     div.className = `inventory-item rarity-${item.rarity}`;
-    let stars = `<span class="star-display rarity-${item.rarity}">${"\u2605".repeat(item.rarity)}</span>`;
     let featuredTag = item.isFeatured ? '<span class="tag featured">Featured</span>' : "";
     let urgentTag = item.isUrgent ? '<span class="tag" style="background: #333; color: #aaa;">Urgent</span>' : "";
     let typeName = item.type === "weapon" ? t("inventory.weapon") : t("inventory.operator");
@@ -352,15 +368,21 @@ function updateInteractiveUI() {
       "Qu\xE0 m\u1ED1c t\xEDch lu\u1EF9": "inventory.note.weaponMilestone"
     };
     let noteText = item.note ? ` (${noteKeys[item.note] ? t(noteKeys[item.note]) : item.note})` : "";
+    let pityText = "";
+    if (item.type === "character" && item.isUrgent && item.rarity >= 5) {
+      pityText = "Urgent";
+    } else if (item.type === "character" && item.rarity === 5 && Number.isFinite(item.pity5AtPull)) {
+      pityText = `${item.pity5AtPull}/10`;
+    } else if (item.type === "character" && item.rarity === 6 && Number.isFinite(item.pity6AtPull) && Number.isFinite(item.featuredAtPull)) {
+      pityText = `${item.pity6AtPull}/80 · ${item.featuredAtPull}/120`;
+    }
     div.innerHTML = `
           <div class="name">
-              ${stars}
-              <span>${typeName} ${item.rarity}\u2605${noteText}</span>
+              <span class="item-title">${typeName} ${item.rarity}\u2605${noteText}</span>
+              ${featuredTag}
               ${urgentTag}
           </div>
-          <div>
-              ${featuredTag}
-          </div>
+          ${pityText ? `<span class="inventory-pity">${pityText}</span>` : ""}
       `;
     invList.appendChild(div);
   });
@@ -419,25 +441,42 @@ function updateLuckRating() {
 }
 function interactiveCardOutcome(item) {
   if (item.rarity !== 6) {
-    return { label: item.isUrgent ? "Urgent" : t("card.standardResult"), className: "" };
+    const key = item.isUrgent ? "pull.urgentOptimized" : "card.standardResult";
+    return { key, label: t(key), className: "" };
   }
   if (item.isFeatured) {
-    return { label: t("card.featuredOutcome"), className: "featured" };
+    return { key: "card.featuredOutcome", label: t("card.featuredOutcome"), className: "featured" };
   }
+  const key = item.isLechLimited ? "card.offLimitedOutcome" : "card.offStandardOutcome";
   return {
-    label: t(item.isLechLimited ? "card.offLimitedOutcome" : "card.offStandardOutcome"),
+    key,
+    label: t(key),
     className: "offrate"
   };
 }
-function renderInteractiveCard(item, titleOverride = "") {
+function updateInteractiveCardTranslations() {
+  document.querySelectorAll("#pull-reveal-board .gacha-card").forEach((card) => {
+    const outcomeKey = card.dataset.outcomeKey;
+    const titleKey = card.dataset.titleKey;
+    const rarity = card.dataset.rarity;
+    if (outcomeKey) card.querySelector(".card-label").textContent = t(outcomeKey);
+    if (titleKey) card.querySelector(".front-title").textContent = t(titleKey);
+    if (outcomeKey && rarity) card.setAttribute("aria-label", `${rarity}★ · ${t(outcomeKey)}`);
+  });
+}
+function renderInteractiveCard(item, titleKey = "") {
   const revealBoard = document.getElementById("pull-reveal-board");
   const card = document.createElement("div");
   const outcome = interactiveCardOutcome(item);
   const outcomeClass = item.rarity === 6 ? item.isFeatured ? "outcome-featured" : "outcome-offrate" : "";
   card.className = `gacha-card ${outcomeClass}`;
+  const resolvedTitleKey = titleKey || (item.type === "weapon" ? "inventory.weapon" : "inventory.operator");
+  card.dataset.outcomeKey = outcome.key;
+  card.dataset.titleKey = resolvedTitleKey;
+  card.dataset.rarity = String(item.rarity);
   card.setAttribute("aria-label", `${item.rarity}\u2605 \xB7 ${outcome.label}`);
   const stars = `<span class="star-display rarity-${item.rarity}">${"\u2605".repeat(item.rarity)}</span>`;
-  const typeText = titleOverride || (item.type === "weapon" ? t("inventory.weapon") : t("inventory.operator"));
+  const typeText = t(resolvedTitleKey);
   const slot = Number.isFinite(item.batchSlot) ? `<span class="card-slot" title="${t("card.slotTitle", { slot: item.batchSlot })}">#${item.batchSlot}</span>` : "";
   const pullNumber = Number.isFinite(item.bannerPullNumber) ? `<span class="card-pull-number" title="${t("card.pullTitle", { pull: item.bannerPullNumber })}">P${item.bannerPullNumber}</span>` : "";
   card.innerHTML = `
@@ -446,15 +485,29 @@ function renderInteractiveCard(item, titleOverride = "") {
           <div class="card-face card-front card-rarity-${item.rarity}">
               ${slot}
               ${pullNumber}
-              <span class="front-title">${typeText}</span>
+              <span class="front-title" data-i18n="${resolvedTitleKey}">${typeText}</span>
               <span class="star-row">${stars}</span>
-              <span class="card-label ${outcome.className}">${outcome.label}</span>
+              <span class="card-label ${outcome.className}" data-i18n="${outcome.key}">${outcome.label}</span>
           </div>
       </div>
   `;
   revealBoard.appendChild(card);
   const delay = 80 + ((item.batchSlot || 1) - 1) * 45;
   setTimeout(() => card.classList.add("flipped"), delay);
+}
+function interactivePitySnapshot() {
+  return {
+    pity5: interactiveCharPity.pity5,
+    pity6: interactiveCharPity.pity6,
+    featured: interactiveCharPity.pullsSinceFeatured
+  };
+}
+function attachInteractivePity(result, before) {
+  if (result.isUrgent) return result;
+  result.pity5AtPull = before.pity5 + 1;
+  result.pity6AtPull = before.pity6 + 1;
+  result.featuredAtPull = before.featured + 1;
+  return result;
 }
 function initInteractiveGacha() {
   const revealBoard = document.getElementById("pull-reveal-board");
@@ -497,7 +550,7 @@ function initInteractiveGacha() {
     interactiveWeaponPity.issuesCount = 0;
     interactiveWeaponPity.issuesSinceFeatured = 0;
     interactiveWeaponPity.featuredGuaranteeConsumed = false;
-    revealBoard.innerHTML = `<span class="no-pulls-yet">${t("pull.bannerChanged")}</span>`;
+    revealBoard.innerHTML = `<span class="no-pulls-yet" data-i18n="pull.bannerChanged">${t("pull.bannerChanged")}</span>`;
     updateInteractiveUI();
     saveInteractiveState();
   }
@@ -512,6 +565,7 @@ function initInteractiveGacha() {
     } else {
       interactiveStats.charTotal++;
       interactiveStats.pullsInCurrent6StarCycle++;
+      interactiveStats.pullsInCurrentLimitedCycle++;
     }
     if (result.isDossier) {
       interactiveStats.charDossier = (interactiveStats.charDossier || 0) + 1;
@@ -529,6 +583,10 @@ function initInteractiveGacha() {
       if (!result.isUrgent) {
         interactiveStats.charPullsFor6starList.push(interactiveStats.pullsInCurrent6StarCycle);
         interactiveStats.pullsInCurrent6StarCycle = 0;
+        if (result.isFeatured || result.isLechLimited) {
+          interactiveStats.charPullsForLimitedList.push(interactiveStats.pullsInCurrentLimitedCycle);
+          interactiveStats.pullsInCurrentLimitedCycle = 0;
+        }
       }
     } else if (result.rarity === 5) {
       interactiveStats.char5star++;
@@ -537,7 +595,7 @@ function initInteractiveGacha() {
     interactiveWeaponTickets += rebate;
     interactiveStats.weapTicketsAccumulated += rebate;
     interactiveInventory.unshift(result);
-    renderInteractiveCard(result, result.isDossier ? t("pull.dossier") : "");
+    renderInteractiveCard(result, result.isDossier ? "pull.dossier" : "");
   };
   document.getElementById("btn-char-pull1").addEventListener("click", () => {
     let isDossier = false;
@@ -548,7 +606,8 @@ function initInteractiveGacha() {
       interactiveCharTickets++;
     }
     revealBoard.innerHTML = "";
-    const result = rollCharacter(interactiveCharPity, false);
+    const pityBefore = interactivePitySnapshot();
+    const result = attachInteractivePity(rollCharacter(interactiveCharPity, false), pityBefore);
     result.batchSlot = 1;
     result.bannerPullNumber = interactiveCharPity.bannerPullsCount;
     result.isDossier = isDossier;
@@ -577,7 +636,8 @@ function initInteractiveGacha() {
       } else {
         interactiveCharTickets++;
       }
-      const result = rollCharacter(interactiveCharPity, false);
+      const pityBefore = interactivePitySnapshot();
+      const result = attachInteractivePity(rollCharacter(interactiveCharPity, false), pityBefore);
       result.batchSlot = i + 1;
       result.bannerPullNumber = interactiveCharPity.bannerPullsCount;
       result.isDossier = isDossier;
@@ -666,6 +726,8 @@ function initInteractiveGacha() {
     interactiveStats.charLosing5050 = 0;
     interactiveStats.pullsInCurrent6StarCycle = 0;
     interactiveStats.charPullsFor6starList = [];
+    interactiveStats.pullsInCurrentLimitedCycle = 0;
+    interactiveStats.charPullsForLimitedList = [];
     interactiveStats.milestone30Triggered = false;
     interactiveStats.milestone60Triggered = false;
     interactiveStats.potentialTokens = 0;
@@ -676,7 +738,7 @@ function initInteractiveGacha() {
     interactiveStats.owned5StarWeapons = 0;
     interactiveStats.weapSelectors = 0;
     interactiveStats.weapTicketsUsed = 0;
-    revealBoard.innerHTML = `<span class="no-pulls-yet">${t("pull.empty")}</span>`;
+    revealBoard.innerHTML = `<span class="no-pulls-yet" data-i18n="pull.empty">${t("pull.empty")}</span>`;
     updateInteractiveUI();
     saveInteractiveState();
   });
@@ -757,7 +819,7 @@ function checkInteractiveMilestones() {
         interactiveWeaponTickets += rebate;
         interactiveStats.weapTicketsAccumulated += rebate;
         interactiveInventory.unshift(urgentResult);
-        renderInteractiveCard(urgentResult, "Urgent Opt");
+        renderInteractiveCard(urgentResult, "pull.urgentOptimized");
       }
       updateInteractiveUI();
       saveInteractiveState();
@@ -1124,10 +1186,11 @@ function singlePullType(item) {
   return item.isLechLimited ? t("single.offLimited") : t("single.offStandard");
 }
 function singleDecisionText(strategyId, decision) {
+  if (decision.guarantee120Consumed) return t("single.featuredStopDecision");
   if (strategyId === "yolo") return t("single.yoloDecision");
   if (strategyId === "pull_60") return t("single.pull60Decision");
   if (strategyId === "roll_meta") return t("single.metaDecision");
-  return decision.totalAvailable >= 110 ? t("single.commit") : t("single.skipCommit");
+  return decision.canAfford120 ? t("single.commit") : t("single.skipCommit");
 }
 function phaseLabel(phase) {
   return {
@@ -1141,6 +1204,7 @@ function pullGroupLabel(group) {
   if (group.kind === "standard") return t("single.groupStandard", { count: group.entries.length });
   if (group.kind === "free") return t("single.groupFree", { count: group.entries.length });
   if (group.kind === "urgent") return t("single.groupUrgent", { count: group.entries.length });
+  if (group.phase === "dossier") return t("single.groupDossier", { count: group.entries.length });
   if (group.kind === "single") return t("single.groupSingle", { count: group.entries.length });
   const batches = group.batchIds.size || Math.max(1, Math.ceil(group.entries.length / 10));
   return batches === 1 ? "x10" : t("single.groupTen", { count: batches });
@@ -1177,7 +1241,7 @@ function renderPullGroup(group) {
   const quotaEnd = Number.isFinite(last.bondQuotaAfter) ? last.bondQuotaAfter : 0;
   const walletEnd = Number.isFinite(last.charTicketsAfterQuota) ? formatNumber(last.charTicketsAfterQuota) : "\u2014";
   const arsenalEarned = calculatePullArsenal(items);
-  const phase = ["standard", "free", "urgent"].includes(group.kind) ? "" : `<span class="phase-chip">${phaseLabel(group.phase)}</span>`;
+  const phase = ["standard", "free", "urgent"].includes(group.kind) || group.phase === "dossier" ? "" : `<span class="phase-chip">${phaseLabel(group.phase)}</span>`;
   const quotaExchange = quotaTickets ? ` \u2192 ${t("single.exchangedTickets", { count: quotaTickets })}` : "";
   let pity80 = last.pity6After;
   let featured120 = last.guarantee120ConsumedAfter ? "\u2713" : `${last.pullsSinceFeaturedAfter}/120`;
@@ -1194,12 +1258,43 @@ function renderPullGroup(group) {
           <span class="stat-quota"><b>Bond</b> +${quotaEarned}${quotaExchange} \xB7 ${t("single.remainingShort", { value: quotaEnd })}</span>
           <span class="stat-arsenal"><b>Arsenal</b> +${formatNumber(arsenalEarned)}</span>
           <span class="stat-wallet"><b>${t("single.ticketShort")}</b> ${walletEnd}</span>
+          ${group.phase === "dossier" ? `<span class="stat-dossier"><b>Dossier</b> ${Number.isFinite(last.dossierTicketsAfter) ? last.dossierTicketsAfter : 0}</span>` : ""}
           <span class="stat-pity"><b>${t("single.pityAfterShort")}</b> 6\u2605 ${pity80}/80${featured120 === null ? "" : ` \xB7 120 ${featured120}`}</span>
       </div>
   </article>`;
 }
-function renderCharacterTimeline(banner) {
-  return `<div class="pull-group-list">${buildCharacterPullGroups(banner).map(renderPullGroup).join("")}</div>`;
+function renderDecisionGroup(strategyId, decision) {
+  const insurance = decision.guarantee120Consumed
+    ? `<span class="milestone-chip featured">${t("single.decisionFeatured")}</span>`
+    : decision.canAfford120
+      ? `<span class="milestone-chip featured">${t("single.decisionEnough")}</span>`
+      : `<span class="milestone-chip decision-shortfall">${t("single.decisionShort", { count: decision.walletShortfall120 })}</span>`;
+  const worstCase = decision.guarantee120Consumed
+    ? ""
+    : `<span><b>${t("single.decisionWorstCaseLabel")}</b> ${decision.worstCaseWalletCost120} ${t("single.ticketUnit")}</span>`;
+  return `<article class="pull-group decision-group">
+      <div class="pull-group-heading">
+          <div><strong>${t("single.decisionTitle")}</strong><span>${t("single.decisionAfterMandatory", {
+    dossier: decision.dossierPullsUsed
+  })}</span></div>
+          <div class="pull-results"><span class="decision-action">${singleDecisionText(strategyId, decision)}</span>${insurance}</div>
+      </div>
+      <div class="pull-group-stats">
+          <span><b>${t("single.decisionProgressLabel")}</b> ${decision.bannerPullsCount}/120</span>
+          ${worstCase}
+          <span class="stat-wallet"><b>${t("single.ticketShort")}</b> ${decision.charTickets}</span>
+          <span class="stat-pity"><b>${t("single.pityAfterShort")}</b> 6★ ${decision.pity6}/80 · 120 ${decision.guarantee120Consumed ? "✓" : `${decision.pullsSinceFeatured}/120`}</span>
+      </div>
+  </article>`;
+}
+function renderCharacterTimeline(banner, strategyId) {
+  const groups = buildCharacterPullGroups(banner);
+  const preBudgetPhases = new Set(["dossier", "optimize30"]);
+  const firstPaidGroup = groups.findIndex((group) => !["standard", "free"].includes(group.kind) && !preBudgetPhases.has(group.phase));
+  const splitAt = firstPaidGroup === -1 ? groups.length : firstPaidGroup;
+  const beforeDecision = groups.slice(0, splitAt).map(renderPullGroup).join("");
+  const afterDecision = groups.slice(splitAt).map(renderPullGroup).join("");
+  return `<div class="pull-group-list">${beforeDecision}${renderDecisionGroup(strategyId, banner.result.decisionState)}${afterDecision}</div>`;
 }
 function characterSummary(banner) {
   const hits = featuredCharacterHits(banner.result.charPulls);
@@ -1266,6 +1361,7 @@ function renderSingleBanner(banner, run) {
       <div class="banner-trace-body">
           <section class="trace-section opening-section">
               <h4>${t("single.opening")}</h4>
+              <div class="trace-state-grid">
               <p>${t("single.openingWallet", {
     tickets: formatNumber(banner.before.charTickets + run.config.incomePerBanner),
     income: formatNumber(run.config.incomePerBanner),
@@ -1282,16 +1378,7 @@ function renderSingleBanner(banner, run) {
 
           <section class="trace-section timeline-section">
               <h4>${t("single.timeline")}</h4>
-              <div class="timeline-decision">
-                  <p>${t("single.decision", {
-    tickets: decision.charTickets,
-    dossier: decision.dossierTickets,
-    pity: decision.pity6,
-    guarantee: decision.guarantee120Consumed ? t("single.completed") : `${decision.pullsSinceFeatured}/120`
-  })}</p>
-                  <p class="decision-callout">${singleDecisionText(run.config.strategyId, decision)}</p>
-              </div>
-              ${renderCharacterTimeline(banner)}
+              ${renderCharacterTimeline(banner, run.config.strategyId)}
           </section>
 
           <section class="trace-section ledger-section">
@@ -1323,6 +1410,7 @@ function renderSingleBanner(banner, run) {
 
           <section class="trace-section closing-section">
               <h4>${t("single.ending")}</h4>
+              <div class="trace-state-grid">
               <p>${t("single.endWallet", {
     tickets: formatNumber(banner.after.charTickets),
     dossier: banner.after.nextDossier,
@@ -1334,6 +1422,7 @@ function renderSingleBanner(banner, run) {
     featured: featuredProgress,
     standard: banner.after.standardPity6
   })}</p>
+              </div>
           </section>
       </div>
   </details>`;
@@ -1353,7 +1442,7 @@ function renderSingleRun(run) {
           </div>
       </div>
       <div class="single-summary-grid">
-          <div><span>${t("single.featuredChars")}</span><strong>${summary.featuredCharacters}</strong><small>${summary.featuredUnique} unique \xB7 ${summary.featuredDupes} dupe<br>${t("single.pity120Hits", { count: summary.timesHit120Guarantee || 0 })}</small></div>
+          <div><span>${t("single.featuredChars")}</span><strong>${summary.featuredCharacters}</strong><small>${summary.featuredUnique} unique \xB7 ${summary.featuredDupes} dupe \xB7 ${summary.offBannerStandard6} std<br>${t("single.pity120Hits", { count: summary.timesHit120Guarantee || 0 })}</small></div>
           <div><span>${t("single.featuredWeapons")}</span><strong>${summary.featuredWeapons}</strong><small>${summary.standardWeapons} off-banner 6\u2605</small></div>
           <div><span>${t("single.characterPulls")}</span><strong>${formatNumber(summary.totalCharPulls + summary.totalUrgentPulls)}</strong><small>${t("single.pullSources", {
     regular: formatNumber(summary.totalCharPulls - summary.totalDossierPulls),

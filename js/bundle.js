@@ -14759,6 +14759,7 @@
       result.standardPity5After = player.standardCharPity.pity5;
       pullsRecord.push(result);
       processCharacterDuplicateAndQuota(player, result, bannerIdx);
+      result.dossierTicketsAfter = player.currentBannerDossierTickets;
       if (result.rarity === 6) {
         player.ownedStandard6Stars++;
       } else if (result.rarity === 5) {
@@ -14788,6 +14789,7 @@
       result.guarantee120ConsumedAfter = bannerState.guarantee120Consumed === true;
       pullsRecord.push(result);
       processCharacterDuplicateAndQuota(player, result, bannerIdx);
+      result.dossierTicketsAfter = player.currentBannerDossierTickets;
       if (result.rarity === 6) {
         if (result.isFeatured) {
           gotFeatured = true;
@@ -14887,6 +14889,7 @@
       result.guarantee120ConsumedAfter = bannerState.guarantee120Consumed === true;
       pullsRecord.push(result);
       processCharacterDuplicateAndQuota(player, result, bannerIdx);
+      result.dossierTicketsAfter = player.currentBannerDossierTickets;
       if (result.rarity === 6) {
         if (result.isFeatured) {
           gotFeatured = true;
@@ -14972,6 +14975,41 @@
       }
     }
     return { pullsRecord, gotFeatured };
+  }
+  function executePreBudgetGuaranteedRolls(player, bannerState, gotFeaturedChar, strategyId, bannerIdx, totalBanners, options) {
+    const pullsRecord = [];
+    let gotFeatured = gotFeaturedChar;
+    let walletPullsSpent = 0;
+    const rules = [
+      {
+        id: "optimize30",
+        enabled: options.optimizeDossierToUrgent !== false,
+        shouldRun: () => bannerState.bannerPullsCount >= 20 && bannerState.bannerPullsCount < 30 && !gotFeatured && player.charTickets >= 30 - bannerState.bannerPullsCount,
+        targetPulls: 30,
+        forceSingleRoll: strategyId === "save_commit_single"
+      }
+    ];
+    for (const rule of rules) {
+      if (!rule.enabled || !rule.shouldRun()) continue;
+      const pullsBefore = bannerState.bannerPullsCount;
+      const res = executeCharacterPullSequence(
+        player,
+        bannerState,
+        rule.targetPulls,
+        false,
+        bannerIdx,
+        gotFeatured,
+        rule.forceSingleRoll,
+        totalBanners
+      );
+      res.pullsRecord.forEach((item) => {
+        item.actionPhase = rule.id;
+      });
+      pullsRecord.push(...res.pullsRecord);
+      walletPullsSpent += bannerState.bannerPullsCount - pullsBefore;
+      gotFeatured = gotFeatured || res.gotFeatured;
+    }
+    return { pullsRecord, gotFeatured, walletPullsSpent };
   }
   function executeWeaponPullSequence(player, bannerState, totalArsenalTicketsEarned, gotFeaturedChar, maxSpend = Infinity, bannerIdx = 0, totalBanners = 10) {
     player.arsenalTickets += totalArsenalTicketsEarned;
@@ -15085,7 +15123,7 @@
       }
     }
   };
-  function runSingleBannerForPlayer(strategyId, player, charBannerState, weaponBannerState, ticketIncome, weaponIncomeNonGacha = 0, bannerIdx = 0, totalBanners = 1) {
+  function runSingleBannerForPlayer(strategyId, player, charBannerState, weaponBannerState, ticketIncome, weaponIncomeNonGacha = 0, bannerIdx = 0, totalBanners = 1, options = {}) {
     const strategy = strategies[strategyId];
     if (!strategy) {
       throw new Error(`Strategy ${strategyId} is not defined.`);
@@ -15112,10 +15150,49 @@
     const freeLimResults = executeFreeLimitedRolls(player, charBannerState, bannerIdx, totalBanners);
     let gotFeaturedChar = freeLimResults.gotFeatured;
     const allCharPulls = [...freeLimResults.pullsRecord];
+    const dossierPullsAtStart = player.currentBannerDossierTickets;
+    if (dossierPullsAtStart > 0) {
+      const dossierTarget = charBannerState.bannerPullsCount + dossierPullsAtStart;
+      const res = executeCharacterPullSequence(
+        player,
+        charBannerState,
+        dossierTarget,
+        false,
+        bannerIdx,
+        gotFeaturedChar,
+        strategyId === "save_commit_single",
+        totalBanners
+      );
+      res.pullsRecord.forEach((item) => {
+        item.actionPhase = "dossier";
+      });
+      allCharPulls.push(...res.pullsRecord);
+      gotFeaturedChar = gotFeaturedChar || res.gotFeatured;
+    }
+    const preBudgetResult = executePreBudgetGuaranteedRolls(
+      player,
+      charBannerState,
+      gotFeaturedChar,
+      strategyId,
+      bannerIdx,
+      totalBanners,
+      options
+    );
+    allCharPulls.push(...preBudgetResult.pullsRecord);
+    gotFeaturedChar = gotFeaturedChar || preBudgetResult.gotFeatured;
+    const worstCaseWalletCost120 = Math.max(
+      0,
+      calculateWorstCaseNetWalletSpent(player, 120, dossierPullsAtStart > 0) - preBudgetResult.walletPullsSpent
+    );
     const decisionState = {
       charTickets: player.charTickets,
       dossierTickets: player.currentBannerDossierTickets,
       totalAvailable: player.charTickets + player.currentBannerDossierTickets,
+      dossierPullsUsed: dossierPullsAtStart,
+      preBudgetWalletPullsUsed: preBudgetResult.walletPullsSpent,
+      worstCaseWalletCost120,
+      walletShortfall120: Math.max(0, worstCaseWalletCost120 - player.charTickets),
+      canAfford120: player.charTickets >= worstCaseWalletCost120,
       pity6: charBannerState.pity6,
       pity5: charBannerState.pity5,
       pullsSinceFeatured: charBannerState.pullsSinceFeatured,
@@ -15123,10 +15200,9 @@
       guarantee120Consumed: charBannerState.guarantee120Consumed === true
     };
     let pullsRecord = [];
-    const totalCharacterTicketsAvailable = player.charTickets + player.currentBannerDossierTickets;
+    const totalCharacterTicketsAvailable = player.charTickets;
     if (strategyId === "save_commit") {
-      const costCurrent = calculateWorstCaseNetWalletSpent(player, 120, player.currentBannerDossierTickets > 0);
-      if (player.charTickets >= costCurrent) {
+      if (decisionState.canAfford120) {
         const res = executeCharacterPullSequence(player, charBannerState, 120, true, bannerIdx, gotFeaturedChar, false, totalBanners);
         res.pullsRecord.forEach((item) => {
           item.actionPhase = "commit";
@@ -15135,8 +15211,7 @@
         gotFeaturedChar = gotFeaturedChar || res.gotFeatured;
       }
     } else if (strategyId === "save_commit_single") {
-      const costCurrent = calculateWorstCaseNetWalletSpent(player, 120, player.currentBannerDossierTickets > 0);
-      if (player.charTickets >= costCurrent) {
+      if (decisionState.canAfford120) {
         const res = executeCharacterPullSequence(player, charBannerState, 120, true, bannerIdx, gotFeaturedChar, true, totalBanners);
         res.pullsRecord.forEach((item) => {
           item.actionPhase = "commit";
@@ -15153,9 +15228,11 @@
       gotFeaturedChar = gotFeaturedChar || res.gotFeatured;
     } else if (strategyId === "pull_60") {
       let targetPulls = 0;
-      if (totalCharacterTicketsAvailable >= 50) {
+      const pullsNeededTo60 = Math.max(0, 60 - charBannerState.bannerPullsCount);
+      const pullsNeededTo30 = Math.max(0, 30 - charBannerState.bannerPullsCount);
+      if (totalCharacterTicketsAvailable >= pullsNeededTo60) {
         targetPulls = 60;
-      } else if (totalCharacterTicketsAvailable >= 20) {
+      } else if (totalCharacterTicketsAvailable >= pullsNeededTo30) {
         targetPulls = 30;
       }
       if (targetPulls > 0) {
@@ -15195,7 +15272,7 @@
         if (nextMetaIdx !== -1) {
           const K = nextMetaIdx - bannerIdx;
           const expectedEarnings = K * ticketIncome;
-          const costCurrent = calculateWorstCaseNetWalletSpent(player, 120, player.currentBannerDossierTickets > 0);
+          const costCurrent = decisionState.worstCaseWalletCost120;
           const remainingQuotaAfterCurrent = ((player.bondQuota || 0) + 110) % 25;
           const quotaBeforeMeta = remainingQuotaAfterCurrent + (K > 1 ? 10 : 0);
           const hasDossierMeta = K === 1;
@@ -15205,7 +15282,7 @@
             shouldPull = true;
           }
         } else {
-          const costCurrent = calculateWorstCaseNetWalletSpent(player, 120, player.currentBannerDossierTickets > 0);
+          const costCurrent = decisionState.worstCaseWalletCost120;
           if (player.charTickets >= costCurrent) {
             shouldPull = true;
           }
@@ -15217,27 +15294,6 @@
           item.actionPhase = "strategy";
         });
         pullsRecord = res.pullsRecord;
-        gotFeaturedChar = gotFeaturedChar || res.gotFeatured;
-      }
-    }
-    if (player.currentBannerDossierTickets > 0) {
-      const dossierTarget = charBannerState.bannerPullsCount + player.currentBannerDossierTickets;
-      const res = executeCharacterPullSequence(player, charBannerState, dossierTarget, false, bannerIdx, gotFeaturedChar, strategyId === "save_commit_single", totalBanners);
-      res.pullsRecord.forEach((item) => {
-        item.actionPhase = "dossier";
-      });
-      pullsRecord.push(...res.pullsRecord);
-      gotFeaturedChar = gotFeaturedChar || res.gotFeatured;
-    }
-    const currentPullsCount = charBannerState.bannerPullsCount;
-    if (currentPullsCount >= 20 && currentPullsCount < 30 && !gotFeaturedChar) {
-      const neededTo30 = 30 - currentPullsCount;
-      if (player.charTickets >= neededTo30) {
-        const res = executeCharacterPullSequence(player, charBannerState, 30, true, bannerIdx, gotFeaturedChar, strategyId === "save_commit_single", totalBanners);
-        res.pullsRecord.forEach((item) => {
-          item.actionPhase = "optimize30";
-        });
-        pullsRecord.push(...res.pullsRecord);
         gotFeaturedChar = gotFeaturedChar || res.gotFeatured;
       }
     }
@@ -15465,10 +15521,15 @@
     } finally {
       Math.random = originalRandom;
     }
+    const summary = snapshotPlayer(player);
+    summary.offBannerStandard6 = banners.reduce(
+      (total, banner) => total + banner.limitedCounts.standard6,
+      0
+    );
     return {
       config: runConfig,
       banners,
-      summary: snapshotPlayer(player)
+      summary
     };
   }
 
@@ -15805,7 +15866,7 @@
       "language.label": "Ng\xF4n ng\u1EEF",
       "tabs.interactive": "Quay t\u01B0\u01A1ng t\xE1c",
       "tabs.simulator": "M\xF4 ph\u1ECFng chi\u1EBFn thu\u1EADt",
-      "tabs.singleRun": "Gacha Simulator",
+      "tabs.singleRun": "M\xF4 ph\u1ECFng m\u1ED9t l\u01B0\u1EE3t",
       "banner.tag": "Chartered Headhunting",
       "banner.switch": "\u0110\u1ED5i banner",
       "banner.rules": "T\u1EC9 l\u1EC7 6\u2605: 0,8% | Soft pity t\u0103ng t\u1EEB l\u01B0\u1EE3t 66 | Hard pity 80 | B\u1EA3o hi\u1EC3m Featured 120",
@@ -15820,6 +15881,7 @@
       "pull.bannerChanged": "\u0110\xE3 \u0111\u1ED5i banner. Pity 6\u2605 \u0111\u01B0\u1EE3c gi\u1EEF l\u1EA1i; b\u1EA3o hi\u1EC3m Featured v\xE0 c\xE1c m\u1ED1c banner \u0111\xE3 reset.",
       "pull.promptNextBanner": "Ch\xFAc m\u1EEBng b\u1EA1n \u0111\xE3 tr\xFAng Operator 6\u2605 gi\u1EDBi h\u1EA1n! B\u1EA1n c\xF3 mu\u1ED1n chuy\u1EC3n sang banner ti\u1EBFp theo kh\xF4ng?",
       "pull.dossier": "Dossier",
+      "pull.urgentOptimized": "Urgent t\u1ED1i \u01B0u",
       "pull.free": "Quay Free Banner (x{count} Free)",
       "pull.one": "Quay x1",
       "pull.ten": "Quay x10",
@@ -15850,10 +15912,13 @@
       "stats.characters": "Nh\xE2n v\u1EADt",
       "stats.totalPulls": "T\u1ED5ng l\u01B0\u1EE3t quay:",
       "stats.sixStar": "S\u1ED1 6\u2605 tr\xFAng:",
+      "stats.limitedNew": "\u2013 Limited m\u1EDBi:",
+      "stats.limitedDupe": "\u2013 Limited tr\xF9ng:",
       "stats.offBannerLimited": "\u2013 L\u1EC7ch Limited:",
       "stats.fiveStar": "S\u1ED1 5\u2605 tr\xFAng:",
       "stats.potential": "Token Potential m\u1ED1c 240:",
-      "stats.averageSix": "S\u1ED1 pull trung b\xECnh / 6\u2605:",
+      "stats.averageSix": "Trung b\xECnh s\u1ED1 pull / Limited:",
+      "stats.averageValue": "{value} l\u01B0\u1EE3t",
       "stats.weapons": "V\u0169 kh\xED",
       "stats.weaponTickets": "T\u1ED5ng v\xE9 \u0111\xE3 d\xF9ng:",
       "stats.weaponIssues": "S\u1ED1 Issue (x10) \u0111\xE3 quay:",
@@ -15896,7 +15961,7 @@
       "simulator.weaponIncomeValue": "~{banner} v\xE9/banner (~{version} v\xE9/b\u1EA3n)",
       "simulator.reset": "Reset c\xE0i \u0111\u1EB7t",
       "single.eyebrow": "ONE PLAYER \xB7 FULL TRACE",
-      "single.title": "Gacha Simulator",
+      "single.title": "M\xF4 ph\u1ECFng m\u1ED9t l\u01B0\u1EE3t",
       "single.intro": "Ch\u1EA1y \u0111\xFAng m\u1ED9t ng\u01B0\u1EDDi ch\u01A1i v\xE0 theo d\xF5i to\xE0n b\u1ED9 quy\u1EBFt \u0111\u1ECBnh, pity, t\xE0i nguy\xEAn v\xE0 k\u1EBFt qu\u1EA3 qua t\u1EEBng banner.",
       "single.strategy": "Chi\u1EBFn thu\u1EADt",
       "single.seed": "Seed (\u0111\u1EC3 tr\u1ED1ng = ng\u1EABu nhi\xEAn)",
@@ -15943,7 +16008,16 @@
       "single.pullsBreakdown": "{standard} Standard \xB7 {limited} Limited \xB7 {urgent} Urgent",
       "single.openingWallet": "{tickets} v\xE9 (nh\u1EADn +{income} t\u1EEB banner) \xB7 {dossier} Dossier \xB7 {arsenal} Arsenal (nh\u1EADn +{weaponIncome} t\u1EEB banner) \xB7 {quota} Quota",
       "single.pityOpening": "Pity \u0111\u1EA7u: Limited {limited}/80 \xB7 Featured 0/120 \xB7 Standard {standard}/80",
-      "single.decision": "Sau 10 free: {tickets} v\xE9 + {dossier} Dossier; pity {pity}/80; ti\u1EBFn \u0111\u1ED9 Featured {guarantee}.",
+      "single.decision": "Sau l\u01B0\u1EE3t mi\u1EC5n ph\xED v\xE0 Dossier: {tickets} v\xE9; pity {pity}/80; ti\u1EBFn \u0111\u1ED9 Featured {guarantee}.",
+      "single.decisionTitle": "Ki\u1EC3m tra ng\xE2n s\xE1ch tr\u01B0\u1EDBc khi d\xF9ng v\xE9",
+      "single.decisionAfterMandatory": "Sau to\xE0n b\u1ED9 roll b\u1EAFt bu\u1ED9c",
+      "single.decisionEnough": "\u0110\u1EE7 b\u1EA3o hi\u1EC3m 120",
+      "single.decisionShort": "Thi\u1EBFu {count} v\xE9 \u0111\u1EC3 b\u1EA3o hi\u1EC3m 120",
+      "single.decisionFeatured": "\u0110\xE3 nh\u1EADn Featured",
+      "single.featuredStopDecision": "D\u1EEBng quay nh\xE2n v\u1EADt v\xE0 chuy\u1EC3n sang ki\u1EC3m tra v\u0169 kh\xED.",
+      "single.decisionProgressLabel": "\u0110\xE3 quay",
+      "single.decisionWorstCaseLabel": "T\u1ED1i \u0111a c\u1EA7n",
+      "single.ticketUnit": "v\xE9",
       "single.commit": "\u0110\u1EE7 ng\xE2n s\xE1ch commit \u0111\u1EBFn Featured ho\u1EB7c m\u1ED1c 120.",
       "single.skipCommit": "Kh\xF4ng commit to\xE0n b\u1ED9; ch\u1EC9 x\u1EED l\xFD ph\u1EA7n b\u1EAFt bu\u1ED9c ho\u1EB7c m\u1ED1c t\u1ED1i \u01B0u n\u1EBFu \u0111\u1EE7 \u0111i\u1EC1u ki\u1EC7n.",
       "single.yoloDecision": "D\xF9ng t\xE0i nguy\xEAn kh\u1EA3 d\u1EE5ng cho \u0111\u1EBFn khi g\u1EB7p Featured ho\u1EB7c h\u1EBFt v\xE9.",
@@ -15979,6 +16053,7 @@
       "single.completed": "\u0110\xE3 ho\xE0n th\xE0nh",
       "single.groupStandard": "Standard mi\u1EC5n ph\xED \xD7{count}",
       "single.groupFree": "Limited mi\u1EC5n ph\xED \xD7{count}",
+      "single.groupDossier": "Dossier \xD7{count}",
       "single.groupUrgent": "Urgent \xD7{count}",
       "single.groupSingle": "Roll l\u1EBB \xD7{count}",
       "single.groupTen": "x10 \xD7{count}",
@@ -16004,24 +16079,24 @@
       "summary.weapon": "Featured Weapon nh\u1EADn \u0111\u01B0\u1EE3c",
       "table.title": "B\u1EA3ng so s\xE1nh chi ti\u1EBFt c\xE1c chi\u1EBFn thu\u1EADt",
       "table.strategy": "Chi\u1EBFn thu\u1EADt",
-      "table.charPulls": "Pulls NV",
-      "table.freeDossier": "Free 30 / Dossier",
-      "table.charRemaining": "V\xE9 NV D\u01B0",
-      "table.charResults": "K\u1EBFt qu\u1EA3 NV",
+      "table.charPulls": "L\u01B0\u1EE3t quay NV",
+      "table.freeDossier": "Urgent / Dossier",
+      "table.charRemaining": "V\xE9 NV c\xF2n l\u1EA1i",
+      "table.charResults": "K\u1EBFt qu\u1EA3 nh\xE2n v\u1EADt",
       "table.charSix": "6\u2605 NV",
       "table.charLim": "M\u1EDBi/Tr\xF9ng",
       "table.featured": "Featured",
       "table.charLoss": "L\u1EC7ch Lim/Std",
       "table.efficiency": "Hi\u1EC7u su\u1EA5t",
-      "table.featuredRange": "C\u1EF1c tr\u1ECB Limited",
+      "table.featuredRange": "Kho\u1EA3ng Limited",
       "table.pity120Hit": "M\u1ED1c 120",
-      "table.metaObtained": "Meta (NV/VK)",
+      "table.metaObtained": "Meta (NV/V\u0169 kh\xED)",
       "table.weaponFeatured": "VK Featured",
-      "table.weaponResults": "K\u1EBFt qu\u1EA3 VK",
+      "table.weaponResults": "K\u1EBFt qu\u1EA3 v\u0169 kh\xED",
       "table.weaponSix": "6\u2605 VK",
-      "table.weaponUsed": "Pulls VK",
-      "table.weaponRemaining": "Pull VK D\u01B0",
-      "table.ownership": "\u0110\u1EE7 Limited (%)",
+      "table.weaponUsed": "L\u01B0\u1EE3t quay VK",
+      "table.weaponRemaining": "L\u01B0\u1EE3t VK c\xF2n l\u1EA1i",
+      "table.ownership": "Ho\xE0n th\xE0nh Limited (%)",
       "table.groupChar": "Nh\xE2n v\u1EADt",
       "table.groupWeapon": "V\u0169 kh\xED",
       "table.empty": "Nh\u1EA5n n\xFAt \u201CCh\u1EA1y gi\u1EA3 l\u1EADp\u201D \u0111\u1EC3 xem k\u1EBFt qu\u1EA3 so s\xE1nh...",
@@ -16053,7 +16128,7 @@
       "table.metric.remainingPulls": "pull c\xF2n l\u1EA1i",
       "table.metric.totalSix": "{count} t\u1ED5ng 6\u2605",
       "table.metric.sixCompact": "{count} 6\u2605",
-      "table.metric.featuredCompact": "Feature: {count}",
+      "table.metric.featuredCompact": "Featured: {count}",
       "table.metric.charFeatured": "F: {unique} m\u1EDBi / {dupes} tr\xF9ng",
       "table.metric.featuredUnique": "M\u1EDBi: {count}",
       "table.metric.featuredDupes": "Tr\xF9ng: {count}",
@@ -16063,7 +16138,7 @@
       "table.metric.range": "C\u1EF1c tr\u1ECB {best}\u2013{worst}",
       "table.metric.highLow": "cao\u2013th\u1EA5p",
       "table.metric.pity120": "M\u1ED1c 120: {value}",
-      "table.metric.metaTypes": "NV / VK",
+      "table.metric.metaTypes": "Nh\xE2n v\u1EADt / V\u0169 kh\xED",
       "table.metric.metaChar": "NV {count}",
       "table.metric.metaWeapon": "VK {count}",
       "table.metric.weaponSix": "{featured} / {total} Featured/T\u1ED5ng 6\u2605",
@@ -16134,11 +16209,13 @@
       "docs.weaponTitle": "Arsenal Exchange",
       "docs.weapon": "M\u1ED9t Issue t\u1ED1n 1.980 Arsenal v\xE0 cho 10 v\u0169 kh\xED. T\u1EF7 l\u1EC7 6\u2605/5\u2605/4\u2605 l\xE0 4%/15%/81%; Issue th\u1EE9 8 b\u1EA3o \u0111\u1EA3m Featured m\u1ED9t l\u1EA7n. M\u1ED1c 10 cho h\u1ED9p ch\u1ECDn 6\u2605 ngo\xE0i rate-up; t\u1EEB m\u1ED1c 18, Featured v\xE0 h\u1ED9p ch\u1ECDn lu\xE2n phi\xEAn m\u1ED7i 8 Issue.",
       "docs.strategiesTitle": "N\u0103m chi\u1EBFn thu\u1EADt m\xF4 ph\u1ECFng",
-      "docs.saveCommit": "Ch\u1EC9 roll khi c\xF3 \u0111\u1EE7 v\xE9 b\u1EA3o hi\u1EC3m 120 l\u01B0\u1EE3t (v\xED + Dossier); d\u1EEBng sau c\u1EE5m ch\u1EE9a Featured ho\u1EB7c t\u1EA1i m\u1ED1c 120.",
-      "docs.saveSingle": "\u0110i\u1EC1u ki\u1EC7n t\xEDch v\xE9 gi\u1ED1ng Save & Commit nh\u01B0ng quay t\u1EEBng l\u01B0\u1EE3t v\xE0 d\u1EEBng ngay khi nh\u1EADn Featured.",
-      "docs.yolo": "D\xF9ng to\xE0n b\u1ED9 v\xE9 kh\u1EA3 d\u1EE5ng cho \u0111\u1EBFn khi nh\u1EADn Featured ho\u1EB7c h\u1EBFt t\xE0i nguy\xEAn.",
-      "docs.pull60": "\u01AFu ti\xEAn ch\u1EA1m m\u1ED1c 60 n\u1EBFu \u0111\u1EE7 50 v\xE9 ngo\xE0i 10 free; n\u1EBFu kh\xF4ng, c\xE2n nh\u1EAFc m\u1ED1c 30. V\u0169 kh\xED ch\u1EC9 quay khi \u0111\xE3 c\xF3 Featured Operator v\xE0 t\xEDch \u0111\u1EE7 8 Issues.",
-      "docs.rollMeta": "Ch\u1ECDn ng\u1EABu nhi\xEAn \u0111\xFAng s\u1ED1 banner Meta \u0111\xE3 c\u1EA5u h\xECnh v\xE0 ch\u1EC9 commit banner th\u01B0\u1EDDng khi v\u1EABn b\u1EA3o to\xE0n qu\u1EF9 cho Meta k\u1EBF ti\u1EBFp.",
+      "docs.strategyCommonTitle": "Quy t\u1EAFc chung khi quy\u1EBFt \u0111\u1ECBnh roll/skip",
+      "docs.strategyCommon": "M\u1ED7i banner x\u1EED l\xFD theo th\u1EE9 t\u1EF1: to\xE0n b\u1ED9 roll b\u1EAFt bu\u1ED9c \u2192 ki\u1EC3m tra ng\xE2n s\xE1ch \u2192 th\u1EF1c thi chi\u1EBFn thu\u1EADt. Roll b\u1EAFt bu\u1ED9c g\u1ED3m Standard/Limited mi\u1EC5n ph\xED, Dossier s\u1EAFp h\u1EBFt h\u1EA1n v\xE0 m\u1ECDi m\u1ED1c ch\u1EAFc ch\u1EAFn roll. Hi\u1EC7n t\u1EA1i, n\u1EBFu t\u1ED5ng l\u01B0\u1EE3t \u0111\xE3 \u1EDF 20\u201329, ch\u01B0a c\xF3 Featured v\xE0 v\xED \u0111\u1EE7 ph\u1EA7n thi\u1EBFu, t\xF9y ch\u1ECDn t\u1ED1i \u01B0u m\u1ED1c 30 s\u1EBD chi th\xEAm v\xE0 th\u1EF1c hi\u1EC7n \u0111\u1EE7 10 Urgent tr\u01B0\u1EDBc khi budget check. \u201CSkip\u201D ch\u1EC9 c\xF3 ngh\u0129a l\xE0 kh\xF4ng commit th\xEAm v\xE9 v\xED sau c\xE1c b\u01B0\u1EDBc b\u1EAFt bu\u1ED9c.",
+      "docs.saveCommit": "ROLL \u2014 Sau khi d\xF9ng h\u1EBFt l\u01B0\u1EE3t Limited mi\u1EC5n ph\xED v\xE0 Dossier, ch\u1EC9 commit khi v\xE9 trong v\xED \u0111\u1EE7 trang tr\u1EA3i tr\u01B0\u1EDDng h\u1EE3p x\u1EA5u nh\u1EA5t \u0111\u1EBFn m\u1ED1c 120, c\xF3 t\xEDnh s\u1ED1 v\xE9 Bond Quota t\u1ED1i thi\u1EC3u c\xF3 th\u1EC3 ho\xE0n l\u1EA1i. Quay theo c\u1EE5m x10, t\u1EF1 chuy\u1EC3n sang x1 khi c\xF2n 1\u20139 l\u01B0\u1EE3t t\u1EDBi m\u1ED1c 30/60/120 ho\u1EB7c khi pity 6\u2605 \u0111\xE3 t\u1EEB 71, r\u1ED3i d\u1EEBng khi c\xF3 Featured ho\u1EB7c ch\u1EA1m 120. SKIP \u2014 Kh\xF4ng \u0111\u1EE7 ng\xE2n s\xE1ch b\u1EA3o hi\u1EC3m th\xEC kh\xF4ng commit th\xEAm v\xE9 v\xED, ngo\xE0i t\xF9y ch\u1ECDn t\u1ED1i \u01B0u m\u1ED1c 30. V\u0168 KH\xCD \u2014 Ch\u1EC9 quay sau khi \u0111\xE3 c\xF3 Featured Operator v\xE0 t\xEDch \u0111\u1EE7 15.840 Arsenal (8 Issues); d\u1EEBng khi ra Featured Weapon.",
+      "docs.saveSingle": "ROLL/SKIP \u2014 D\xF9ng \u0111\xFAng ph\xE9p ki\u1EC3m tra ng\xE2n s\xE1ch 120 v\xE0 c\xE1c ngo\u1EA1i l\u1EC7 Dossier/t\u1ED1i \u01B0u m\u1ED1c 30 nh\u01B0 Save & Commit. Kh\xE1c bi\u1EC7t l\xE0 to\xE0n b\u1ED9 l\u01B0\u1EE3t commit d\xF9ng x1, n\xEAn d\u1EEBng \u0111\xFAng ngay l\u01B0\u1EE3t nh\u1EADn Featured v\xE0 kh\xF4ng hao c\xE1c l\u01B0\u1EE3t c\xF2n l\u1EA1i c\u1EE7a m\u1ED9t c\u1EE5m x10. V\u0168 KH\xCD \u2014 Ch\u1EC9 b\u1EAFt \u0111\u1EA7u khi \u0111\xE3 c\xF3 Featured Operator v\xE0 \u0111\u1EE7 15.840 Arsenal (8 Issues), sau \u0111\xF3 d\u1EEBng \u1EDF Featured Weapon.",
+      "docs.yolo": "ROLL \u2014 Sau ph\u1EA7n mi\u1EC5n ph\xED, d\xF9ng to\xE0n b\u1ED9 v\xE9 nh\xE2n v\u1EADt \u0111ang c\xF3 v\xE0 d\u1EEBng ngay khi nh\u1EADn Featured; kh\xF4ng gi\u1EEF qu\u1EF9 cho banner sau v\xE0 kh\xF4ng y\xEAu c\u1EA7u \u0111\u1EE7 b\u1EA3o hi\u1EC3m 120. SKIP \u2014 Ch\u1EC9 kh\xF4ng quay th\xEAm khi v\xED \u0111\xE3 h\u1EBFt ho\u1EB7c Featured \u0111\xE3 xu\u1EA5t hi\u1EC7n trong ph\u1EA7n mi\u1EC5n ph\xED/Dossier. V\u0168 KH\xCD \u2014 N\u1EBFu \u0111\xE3 c\xF3 Featured Operator, d\xF9ng t\u1EEBng Issue kh\u1EA3 d\u1EE5ng (1.980 Arsenal/Issue) cho \u0111\u1EBFn khi c\xF3 Featured Weapon ho\u1EB7c kh\xF4ng \u0111\u1EE7 m\u1ED9t Issue; kh\xF4ng c\u1EA7n t\xEDch s\u1EB5n 8 Issues.",
+      "docs.pull60": "ROLL \u2014 N\u1EBFu sau 10 l\u01B0\u1EE3t mi\u1EC5n ph\xED c\xF3 \xEDt nh\u1EA5t 50 v\xE9 kh\u1EA3 d\u1EE5ng (v\xED + Dossier), \u0111\u1EB7t m\u1EE5c ti\xEAu t\u1ED5ng 60 l\u01B0\u1EE3t \u0111\u1EC3 l\u1EA5y 10 Dossier cho banner sau v\xE0 kh\xF4ng d\u1EEBng s\u1EDBm d\xF9 \u0111\xE3 ra Featured. N\u1EBFu ch\u1EC9 c\xF3 20\u201349 v\xE9, h\u1EA1 m\u1EE5c ti\xEAu xu\u1ED1ng 30 \u0111\u1EC3 k\xEDch ho\u1EA1t 10 Urgent; d\u01B0\u1EDBi 20 v\xE9 th\xEC skip ph\u1EA7n chi\u1EBFn thu\u1EADt. N\xC2NG 120 \u2014 Khi \u0111\xE3 \u0111\u1EBFn 60 m\xE0 ch\u01B0a c\xF3 Featured, ch\u1EC9 \u0111i ti\u1EBFp \u0111\u1EBFn 120 n\u1EBFu s\u1ED1 v\xE9 hi\u1EC7n t\u1EA1i, ho\xE0n Bond Quota t\u1ED1i thi\u1EC3u v\xE0 thu nh\u1EADp banner k\u1EBF ti\u1EBFp v\u1EABn \u0111\u1EE7 b\u1EA3o v\u1EC7 m\u1EE5c ti\xEAu 60 c\u1EE7a banner sau. V\u0168 KH\xCD \u2014 Ch\u1EC9 quay khi c\xF3 Featured Operator v\xE0 \u0111\u1EE7 15.840 Arsenal.",
+      "docs.rollMeta": "CH\u1ECCN META \u2014 M\u1ED7i l\u01B0\u1EE3t m\xF4 ph\u1ECFng ch\u1ECDn ng\u1EABu nhi\xEAn \u0111\xFAng s\u1ED1 banner Meta \u0111\xE3 c\u1EA5u h\xECnh. ROLL \u2014 Banner Meta lu\xF4n d\xF9ng t\xE0i nguy\xEAn kh\u1EA3 d\u1EE5ng, t\u1ED1i \u0111a t\u1EDBi Featured ho\u1EB7c m\u1ED1c 120. Banner th\u01B0\u1EDDng ch\u1EC9 commit n\u1EBFu ng\xE2n s\xE1ch d\u1EF1 ph\xF3ng \u0111\u1EE7 tr\u1EA3 tr\u01B0\u1EDDng h\u1EE3p x\u1EA5u nh\u1EA5t cho c\u1EA3 banner hi\u1EC7n t\u1EA1i v\xE0 b\u1EA3o hi\u1EC3m 120 c\u1EE7a banner Meta k\u1EBF ti\u1EBFp; n\u1EBFu kh\xF4ng c\xF2n Meta ph\xEDa tr\u01B0\u1EDBc th\xEC quay theo \u0111i\u1EC1u ki\u1EC7n Save & Commit. SKIP \u2014 Banner th\u01B0\u1EDDng kh\xF4ng \u0111\u1EA1t ph\xE9p ki\u1EC3m tra d\u1EF1 tr\u1EEF s\u1EBD gi\u1EEF v\xE9 v\xED, nh\u01B0ng quy t\u1EAFc Dossier/t\u1ED1i \u01B0u m\u1ED1c 30 v\u1EABn \xE1p d\u1EE5ng. V\u0168 KH\xCD \u2014 Banner Meta quay sau khi c\xF3 Featured Operator v\u1EDBi Arsenal kh\u1EA3 d\u1EE5ng. Banner th\u01B0\u1EDDng ch\u1EC9 quay khi c\xF3 nh\xE2n v\u1EADt, \u0111\u1EE7 8 Issues hi\u1EC7n t\u1EA1i v\xE0 ph\u1EA7n c\xF2n l\u1EA1i c\u1ED9ng thu nh\u1EADp d\u1EF1 ki\u1EBFn v\u1EABn b\u1EA3o \u0111\u1EA3m 8 Issues cho Meta k\u1EBF ti\u1EBFp; n\u1EBFu kh\xF4ng c\xF2n Meta ph\xEDa tr\u01B0\u1EDBc, ch\u1EC9 c\u1EA7n \u0111\u1EE7 8 Issues hi\u1EC7n t\u1EA1i.",
       "docs.footnote": "N\u1ED9i dung n\xE0y \u0111\u01B0\u1EE3c \u0111\xF3ng g\xF3i tr\u1EF1c ti\u1EBFp trong \u1EE9ng d\u1EE5ng v\xE0 kh\xF4ng t\u1EA3i file hay d\u1EEF li\u1EC7u b\xEAn ngo\xE0i.",
       "error.freeTickets": "B\u1EA1n kh\xF4ng \u0111\u1EE7 v\xE9 Free Banner gi\u1EDBi h\u1EA1n!",
       "error.characterTickets": "B\u1EA1n kh\xF4ng \u0111\u1EE7 v\xE9 gacha nh\xE2n v\u1EADt! H\xE3y t\xEDch lu\u1EF9 th\xEAm ho\u1EB7c b\u1EA5m Reset.",
@@ -16156,7 +16233,7 @@
       "language.label": "Language",
       "tabs.interactive": "Interactive Pull",
       "tabs.simulator": "Strategy Simulator",
-      "tabs.singleRun": "Gacha Simulator",
+      "tabs.singleRun": "Single Run Simulator",
       "banner.tag": "Chartered Headhunting",
       "banner.switch": "Switch banner",
       "banner.rules": "6\u2605 rate: 0.8% | Soft pity starts at pull 66 | Hard pity 80 | Featured guarantee 120",
@@ -16171,6 +16248,7 @@
       "pull.bannerChanged": "Banner switched. 6\u2605 pity carries over; Featured guarantee and banner milestones have reset.",
       "pull.promptNextBanner": "Congratulations on obtaining the featured 6\u2605 Operator! Do you want to switch to the next banner?",
       "pull.dossier": "Dossier",
+      "pull.urgentOptimized": "Optimized Urgent",
       "pull.free": "Free Banner Pull (x{count} Free)",
       "pull.one": "Pull x1",
       "pull.ten": "Pull x10",
@@ -16201,10 +16279,13 @@
       "stats.characters": "Characters",
       "stats.totalPulls": "Total pulls:",
       "stats.sixStar": "6\u2605 obtained:",
+      "stats.limitedNew": "\u2013 Limited (New):",
+      "stats.limitedDupe": "\u2013 Limited duplicates:",
       "stats.offBannerLimited": "\u2013 Off-banner Limited:",
       "stats.fiveStar": "5\u2605 obtained:",
       "stats.potential": "Pull 240 Potential tokens:",
-      "stats.averageSix": "Average pulls / 6\u2605:",
+      "stats.averageSix": "Average pulls / Limited:",
+      "stats.averageValue": "{value} pulls",
       "stats.weapons": "Weapons",
       "stats.weaponTickets": "Tickets used:",
       "stats.weaponIssues": "Issues (x10) performed:",
@@ -16247,7 +16328,7 @@
       "simulator.weaponIncomeValue": "~{banner} tickets/banner (~{version} tickets/version)",
       "simulator.reset": "Reset settings",
       "single.eyebrow": "ONE PLAYER \xB7 FULL TRACE",
-      "single.title": "Gacha Simulator",
+      "single.title": "Single Run Simulator",
       "single.intro": "Run exactly one player and inspect every decision, pity state, resource change, and result across banners.",
       "single.strategy": "Strategy",
       "single.seed": "Seed (blank = random)",
@@ -16294,7 +16375,16 @@
       "single.pullsBreakdown": "{standard} Standard \xB7 {limited} Limited \xB7 {urgent} Urgent",
       "single.openingWallet": "{tickets} tickets (+{income} from banner) \xB7 {dossier} Dossier \xB7 {arsenal} Arsenal (+{weaponIncome} from banner) \xB7 {quota} Quota",
       "single.pityOpening": "Opening pity: Limited {limited}/80 \xB7 Featured 0/120 \xB7 Standard {standard}/80",
-      "single.decision": "After 10 free: {tickets} tickets + {dossier} Dossier; pity {pity}/80; Featured progress {guarantee}.",
+      "single.decision": "After free pulls and Dossier: {tickets} tickets; pity {pity}/80; Featured progress {guarantee}.",
+      "single.decisionTitle": "Budget check before spending tickets",
+      "single.decisionAfterMandatory": "After all mandatory rolls",
+      "single.decisionEnough": "120 guarantee covered",
+      "single.decisionShort": "{count} tickets short of 120 guarantee",
+      "single.decisionFeatured": "Featured obtained",
+      "single.featuredStopDecision": "Stop character pulls and continue to the weapon check.",
+      "single.decisionProgressLabel": "Pulled",
+      "single.decisionWorstCaseLabel": "Maximum needed",
+      "single.ticketUnit": "tickets",
       "single.commit": "Budget is sufficient to commit until Featured or pull 120.",
       "single.skipCommit": "No full commit; only mandatory spending or milestone optimization may occur.",
       "single.yoloDecision": "Spend available resources until Featured appears or tickets run out.",
@@ -16330,6 +16420,7 @@
       "single.completed": "Completed",
       "single.groupStandard": "Free Standard \xD7{count}",
       "single.groupFree": "Free Limited \xD7{count}",
+      "single.groupDossier": "Dossier \xD7{count}",
       "single.groupUrgent": "Urgent \xD7{count}",
       "single.groupSingle": "Single pulls \xD7{count}",
       "single.groupTen": "x10 \xD7{count}",
@@ -16355,24 +16446,24 @@
       "summary.weapon": "Featured weapons obtained",
       "table.title": "Detailed strategy comparison",
       "table.strategy": "Strategy",
-      "table.charPulls": "Char Pulls",
-      "table.freeDossier": "Free 30 / Dossier",
-      "table.charRemaining": "Char Tickets Left",
-      "table.charResults": "Char Results",
-      "table.charSix": "6\u2605 Char",
+      "table.charPulls": "Character Pulls",
+      "table.freeDossier": "Urgent / Dossier",
+      "table.charRemaining": "Character Tickets Left",
+      "table.charResults": "Character Results",
+      "table.charSix": "6\u2605 Characters",
       "table.charLim": "New/Dupe",
       "table.featured": "Featured",
       "table.charLoss": "Off-banner Lim/Std",
       "table.efficiency": "Efficiency",
       "table.featuredRange": "Limited Range",
-      "table.pity120Hit": "120 Pitys",
-      "table.metaObtained": "Meta (Char/Weap)",
-      "table.weaponFeatured": "Feat Weap",
+      "table.pity120Hit": "120 Guarantees",
+      "table.metaObtained": "Meta (Character/Weapon)",
+      "table.weaponFeatured": "Featured Weapons",
       "table.weaponResults": "Weapon Results",
-      "table.weaponSix": "6\u2605 Weap",
-      "table.weaponUsed": "Weap Pulls",
-      "table.weaponRemaining": "Weap Pulls Left",
-      "table.ownership": "All Limited (%)",
+      "table.weaponSix": "6\u2605 Weapons",
+      "table.weaponUsed": "Weapon Pulls",
+      "table.weaponRemaining": "Weapon Pulls Left",
+      "table.ownership": "Limited Completion (%)",
       "table.groupChar": "Characters",
       "table.groupWeapon": "Weapons",
       "table.empty": "Run the simulation to view the comparison...",
@@ -16414,9 +16505,9 @@
       "table.metric.range": "Range {best}\u2013{worst}",
       "table.metric.highLow": "high\u2013low",
       "table.metric.pity120": "Pull 120: {value}",
-      "table.metric.metaTypes": "Char / Weap",
-      "table.metric.metaChar": "Char {count}",
-      "table.metric.metaWeapon": "Weap {count}",
+      "table.metric.metaTypes": "Character / Weapon",
+      "table.metric.metaChar": "Character {count}",
+      "table.metric.metaWeapon": "Weapon {count}",
       "table.metric.weaponSix": "{featured} / {total} Featured/Total 6\u2605",
       "table.metric.weaponFeatured": "{count} Featured",
       "table.metric.arsenalRemaining": "Arsenal left: {count}",
@@ -16485,11 +16576,13 @@
       "docs.weaponTitle": "Arsenal Exchange",
       "docs.weapon": "One Issue costs 1,980 Arsenal and yields 10 weapons. The 6\u2605/5\u2605/4\u2605 rates are 4%/15%/81%; Issue eight guarantees Featured once. Issue 10 gives an off-rate 6\u2605 selector; from Issue 18 onward, Featured and selector rewards alternate every 8 Issues.",
       "docs.strategiesTitle": "Five simulation strategies",
-      "docs.saveCommit": "Commit only when having enough guaranteed 120 pulls (wallet + Dossier); stop after the batch containing Featured or at pull 120.",
-      "docs.saveSingle": "Uses the same savings condition as Save & Commit, but pulls one at a time and stops immediately on Featured.",
-      "docs.yolo": "Spend every available ticket until Featured appears or resources run out.",
-      "docs.pull60": "Prefer reaching pull 60 with at least 50 tickets beyond the 10 free pulls; otherwise consider pull 30. Weapons are pulled only after obtaining the Featured Operator and saving 8 Issues.",
-      "docs.rollMeta": "Randomly select exactly the configured number of Meta banners and commit on regular banners only when the next Meta budget remains protected.",
+      "docs.strategyCommonTitle": "Shared roll/skip rules",
+      "docs.strategyCommon": "Each banner is processed in this order: all mandatory rolls \u2192 check the wallet budget \u2192 execute the strategy. Mandatory rolls include free Standard/Limited pulls, expiring Dossier, and every guaranteed-roll milestone. Currently, if the total is 20\u201329 pulls, Featured is still missing, and the wallet covers the gap, the Pull 30 optimization and all 10 Urgent pulls finish before the budget check. \u201CSkip\u201D only means no additional wallet commit after these mandatory steps.",
+      "docs.saveCommit": "ROLL \u2014 After all free Limited and Dossier pulls are spent, commit only when wallet tickets cover the calculated worst case through pull 120, including minimum guaranteed Bond Quota rebates. Pull in x10 batches, switching to x1 when 1\u20139 pulls remain to milestone 30/60/120 or 6\u2605 pity is at least 71, then stop on Featured or pull 120. SKIP \u2014 If the guarantee budget is short, make no wallet commit except the optional Pull 30 optimization. WEAPON \u2014 Pull only after obtaining the Featured Operator and saving 15,840 Arsenal (8 Issues), stopping on Featured Weapon.",
+      "docs.saveSingle": "ROLL/SKIP \u2014 Uses the same pull-120 budget check and the same Dossier/Pull 30 exceptions as Save & Commit. The full commit uses x1 pulls, so it stops on the exact Featured hit without consuming the rest of an x10 batch. WEAPON \u2014 Start only after obtaining the Featured Operator and saving 15,840 Arsenal (8 Issues), then stop on Featured Weapon.",
+      "docs.yolo": "ROLL \u2014 After free pulls, spend every available character ticket and stop when Featured appears; no pull-120 guarantee or future-banner reserve is required. SKIP \u2014 Additional pulls stop only when the wallet is empty or Featured already appeared during free/Dossier pulls. WEAPON \u2014 After obtaining the Featured Operator, spend each affordable Issue (1,980 Arsenal) until Featured Weapon appears or fewer than one Issue remains; saving 8 Issues first is not required.",
+      "docs.pull60": "ROLL \u2014 With at least 50 available tickets (wallet + Dossier) after the 10 free pulls, target 60 total pulls for 10 next-banner Dossier and do not stop early on Featured. With only 20\u201349 tickets, fall back to pull 30 for 10 Urgent pulls; below 20, skip the strategy phase. UPGRADE TO 120 \u2014 After missing Featured at 60, continue only if current tickets, minimum Bond Quota rebates, and next-banner income still protect the next banner\u2019s pull-60 target. WEAPON \u2014 Pull only after obtaining the Featured Operator and saving 15,840 Arsenal.",
+      "docs.rollMeta": "META SELECTION \u2014 Each simulation randomly selects exactly the configured number of Meta banners. ROLL \u2014 A Meta banner always spends available resources, up to Featured or pull 120. A regular banner commits only when projected funds cover the worst case for both the current banner and the next Meta banner\u2019s pull-120 guarantee; if no later Meta exists, use Save & Commit conditions. SKIP \u2014 A regular banner that fails the reserve check keeps wallet tickets, while shared Dossier/Pull 30 rules still apply. WEAPON \u2014 On Meta banners, pull with available Arsenal after obtaining the Featured Operator. On regular banners, require the character, 8 Issues now, and enough remaining plus forecast income to preserve 8 Issues for the next Meta; with no later Meta, only the current 8 Issues are required.",
       "docs.footnote": "This content is bundled directly into the application and does not load external files or data.",
       "error.freeTickets": "You do not have enough limited Free Banner tickets!",
       "error.characterTickets": "You do not have enough character tickets. Earn more or reset your progress.",
@@ -16589,9 +16682,10 @@
       minOwned = 0;
       maxOwned = 0;
     }
+    const labelKey = chart.options._distributionLabelKey || "chart.distribution.label";
     const labels = [];
     for (let i = minOwned; i <= maxOwned; i++) {
-      labels.push(t("chart.distribution.label", { count: formatNumber2(i) }));
+      labels.push(t(labelKey, { count: formatNumber2(i) }));
     }
     chart.data.labels = labels;
     chart.data.datasets.forEach((dataset) => {
@@ -16675,6 +16769,7 @@
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        _distributionLabelKey: "chart.distribution.label",
         plugins: {
           title: {
             display: true,
@@ -16821,7 +16916,7 @@
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        _isWeapon: true,
+        _distributionLabelKey: "chart.weaponDistribution.label",
         plugins: {
           title: {
             display: true,
@@ -16939,6 +17034,9 @@
     pullsInCurrent6StarCycle: 0,
     charPullsFor6starList: [],
     // Danh sách số lượt roll để ra mỗi 6★
+    pullsInCurrentLimitedCycle: 0,
+    charPullsForLimitedList: [],
+    // Danh sách số lượt roll để ra mỗi Limited (Featured hoặc lệch Limited)
     milestone30Triggered: false,
     milestone60Triggered: false,
     potentialTokens: 0,
@@ -16998,6 +17096,12 @@
           Object.assign(interactiveStats, state.stats);
           if (typeof interactiveStats.charDossier === "undefined") {
             interactiveStats.charDossier = 0;
+          }
+          if (!Number.isFinite(interactiveStats.pullsInCurrentLimitedCycle)) {
+            interactiveStats.pullsInCurrentLimitedCycle = 0;
+          }
+          if (!Array.isArray(interactiveStats.charPullsForLimitedList)) {
+            interactiveStats.charPullsForLimitedList = [];
           }
           interactiveOwnedCharactersSet = new Set(state.ownedCharacters || []);
         } else {
@@ -17097,16 +17201,17 @@
     loadSimulatorLastResults();
     updateInteractiveUI();
     calculateVersionIncome();
-    document.getElementById("build-info").textContent = t("app.version", { version: "1.2.4", commit: "b3d43cb" });
+    document.getElementById("build-info").textContent = t("app.version", { version: "1.3.0", commit: "bc26631" });
     subscribe(() => {
       applyTranslations();
       updateLocaleControls();
       updateInteractiveUI();
+      updateInteractiveCardTranslations();
       calculateVersionIncome();
       updateSingleRunIncome();
       loadSimulatorLastResults();
       if (lastSingleRun) renderSingleRun(lastSingleRun);
-      document.getElementById("build-info").textContent = t("app.version", { version: "1.2.4", commit: "b3d43cb" });
+      document.getElementById("build-info").textContent = t("app.version", { version: "1.3.0", commit: "bc26631" });
     });
   });
   function updateLocaleControls() {
@@ -17190,16 +17295,23 @@
     document.getElementById("stat-char-6star-lim-dupe").innerText = limDupe;
     document.getElementById("stat-char-6star-lech-lim").innerText = lechLim;
     const totalCharacterResults = interactiveStats.charTotal + interactiveStats.charUrgent;
-    const char6Rate = totalCharacterResults > 0 ? (interactiveStats.char6star / totalCharacterResults * 100).toFixed(1) : "0.0";
-    document.getElementById("stat-char-6star-rate").innerText = `${char6Rate}%`;
+    const percentText = (count, total) => `${formatNumber2(total > 0 ? count / total * 100 : 0, {
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1
+    })}%`;
+    document.getElementById("stat-char-6star-rate").innerText = percentText(interactiveStats.char6star, totalCharacterResults);
+    document.getElementById("stat-char-6star-lim-new-rate").innerText = percentText(limNew, interactiveStats.char6star);
+    document.getElementById("stat-char-6star-lim-dupe-rate").innerText = percentText(limDupe, interactiveStats.char6star);
+    document.getElementById("stat-char-6star-lech-lim-rate").innerText = percentText(lechLim, interactiveStats.char6star);
     document.getElementById("stat-char-5star").innerText = interactiveStats.char5star;
     document.getElementById("stat-char-potential").innerText = interactiveStats.potentialTokens || 0;
-    const char5Rate = totalCharacterResults > 0 ? (interactiveStats.char5star / totalCharacterResults * 100).toFixed(1) : "0.0";
-    document.getElementById("stat-char-5star-rate").innerText = `${char5Rate}%`;
-    if (interactiveStats.charPullsFor6starList.length > 0) {
-      const sum = interactiveStats.charPullsFor6starList.reduce((a, b) => a + b, 0);
-      const avg = sum / interactiveStats.charPullsFor6starList.length;
-      document.getElementById("stat-char-avg-pull").innerText = `${avg.toFixed(1)} roll`;
+    document.getElementById("stat-char-5star-rate").innerText = percentText(interactiveStats.char5star, totalCharacterResults);
+    if (interactiveStats.charPullsForLimitedList.length > 0) {
+      const sum = interactiveStats.charPullsForLimitedList.reduce((a, b) => a + b, 0);
+      const avg = sum / interactiveStats.charPullsForLimitedList.length;
+      document.getElementById("stat-char-avg-pull").innerText = t("stats.averageValue", {
+        value: formatNumber2(avg, { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+      });
     } else {
       document.getElementById("stat-char-avg-pull").innerText = "--";
     }
@@ -17217,7 +17329,6 @@
     interactiveInventory.forEach((item) => {
       const div = document.createElement("div");
       div.className = `inventory-item rarity-${item.rarity}`;
-      let stars = `<span class="star-display rarity-${item.rarity}">${"\u2605".repeat(item.rarity)}</span>`;
       let featuredTag = item.isFeatured ? '<span class="tag featured">Featured</span>' : "";
       let urgentTag = item.isUrgent ? '<span class="tag" style="background: #333; color: #aaa;">Urgent</span>' : "";
       let typeName = item.type === "weapon" ? t("inventory.weapon") : t("inventory.operator");
@@ -17228,15 +17339,21 @@
         "Qu\xE0 m\u1ED1c t\xEDch lu\u1EF9": "inventory.note.weaponMilestone"
       };
       let noteText = item.note ? ` (${noteKeys[item.note] ? t(noteKeys[item.note]) : item.note})` : "";
+      let pityText = "";
+      if (item.type === "character" && item.isUrgent && item.rarity >= 5) {
+        pityText = "Urgent";
+      } else if (item.type === "character" && item.rarity === 5 && Number.isFinite(item.pity5AtPull)) {
+        pityText = `${item.pity5AtPull}/10`;
+      } else if (item.type === "character" && item.rarity === 6 && Number.isFinite(item.pity6AtPull) && Number.isFinite(item.featuredAtPull)) {
+        pityText = `${item.pity6AtPull}/80 \xB7 ${item.featuredAtPull}/120`;
+      }
       div.innerHTML = `
           <div class="name">
-              ${stars}
-              <span>${typeName} ${item.rarity}\u2605${noteText}</span>
+              <span class="item-title">${typeName} ${item.rarity}\u2605${noteText}</span>
+              ${featuredTag}
               ${urgentTag}
           </div>
-          <div>
-              ${featuredTag}
-          </div>
+          ${pityText ? `<span class="inventory-pity">${pityText}</span>` : ""}
       `;
       invList.appendChild(div);
     });
@@ -17293,25 +17410,42 @@
   }
   function interactiveCardOutcome(item) {
     if (item.rarity !== 6) {
-      return { label: item.isUrgent ? "Urgent" : t("card.standardResult"), className: "" };
+      const key2 = item.isUrgent ? "pull.urgentOptimized" : "card.standardResult";
+      return { key: key2, label: t(key2), className: "" };
     }
     if (item.isFeatured) {
-      return { label: t("card.featuredOutcome"), className: "featured" };
+      return { key: "card.featuredOutcome", label: t("card.featuredOutcome"), className: "featured" };
     }
+    const key = item.isLechLimited ? "card.offLimitedOutcome" : "card.offStandardOutcome";
     return {
-      label: t(item.isLechLimited ? "card.offLimitedOutcome" : "card.offStandardOutcome"),
+      key,
+      label: t(key),
       className: "offrate"
     };
   }
-  function renderInteractiveCard(item, titleOverride = "") {
+  function updateInteractiveCardTranslations() {
+    document.querySelectorAll("#pull-reveal-board .gacha-card").forEach((card) => {
+      const outcomeKey = card.dataset.outcomeKey;
+      const titleKey = card.dataset.titleKey;
+      const rarity = card.dataset.rarity;
+      if (outcomeKey) card.querySelector(".card-label").textContent = t(outcomeKey);
+      if (titleKey) card.querySelector(".front-title").textContent = t(titleKey);
+      if (outcomeKey && rarity) card.setAttribute("aria-label", `${rarity}\u2605 \xB7 ${t(outcomeKey)}`);
+    });
+  }
+  function renderInteractiveCard(item, titleKey = "") {
     const revealBoard = document.getElementById("pull-reveal-board");
     const card = document.createElement("div");
     const outcome = interactiveCardOutcome(item);
     const outcomeClass = item.rarity === 6 ? item.isFeatured ? "outcome-featured" : "outcome-offrate" : "";
     card.className = `gacha-card ${outcomeClass}`;
+    const resolvedTitleKey = titleKey || (item.type === "weapon" ? "inventory.weapon" : "inventory.operator");
+    card.dataset.outcomeKey = outcome.key;
+    card.dataset.titleKey = resolvedTitleKey;
+    card.dataset.rarity = String(item.rarity);
     card.setAttribute("aria-label", `${item.rarity}\u2605 \xB7 ${outcome.label}`);
     const stars = `<span class="star-display rarity-${item.rarity}">${"\u2605".repeat(item.rarity)}</span>`;
-    const typeText = titleOverride || (item.type === "weapon" ? t("inventory.weapon") : t("inventory.operator"));
+    const typeText = t(resolvedTitleKey);
     const slot = Number.isFinite(item.batchSlot) ? `<span class="card-slot" title="${t("card.slotTitle", { slot: item.batchSlot })}">#${item.batchSlot}</span>` : "";
     const pullNumber = Number.isFinite(item.bannerPullNumber) ? `<span class="card-pull-number" title="${t("card.pullTitle", { pull: item.bannerPullNumber })}">P${item.bannerPullNumber}</span>` : "";
     card.innerHTML = `
@@ -17320,15 +17454,29 @@
           <div class="card-face card-front card-rarity-${item.rarity}">
               ${slot}
               ${pullNumber}
-              <span class="front-title">${typeText}</span>
+              <span class="front-title" data-i18n="${resolvedTitleKey}">${typeText}</span>
               <span class="star-row">${stars}</span>
-              <span class="card-label ${outcome.className}">${outcome.label}</span>
+              <span class="card-label ${outcome.className}" data-i18n="${outcome.key}">${outcome.label}</span>
           </div>
       </div>
   `;
     revealBoard.appendChild(card);
     const delay = 80 + ((item.batchSlot || 1) - 1) * 45;
     setTimeout(() => card.classList.add("flipped"), delay);
+  }
+  function interactivePitySnapshot() {
+    return {
+      pity5: interactiveCharPity.pity5,
+      pity6: interactiveCharPity.pity6,
+      featured: interactiveCharPity.pullsSinceFeatured
+    };
+  }
+  function attachInteractivePity(result, before) {
+    if (result.isUrgent) return result;
+    result.pity5AtPull = before.pity5 + 1;
+    result.pity6AtPull = before.pity6 + 1;
+    result.featuredAtPull = before.featured + 1;
+    return result;
   }
   function initInteractiveGacha() {
     const revealBoard = document.getElementById("pull-reveal-board");
@@ -17371,7 +17519,7 @@
       interactiveWeaponPity.issuesCount = 0;
       interactiveWeaponPity.issuesSinceFeatured = 0;
       interactiveWeaponPity.featuredGuaranteeConsumed = false;
-      revealBoard.innerHTML = `<span class="no-pulls-yet">${t("pull.bannerChanged")}</span>`;
+      revealBoard.innerHTML = `<span class="no-pulls-yet" data-i18n="pull.bannerChanged">${t("pull.bannerChanged")}</span>`;
       updateInteractiveUI();
       saveInteractiveState();
     }
@@ -17386,6 +17534,7 @@
       } else {
         interactiveStats.charTotal++;
         interactiveStats.pullsInCurrent6StarCycle++;
+        interactiveStats.pullsInCurrentLimitedCycle++;
       }
       if (result.isDossier) {
         interactiveStats.charDossier = (interactiveStats.charDossier || 0) + 1;
@@ -17403,6 +17552,10 @@
         if (!result.isUrgent) {
           interactiveStats.charPullsFor6starList.push(interactiveStats.pullsInCurrent6StarCycle);
           interactiveStats.pullsInCurrent6StarCycle = 0;
+          if (result.isFeatured || result.isLechLimited) {
+            interactiveStats.charPullsForLimitedList.push(interactiveStats.pullsInCurrentLimitedCycle);
+            interactiveStats.pullsInCurrentLimitedCycle = 0;
+          }
         }
       } else if (result.rarity === 5) {
         interactiveStats.char5star++;
@@ -17411,7 +17564,7 @@
       interactiveWeaponTickets += rebate;
       interactiveStats.weapTicketsAccumulated += rebate;
       interactiveInventory.unshift(result);
-      renderInteractiveCard(result, result.isDossier ? t("pull.dossier") : "");
+      renderInteractiveCard(result, result.isDossier ? "pull.dossier" : "");
     };
     document.getElementById("btn-char-pull1").addEventListener("click", () => {
       let isDossier = false;
@@ -17422,7 +17575,8 @@
         interactiveCharTickets++;
       }
       revealBoard.innerHTML = "";
-      const result = rollCharacter(interactiveCharPity, false);
+      const pityBefore = interactivePitySnapshot();
+      const result = attachInteractivePity(rollCharacter(interactiveCharPity, false), pityBefore);
       result.batchSlot = 1;
       result.bannerPullNumber = interactiveCharPity.bannerPullsCount;
       result.isDossier = isDossier;
@@ -17449,7 +17603,8 @@
         } else {
           interactiveCharTickets++;
         }
-        const result = rollCharacter(interactiveCharPity, false);
+        const pityBefore = interactivePitySnapshot();
+        const result = attachInteractivePity(rollCharacter(interactiveCharPity, false), pityBefore);
         result.batchSlot = i + 1;
         result.bannerPullNumber = interactiveCharPity.bannerPullsCount;
         result.isDossier = isDossier;
@@ -17536,6 +17691,8 @@
       interactiveStats.charLosing5050 = 0;
       interactiveStats.pullsInCurrent6StarCycle = 0;
       interactiveStats.charPullsFor6starList = [];
+      interactiveStats.pullsInCurrentLimitedCycle = 0;
+      interactiveStats.charPullsForLimitedList = [];
       interactiveStats.milestone30Triggered = false;
       interactiveStats.milestone60Triggered = false;
       interactiveStats.potentialTokens = 0;
@@ -17546,7 +17703,7 @@
       interactiveStats.owned5StarWeapons = 0;
       interactiveStats.weapSelectors = 0;
       interactiveStats.weapTicketsUsed = 0;
-      revealBoard.innerHTML = `<span class="no-pulls-yet">${t("pull.empty")}</span>`;
+      revealBoard.innerHTML = `<span class="no-pulls-yet" data-i18n="pull.empty">${t("pull.empty")}</span>`;
       updateInteractiveUI();
       saveInteractiveState();
     });
@@ -17627,7 +17784,7 @@
           interactiveWeaponTickets += rebate;
           interactiveStats.weapTicketsAccumulated += rebate;
           interactiveInventory.unshift(urgentResult);
-          renderInteractiveCard(urgentResult, "Urgent Opt");
+          renderInteractiveCard(urgentResult, "pull.urgentOptimized");
         }
         updateInteractiveUI();
         saveInteractiveState();
@@ -17990,10 +18147,11 @@
     return item.isLechLimited ? t("single.offLimited") : t("single.offStandard");
   }
   function singleDecisionText(strategyId, decision) {
+    if (decision.guarantee120Consumed) return t("single.featuredStopDecision");
     if (strategyId === "yolo") return t("single.yoloDecision");
     if (strategyId === "pull_60") return t("single.pull60Decision");
     if (strategyId === "roll_meta") return t("single.metaDecision");
-    return decision.totalAvailable >= 110 ? t("single.commit") : t("single.skipCommit");
+    return decision.canAfford120 ? t("single.commit") : t("single.skipCommit");
   }
   function phaseLabel(phase) {
     return {
@@ -18007,6 +18165,7 @@
     if (group.kind === "standard") return t("single.groupStandard", { count: group.entries.length });
     if (group.kind === "free") return t("single.groupFree", { count: group.entries.length });
     if (group.kind === "urgent") return t("single.groupUrgent", { count: group.entries.length });
+    if (group.phase === "dossier") return t("single.groupDossier", { count: group.entries.length });
     if (group.kind === "single") return t("single.groupSingle", { count: group.entries.length });
     const batches = group.batchIds.size || Math.max(1, Math.ceil(group.entries.length / 10));
     return batches === 1 ? "x10" : t("single.groupTen", { count: batches });
@@ -18041,7 +18200,7 @@
     const quotaEnd = Number.isFinite(last.bondQuotaAfter) ? last.bondQuotaAfter : 0;
     const walletEnd = Number.isFinite(last.charTicketsAfterQuota) ? formatNumber2(last.charTicketsAfterQuota) : "\u2014";
     const arsenalEarned = calculatePullArsenal(items);
-    const phase = ["standard", "free", "urgent"].includes(group.kind) ? "" : `<span class="phase-chip">${phaseLabel(group.phase)}</span>`;
+    const phase = ["standard", "free", "urgent"].includes(group.kind) || group.phase === "dossier" ? "" : `<span class="phase-chip">${phaseLabel(group.phase)}</span>`;
     const quotaExchange = quotaTickets ? ` \u2192 ${t("single.exchangedTickets", { count: quotaTickets })}` : "";
     let pity80 = last.pity6After;
     let featured120 = last.guarantee120ConsumedAfter ? "\u2713" : `${last.pullsSinceFeaturedAfter}/120`;
@@ -18058,12 +18217,37 @@
           <span class="stat-quota"><b>Bond</b> +${quotaEarned}${quotaExchange} \xB7 ${t("single.remainingShort", { value: quotaEnd })}</span>
           <span class="stat-arsenal"><b>Arsenal</b> +${formatNumber2(arsenalEarned)}</span>
           <span class="stat-wallet"><b>${t("single.ticketShort")}</b> ${walletEnd}</span>
+          ${group.phase === "dossier" ? `<span class="stat-dossier"><b>Dossier</b> ${Number.isFinite(last.dossierTicketsAfter) ? last.dossierTicketsAfter : 0}</span>` : ""}
           <span class="stat-pity"><b>${t("single.pityAfterShort")}</b> 6\u2605 ${pity80}/80${featured120 === null ? "" : ` \xB7 120 ${featured120}`}</span>
       </div>
   </article>`;
   }
-  function renderCharacterTimeline(banner) {
-    return `<div class="pull-group-list">${buildCharacterPullGroups(banner).map(renderPullGroup).join("")}</div>`;
+  function renderDecisionGroup(strategyId, decision) {
+    const insurance = decision.guarantee120Consumed ? `<span class="milestone-chip featured">${t("single.decisionFeatured")}</span>` : decision.canAfford120 ? `<span class="milestone-chip featured">${t("single.decisionEnough")}</span>` : `<span class="milestone-chip decision-shortfall">${t("single.decisionShort", { count: decision.walletShortfall120 })}</span>`;
+    const worstCase = decision.guarantee120Consumed ? "" : `<span><b>${t("single.decisionWorstCaseLabel")}</b> ${decision.worstCaseWalletCost120} ${t("single.ticketUnit")}</span>`;
+    return `<article class="pull-group decision-group">
+      <div class="pull-group-heading">
+          <div><strong>${t("single.decisionTitle")}</strong><span>${t("single.decisionAfterMandatory", {
+      dossier: decision.dossierPullsUsed
+    })}</span></div>
+          <div class="pull-results"><span class="decision-action">${singleDecisionText(strategyId, decision)}</span>${insurance}</div>
+      </div>
+      <div class="pull-group-stats">
+          <span><b>${t("single.decisionProgressLabel")}</b> ${decision.bannerPullsCount}/120</span>
+          ${worstCase}
+          <span class="stat-wallet"><b>${t("single.ticketShort")}</b> ${decision.charTickets}</span>
+          <span class="stat-pity"><b>${t("single.pityAfterShort")}</b> 6\u2605 ${decision.pity6}/80 \xB7 120 ${decision.guarantee120Consumed ? "\u2713" : `${decision.pullsSinceFeatured}/120`}</span>
+      </div>
+  </article>`;
+  }
+  function renderCharacterTimeline(banner, strategyId) {
+    const groups = buildCharacterPullGroups(banner);
+    const preBudgetPhases = /* @__PURE__ */ new Set(["dossier", "optimize30"]);
+    const firstPaidGroup = groups.findIndex((group) => !["standard", "free"].includes(group.kind) && !preBudgetPhases.has(group.phase));
+    const splitAt = firstPaidGroup === -1 ? groups.length : firstPaidGroup;
+    const beforeDecision = groups.slice(0, splitAt).map(renderPullGroup).join("");
+    const afterDecision = groups.slice(splitAt).map(renderPullGroup).join("");
+    return `<div class="pull-group-list">${beforeDecision}${renderDecisionGroup(strategyId, banner.result.decisionState)}${afterDecision}</div>`;
   }
   function characterSummary(banner) {
     const hits = featuredCharacterHits(banner.result.charPulls);
@@ -18126,6 +18310,7 @@
       <div class="banner-trace-body">
           <section class="trace-section opening-section">
               <h4>${t("single.opening")}</h4>
+              <div class="trace-state-grid">
               <p>${t("single.openingWallet", {
       tickets: formatNumber2(banner.before.charTickets + run.config.incomePerBanner),
       income: formatNumber2(run.config.incomePerBanner),
@@ -18142,16 +18327,7 @@
 
           <section class="trace-section timeline-section">
               <h4>${t("single.timeline")}</h4>
-              <div class="timeline-decision">
-                  <p>${t("single.decision", {
-      tickets: decision.charTickets,
-      dossier: decision.dossierTickets,
-      pity: decision.pity6,
-      guarantee: decision.guarantee120Consumed ? t("single.completed") : `${decision.pullsSinceFeatured}/120`
-    })}</p>
-                  <p class="decision-callout">${singleDecisionText(run.config.strategyId, decision)}</p>
-              </div>
-              ${renderCharacterTimeline(banner)}
+              ${renderCharacterTimeline(banner, run.config.strategyId)}
           </section>
 
           <section class="trace-section ledger-section">
@@ -18183,6 +18359,7 @@
 
           <section class="trace-section closing-section">
               <h4>${t("single.ending")}</h4>
+              <div class="trace-state-grid">
               <p>${t("single.endWallet", {
       tickets: formatNumber2(banner.after.charTickets),
       dossier: banner.after.nextDossier,
@@ -18194,6 +18371,7 @@
       featured: featuredProgress,
       standard: banner.after.standardPity6
     })}</p>
+              </div>
           </section>
       </div>
   </details>`;
@@ -18213,7 +18391,7 @@
           </div>
       </div>
       <div class="single-summary-grid">
-          <div><span>${t("single.featuredChars")}</span><strong>${summary.featuredCharacters}</strong><small>${summary.featuredUnique} unique \xB7 ${summary.featuredDupes} dupe<br>${t("single.pity120Hits", { count: summary.timesHit120Guarantee || 0 })}</small></div>
+          <div><span>${t("single.featuredChars")}</span><strong>${summary.featuredCharacters}</strong><small>${summary.featuredUnique} unique \xB7 ${summary.featuredDupes} dupe \xB7 ${summary.offBannerStandard6} std<br>${t("single.pity120Hits", { count: summary.timesHit120Guarantee || 0 })}</small></div>
           <div><span>${t("single.featuredWeapons")}</span><strong>${summary.featuredWeapons}</strong><small>${summary.standardWeapons} off-banner 6\u2605</small></div>
           <div><span>${t("single.characterPulls")}</span><strong>${formatNumber2(summary.totalCharPulls + summary.totalUrgentPulls)}</strong><small>${t("single.pullSources", {
       regular: formatNumber2(summary.totalCharPulls - summary.totalDossierPulls),

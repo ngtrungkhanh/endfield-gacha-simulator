@@ -26,3 +26,16 @@ Dự án này tuân thủ các quy tắc thiết kế và viết code sau để 
 *   Mỗi trang thành phần/tab phải có thẻ ID định danh rõ ràng cho các tương tác tự động.
 *   Sử dụng thẻ ngữ nghĩa HTML5 (`<header>`, `<main>`, `<section>`, `<aside>`, `<nav>`).
 *   Giữ hiệu năng tải trang ở mức tối đa bằng cách không lạm dụng các hình ảnh nặng, ưu tiên sử dụng CSS thuần và SVG vector.
+
+## 4. Quy tắc phát hành
+*   Sử dụng tiếng Việt khi giao tiếp hoặc lập kế hoạch.
+*   Sau khi sửa mã nguồn JavaScript trong `js/`, phải chạy `npm run build` để cập nhật `js/bundle.js`, bảo đảm `index.html` luôn mở và chạy trực tiếp được.
+*   Trước khi bàn giao thay đổi ảnh hưởng đến giao diện hoặc runtime, bắt buộc chạy `npm run build` và `npm test`; không được báo hoàn thành nếu `js/bundle.js` dành cho `index.html` chưa được cập nhật hoặc kiểm thử còn lỗi.
+*   Không tự động chạy `npm run package` sau mỗi lần sửa code. Chỉ đóng gói/phát hành file `release/A9EGacha_<phiên-bản>.html` khi người dùng yêu cầu rõ ràng. Khi có yêu cầu đó, phải chạy `npm run package`, xác minh file release cùng checksum SHA-256 và bảo đảm `dist/index.html` là bản production mới nhất.
+*   Chỉ tạo hoặc cập nhật file HTML tổng hợp trong `release/` khi tăng phiên bản hoặc khi người dùng yêu cầu; không tạo bản sao ở thư mục gốc của dự án.
+*   Không chỉnh sửa thủ công `js/bundle.js`, `dist/` hoặc file HTML trong `release/`; mọi file này phải được tạo từ script build/package.
+
+## 5. Bảo toàn dữ liệu nghiên cứu
+*   `data/bookkeeping.md` là dữ liệu raw được ghi nhận từ nội dung ingame và lưu lại để phục vụ nghiên cứu, đối chiếu nguồn, tái kiểm tra giả định và kiểm chứng kết quả mô phỏng trong tương lai.
+*   Phải giữ nguyên dữ liệu gốc trong `data/bookkeeping.md`; không rút gọn, chuẩn hóa lại, diễn giải thay thế hoặc xóa file này chỉ vì dung lượng lớn hay định dạng khó đọc.
+*   Nếu cần tạo bảng tóm tắt hoặc dữ liệu đã xử lý, phải lưu ở file khác và ghi rõ nguồn dẫn về `data/bookkeeping.md`.

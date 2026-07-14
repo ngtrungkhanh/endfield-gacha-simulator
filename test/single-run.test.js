@@ -24,7 +24,7 @@ test('single run is reproducible and restores Math.random', () => {
     assert.equal(first.config.numericSeed, 20260711);
 });
 
-test('reference seed matches the documented detailed run totals', () => {
+test('reference seed produces stable detailed run totals', () => {
     const run = runSingleDetailedSimulation(referenceConfig);
 
     assert.equal(run.banners.length, 10);
@@ -38,6 +38,10 @@ test('reference seed matches the documented detailed run totals', () => {
     assert.equal(run.summary.arsenalTickets, 16440);
     assert.equal(run.summary.bondQuota, 10);
     assert.ok(typeof run.summary.timesHit120Guarantee === 'number');
+    assert.equal(
+        run.summary.offBannerStandard6,
+        run.banners.reduce((total, banner) => total + banner.limitedCounts.standard6, 0)
+    );
 });
 
 test('text seeds are stable 32-bit values and every strategy can run once', () => {

@@ -87,6 +87,20 @@ test('single-run paid options exist and Interactive Pull has no Free Banner cont
     assert.doesNotMatch(html, /id="wallet-next-dossier-tickets"/);
 });
 
+test('strategy simulator is the default tab and tabs follow the requested order', () => {
+    const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+    const nav = html.match(/<nav class="tabs-navigation"[\s\S]*?<\/nav>/)?.[0] || '';
+    const tabIds = [...nav.matchAll(/id="(btn-tab-[^"]+)"/g)].map(match => match[1]);
+    assert.deepEqual(tabIds, [
+        'btn-tab-simulator',
+        'btn-tab-single-run',
+        'btn-tab-interactive'
+    ]);
+    assert.match(nav, /id="btn-tab-simulator"[^>]*class="tab-btn active"|class="tab-btn active"[^>]*id="btn-tab-simulator"/);
+    assert.match(html, /<main class="tab-content active" id="simulator-tab"/);
+    assert.match(html, /<main class="tab-content" id="interactive-tab"[^>]*hidden/);
+});
+
 test('strategy comparison table uses the compact ten-column layout', () => {
     const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
     const table = html.match(/<table class="comparison-table">([\s\S]*?)<\/table>/)?.[1] || '';

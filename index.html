@@ -38,9 +38,9 @@
             </div>
             <div class="header-controls">
                 <nav class="tabs-navigation" role="tablist" aria-label="Main sections">
-                    <button class="tab-btn active" id="btn-tab-interactive" data-tab="interactive-tab" data-i18n="tabs.interactive" role="tab" aria-selected="true" aria-controls="interactive-tab">Quay tương tác</button>
-                    <button class="tab-btn" id="btn-tab-simulator" data-tab="simulator-tab" data-i18n="tabs.simulator" role="tab" aria-selected="false" aria-controls="simulator-tab" tabindex="-1">Mô phỏng chiến thuật</button>
-                    <button class="tab-btn" id="btn-tab-single-run" data-tab="single-run-tab" data-i18n="tabs.singleRun" role="tab" aria-selected="false" aria-controls="single-run-tab" tabindex="-1">Gacha Simulator</button>
+                    <button class="tab-btn active" id="btn-tab-simulator" data-tab="simulator-tab" data-i18n="tabs.simulator" role="tab" aria-selected="true" aria-controls="simulator-tab">Mô phỏng chiến thuật</button>
+                    <button class="tab-btn" id="btn-tab-single-run" data-tab="single-run-tab" data-i18n="tabs.singleRun" role="tab" aria-selected="false" aria-controls="single-run-tab" tabindex="-1">Mô phỏng một lượt</button>
+                    <button class="tab-btn" id="btn-tab-interactive" data-tab="interactive-tab" data-i18n="tabs.interactive" role="tab" aria-selected="false" aria-controls="interactive-tab" tabindex="-1">Quay tương tác</button>
                 </nav>
                 <button class="docs-trigger" id="btn-open-docs" type="button" data-i18n="docs.open">Tài liệu</button>
                 <div class="locale-switcher" role="group" data-i18n-aria-label="language.label" aria-label="Ngôn ngữ">
@@ -51,8 +51,8 @@
             </div>
         </header>
 
-        <!-- TAB 1: INTERACTIVE PULL -->
-        <main class="tab-content active" id="interactive-tab" role="tabpanel" aria-labelledby="btn-tab-interactive" tabindex="0">
+        <!-- INTERACTIVE PULL -->
+        <main class="tab-content" id="interactive-tab" role="tabpanel" aria-labelledby="btn-tab-interactive" tabindex="0" hidden>
             <div class="interactive-layout">
                 <!-- Banner & Stats Side (Left) -->
                 <div class="banner-side-container" style="display: flex; flex-direction: column; gap: 24px;">
@@ -115,12 +115,12 @@
                                 <div style="font-size: 12px; color: var(--text-secondary); display: flex; flex-direction: column; gap: 6px;">
                                     <div><span data-i18n="stats.totalPulls">Tổng lượt quay:</span> <span id="stat-char-total" style="color: var(--text-white); font-weight: 700;">0</span> (Urgent: <span id="stat-char-urgent" style="color: var(--text-white);">0</span>, Dossier: <span id="stat-char-dossier" style="color: var(--text-white);">0</span>)</div>
                                     <div><span data-i18n="stats.sixStar">Số 6★ trúng:</span> <span id="stat-char-6star" style="color: var(--star-6); font-weight: 700;">0</span> (<span id="stat-char-6star-rate" style="font-weight: 600; color: var(--text-primary);">0.0%</span>)</div>
-                                    <div style="padding-left: 8px; font-size: 11px;">- Limited (New): <span id="stat-char-6star-lim-new" style="color: var(--text-white); font-weight: 600;">0</span></div>
-                                    <div style="padding-left: 8px; font-size: 11px;">- Limited Dupe: <span id="stat-char-6star-lim-dupe" style="color: var(--text-white); font-weight: 600;">0</span></div>
-                                    <div style="padding-left: 8px; font-size: 11px;"><span data-i18n="stats.offBannerLimited">– Lệch Limited:</span> <span id="stat-char-6star-lech-lim" style="color: var(--text-white); font-weight: 600;">0</span></div>
+                                    <div style="padding-left: 8px; font-size: 11px;"><span data-i18n="stats.limitedNew">– Limited mới:</span> <span id="stat-char-6star-lim-new" style="color: var(--text-white); font-weight: 600;">0</span> (<span id="stat-char-6star-lim-new-rate">0,0%</span>)</div>
+                                    <div style="padding-left: 8px; font-size: 11px;"><span data-i18n="stats.limitedDupe">– Limited trùng:</span> <span id="stat-char-6star-lim-dupe" style="color: var(--text-white); font-weight: 600;">0</span> (<span id="stat-char-6star-lim-dupe-rate">0,0%</span>)</div>
+                                    <div style="padding-left: 8px; font-size: 11px;"><span data-i18n="stats.offBannerLimited">– Lệch Limited:</span> <span id="stat-char-6star-lech-lim" style="color: var(--text-white); font-weight: 600;">0</span> (<span id="stat-char-6star-lech-lim-rate">0,0%</span>)</div>
                                     <div><span data-i18n="stats.fiveStar">Số 5★ trúng:</span> <span id="stat-char-5star" style="color: var(--star-5); font-weight: 700;">0</span> (<span id="stat-char-5star-rate" style="font-weight: 600; color: var(--text-primary);">0.0%</span>)</div>
                                     <div><span data-i18n="stats.potential">Token Potential mốc 240:</span> <span id="stat-char-potential" style="color: var(--orange-primary); font-weight: 700;">0</span></div>
-                                    <div><span data-i18n="stats.averageSix">Số pull trung bình / 6★:</span> <span id="stat-char-avg-pull" style="color: var(--orange-primary); font-weight: 700;">--</span></div>
+                                    <div><span data-i18n="stats.averageSix">Trung bình số pull / Limited:</span> <span id="stat-char-avg-pull" style="color: var(--orange-primary); font-weight: 700;">--</span></div>
                                 </div>
                             </div>
                             <!-- Weapon Stats -->
@@ -161,8 +161,8 @@
             </div>
         </main>
 
-        <!-- TAB 2: STRATEGY SIMULATOR -->
-        <main class="tab-content" id="simulator-tab" role="tabpanel" aria-labelledby="btn-tab-simulator" tabindex="0" hidden>
+        <!-- DEFAULT TAB: STRATEGY SIMULATOR -->
+        <main class="tab-content active" id="simulator-tab" role="tabpanel" aria-labelledby="btn-tab-simulator" tabindex="0">
             <div class="simulator-layout">
                 <!-- Control Panel (Left Column) -->
                 <aside class="control-panel glass-panel">
@@ -314,15 +314,15 @@
                                 <thead>
                                     <tr>
                                         <th class="tooltip-header sticky-col" data-i18n="table.strategy" data-i18n-tooltip="table.tooltip.strategy">Chiến thuật</th>
-                                        <th class="tooltip-header col-char-pulls" data-i18n="table.charPulls" data-i18n-tooltip="table.tooltip.charPulls">Pull NV</th>
-                                        <th class="tooltip-header col-char-wallet" data-i18n="table.charRemaining" data-i18n-tooltip="table.tooltip.charRemaining">Vé NV dư</th>
-                                        <th class="tooltip-header col-char-results" data-i18n="table.charResults" data-i18n-tooltip="table.tooltip.charResults">Kết quả NV</th>
+                                        <th class="tooltip-header col-char-pulls" data-i18n="table.charPulls" data-i18n-tooltip="table.tooltip.charPulls">Lượt quay NV</th>
+                                        <th class="tooltip-header col-char-wallet" data-i18n="table.charRemaining" data-i18n-tooltip="table.tooltip.charRemaining">Vé NV còn lại</th>
+                                        <th class="tooltip-header col-char-results" data-i18n="table.charResults" data-i18n-tooltip="table.tooltip.charResults">Kết quả nhân vật</th>
                                         <th class="tooltip-header col-efficiency" data-i18n="table.efficiency" data-i18n-tooltip="table.tooltip.efficiency">Hiệu quả</th>
-                                        <th class="tooltip-header col-range" data-i18n="table.featuredRange" data-i18n-tooltip="table.tooltip.featuredRange">Cực trị Limited</th>
-                                        <th class="tooltip-header col-meta" data-i18n="table.metaObtained" data-i18n-tooltip="table.tooltip.metaObtained">Meta (Char/Vũ khí)</th>
-                                        <th class="tooltip-header col-weapon-results" data-i18n="table.weaponResults" data-i18n-tooltip="table.tooltip.weaponResults">Kết quả VK</th>
-                                        <th class="tooltip-header col-weapon-pulls" data-i18n="table.weaponUsed" data-i18n-tooltip="table.tooltip.weaponUsed">Pull VK</th>
-                                        <th class="tooltip-header col-ownership" data-i18n="table.ownership" data-i18n-tooltip="table.tooltip.ownership">Đủ Limited (%)</th>
+                                        <th class="tooltip-header col-range" data-i18n="table.featuredRange" data-i18n-tooltip="table.tooltip.featuredRange">Khoảng Limited</th>
+                                        <th class="tooltip-header col-meta" data-i18n="table.metaObtained" data-i18n-tooltip="table.tooltip.metaObtained">Meta (NV/Vũ khí)</th>
+                                        <th class="tooltip-header col-weapon-results" data-i18n="table.weaponResults" data-i18n-tooltip="table.tooltip.weaponResults">Kết quả vũ khí</th>
+                                        <th class="tooltip-header col-weapon-pulls" data-i18n="table.weaponUsed" data-i18n-tooltip="table.tooltip.weaponUsed">Lượt quay VK</th>
+                                        <th class="tooltip-header col-ownership" data-i18n="table.ownership" data-i18n-tooltip="table.tooltip.ownership">Hoàn thành Limited (%)</th>
                                     </tr>
                                 </thead>
                                 <tbody id="comparison-table-body">
@@ -386,7 +386,7 @@
                 <aside class="control-panel glass-panel single-run-controls">
                     <div>
                         <span class="eyebrow" data-i18n="single.eyebrow">ONE PLAYER · FULL TRACE</span>
-                        <h3 class="panel-title" data-i18n="single.title">Gacha Simulator</h3>
+                        <h3 class="panel-title" data-i18n="single.title">Mô phỏng một lượt</h3>
                         <p class="panel-intro" data-i18n="single.intro">Chạy đúng một người chơi và theo dõi toàn bộ quyết định, pity, tài nguyên và kết quả qua từng banner.</p>
                     </div>
 
@@ -525,6 +525,12 @@
 
                 <section class="docs-section">
                     <h3 data-i18n="docs.strategiesTitle">Năm chiến thuật mô phỏng</h3>
+                    <div class="docs-rule-grid docs-strategy-common">
+                        <article class="docs-rule-wide">
+                            <strong data-i18n="docs.strategyCommonTitle">Quy tắc chung khi quyết định roll/skip</strong>
+                            <p data-i18n="docs.strategyCommon">Mọi banner thực hiện các lượt miễn phí trước khi chiến thuật ra quyết định; Dossier sắp hết hạn và tối ưu mốc 30 vẫn có thể chạy dù chiến thuật skip.</p>
+                        </article>
+                    </div>
                     <div class="docs-strategy-list">
                         <article><span>01</span><div><strong data-i18n="strategy.save_commit.name">Save &amp; Commit</strong><p data-i18n="docs.saveCommit">Chỉ roll khi có đủ vé bảo hiểm 120 lượt (ví + Dossier); dừng sau cụm chứa Featured hoặc tại mốc 120.</p></div></article>
                         <article><span>02</span><div><strong data-i18n="strategy.save_commit_single.name">Save &amp; Commit (Quay lẻ)</strong><p data-i18n="docs.saveSingle">Điều kiện tích vé giống Save &amp; Commit nhưng quay từng lượt và dừng ngay khi nhận Featured.</p></div></article>

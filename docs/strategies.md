@@ -8,15 +8,13 @@ Mọi chiến thuật đều thực hiện theo thứ tự sau:
 
 1. Vé Dossier tích lũy ở banner trước trở thành vé khả dụng; vé khả dụng cũ chưa dùng hết hạn.
 2. Nhận thu nhập vé nhân vật được cấu hình cho banner.
-3. Quay 15 lượt Standard miễn phí để ghi nhận Operator, Bond Quota và Arsenal rebate.
-4. Quay bắt buộc 10 lượt Limited miễn phí.
-5. Quyết định có chi vé trong ví hay không theo chiến thuật.
-6. Nếu chiến thuật skip nhưng còn Dossier sắp hết hạn, tự động dùng hết Dossier.
-7. Nếu đã đạt từ 20 đến 29 lượt mà chưa có featured, có thể dùng tối đa 10 vé ví để chạm mốc 30.
-8. Ngay khi lượt hợp lệ thứ 30 hoàn tất, bắt buộc thực hiện đủ 10 Urgent Recruitment miễn phí trước khi tiếp tục bất kỳ lượt Limited hoặc quyết định nào khác. Urgent không thể để dành.
-9. Khi Bond Quota đạt 25, tự động đổi thành vé nhân vật và cộng ngay vào ví; vé mới có thể được dùng tiếp trong chính banner đang chạy.
-10. Tại mỗi 240 lượt hợp lệ trên cùng banner, ghi nhận một token Potential của featured 6★.
-11. Cộng Arsenal rebate cùng thu nhập Arsenal ngoài gacha, sau đó áp dụng chính sách quay vũ khí của chiến thuật.
+3. Thực hiện toàn bộ roll bắt buộc: 15 Standard miễn phí, 10 Limited miễn phí, Dossier sắp hết hạn và các mốc chắc chắn roll.
+4. Trong pha bắt buộc, nếu đã đạt 20–29 lượt, chưa có Featured và ví đủ phần thiếu, dùng vé ví để chạm đúng mốc 30 rồi thực hiện đủ 10 Urgent Recruitment miễn phí.
+5. Chỉ sau khi toàn bộ roll bắt buộc kết thúc mới chụp trạng thái và kiểm tra ngân sách còn lại. Nếu bỏ quy tắc chắc chắn lên mốc 30, budget được kiểm tra ngay tại trạng thái sau Dossier (ví dụ mốc 20).
+6. Thực thi quyết định roll/skip của chiến thuật.
+7. Khi Bond Quota đạt 25, tự động đổi thành vé nhân vật và cộng ngay vào ví; vé mới có thể được dùng tiếp trong chính banner đang chạy.
+8. Tại mỗi 240 lượt hợp lệ trên cùng banner, ghi nhận một token Potential của featured 6★.
+9. Cộng Arsenal rebate cùng thu nhập Arsenal ngoài gacha, sau đó áp dụng chính sách quay vũ khí của chiến thuật.
 
 ### Quy tắc chuyển sang roll x1
 
@@ -60,6 +58,7 @@ ID: `pull_60`
 - Nếu không đủ mốc 60 nhưng tổng tài nguyên có ít nhất 20 lượt, quay đến mốc 30.
 - Nếu không đủ mốc 30, chiến thuật skip ngoài các lượt miễn phí và Dossier bắt buộc phải dùng.
 - Không dừng sớm khi nhận featured; mục tiêu chính là hoàn thành mốc đã chọn.
+- Nếu đã đạt mốc 60 mà chưa nhận featured, chiến thuật chỉ nâng mục tiêu lên 120 khi vé hiện có, Bond Quota hoàn tối thiểu và thu nhập banner kế tiếp vẫn bảo vệ được mục tiêu mốc 60 của banner sau.
 - Sau khi nhận featured Operator, chỉ bắt đầu quay vũ khí khi đã tích đủ 15.840 Arsenal Tickets, tương đương tám Issue.
 - Dừng quay vũ khí khi nhận featured hoặc phần thưởng mốc được simulator tính là featured.
 
@@ -80,7 +79,7 @@ ID: `roll_meta`
 - Một Issue luôn được tính là 10 lượt và tiêu tốn 1.980 Arsenal Tickets.
 - Các chiến thuật dừng săn vũ khí khi nhận featured trực tiếp hoặc khi phần thưởng mốc trả về `featured_weapon`.
 - `selector_box` là hộp chọn 6★ ngoài rate-up: tăng thống kê 6★ Standard và hộp chọn, nhưng không tăng Featured Weapon và không hoàn thành mục tiêu săn Featured.
-- Save & Commit yêu cầu ngân sách đủ tám Issue trước khi bắt đầu; các chiến thuật còn lại có thể bắt đầu ngay khi đủ một Issue và thỏa điều kiện featured Operator của chúng.
+- Save & Commit, Save & Commit — Roll lẻ và Pull 60 yêu cầu đủ tám Issue trước khi bắt đầu. Yolo có thể bắt đầu từ một Issue. Roll Meta áp dụng điều kiện riêng: banner Meta dùng Arsenal khả dụng sau khi có featured Operator; banner thường phải đủ tám Issue hiện tại và bảo toàn ngân sách cho banner Meta kế tiếp.
 
 ## Giả định mô hình cần tiếp tục xác minh
 
@@ -94,9 +93,3 @@ Các giá trị sau đang được dùng trong code để mô phỏng dupe và B
 - Pity 6★ của Arsenal (`issuesSince6`) hiện được giữ khi đổi Issue banner, trong khi featured guarantee và số Issue cột mốc reset.
 
 Những giả định này cần được thay bằng dữ liệu pool/sở hữu đầu vào nếu simulator phát triển theo hướng mô phỏng tài khoản thực tế.
-
-## Run kiểm chứng chi tiết
-
-[`reports/detailed_gacha_run.md`](../reports/detailed_gacha_run.md) là một run Save & Commit có seed cố định `20260711`, dùng để kiểm tra thứ tự quyết định, pity 80/120, mốc 30/60, Urgent, Dossier, Bond Quota và Arsenal qua 10 banner.
-
-Run này gọi trực tiếp cùng `SimulatorPlayer` và `runSingleBannerForPlayer()` mà giao diện web sử dụng. Với cùng seed và cấu hình, tab Gacha Simulator có thể tái tạo cùng timeline. Mô phỏng Monte Carlo nhiều người chơi vẫn dùng `Math.random()` và không có seed đầu vào, nên mỗi lần chạy có cùng logic nhưng không nhất thiết cho đúng cùng một mẫu ngẫu nhiên.

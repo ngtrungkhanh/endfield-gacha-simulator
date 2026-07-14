@@ -53,6 +53,9 @@ test('single file release matches inlined source and checksum is valid', { skip:
     assert.equal(existsSync(singleHtmlPath), true, 'singleHtmlPath exists');
     const singleHtml = readFileSync(singleHtmlPath, 'utf8');
 
+    assert.equal(singleHtml.includes('<script src="js/bundle.js"></script>'), false, 'source script tag was fully replaced');
+    assert.equal((singleHtml.match(/<script(?:\s|>)/g) || []).length, 2, 'single file keeps the error handler and one bundled script');
+
     // Verify CSS is inlined
     const css = readFileSync(join(dist, 'css/style.css'), 'utf8');
     assert.equal(singleHtml.includes(`<style>${css}</style>`), true, 'CSS is inlined');

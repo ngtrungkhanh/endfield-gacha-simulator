@@ -1,80 +1,120 @@
-# Arknights: Endfield Gacha Simulator v1.2.4
+# A9E Gacha Simulator
 
-Trình giả lập gacha dành cho **Arknights: Endfield**, hỗ trợ quay tương tác và mô phỏng Monte Carlo để so sánh các chiến thuật sử dụng tài nguyên qua nhiều banner.
+**Tiếng Việt** · [English](README.en.md)
 
-An offline-first Vietnamese/English gacha simulator for **Arknights: Endfield**, with interactive pulls and Monte Carlo strategy comparisons.
+A9E Gacha Simulator là ứng dụng mô phỏng gacha dành cho **Arknights: Endfield**. Ứng dụng hỗ trợ quay thử trực tiếp, so sánh chiến thuật bằng mô phỏng Monte Carlo và xem chi tiết toàn bộ diễn biến của một người chơi qua nhiều banner.
 
----
+Ứng dụng chạy hoàn toàn offline, không gửi dữ liệu ra ngoài và hỗ trợ chuyển đổi tức thời giữa tiếng Việt và tiếng Anh.
 
-## Tính năng nổi bật
+## Bắt đầu nhanh
 
-### 1. Quay tương tác (Interactive Pulls)
-- Quay Operator và vũ khí trực tiếp trên giao diện trực quan.
-- Theo dõi pity hiện tại dạng `xx/80`, kết quả quay, Dossier, Bond Quota, Arsenal rebate và thống kê tài nguyên đã sử dụng/nhận được.
-- **Bảo hiểm Featured động (Dynamic Featured Pity)**: bảo đảm Featured đầu tiên ở mốc 120; nếu tiếp tục quay trên cùng banner, các bản tiếp theo được bảo đảm tại mốc tổng 240/480/720/960... Bản Featured trùng được ghi nhận thành dupe/Potential và nhận Bond Quota theo mô hình tài khoản hiện tại.
-- **Hệ thống Vé Dossier**: Tích lũy 10 vé Dossier khi đạt mốc 60 lượt quay trên banner hiện tại, tự động tích lũy và ưu tiên sử dụng trước khi chuyển sang banner tiếp theo.
-- Tự động gợi ý chuyển banner khi quay trúng nhân vật Featured của banner hiện tại.
+### Dùng bản phát hành
 
-### 2. Mô phỏng chiến thuật (Strategy Simulator)
-- Chạy giả lập Monte Carlo nhiều người chơi qua chu kỳ Banner (Banner cycles) để so sánh hiệu năng.
-- Tích hợp 5 chiến thuật gacha thông minh: *Save & Commit*, *Save & Commit (Roll lẻ)*, *Yolo / Spend All*, *Pull 60*, và *Roll Meta*.
-- Số banner Meta do người dùng cấu hình; các vị trí Meta được chọn ngẫu nhiên trong chuỗi banner và dùng chung khi so sánh các chiến thuật.
-- Tích hợp nút **Reset cài đặt** để khôi phục cấu hình mặc định và xóa cache cũ một cách an toàn.
-- So sánh hiệu suất chi tiêu bằng bảng thống kê chi tiết và biểu đồ trực quan (sử dụng thư viện Chart.js).
+1. Tải file `A9EGacha_<phiên-bản>.html` mới nhất trong thư mục `release/` hoặc từ trang GitHub Releases.
+2. Mở file bằng trình duyệt hiện đại như Chrome, Edge hoặc Firefox.
+3. Không cần cài Node.js, không cần chạy server và không cần kết nối mạng.
 
-### 3. Gacha Simulator (Single Run)
-- Chạy giả lập chi tiết cho một người chơi với hạt giống (seed) ngẫu nhiên hoặc tự nhập.
-- Theo dõi toàn bộ timeline quyết định, pity, tài nguyên và kết quả quay chi tiết qua từng mùa banner.
+### Chạy trực tiếp từ mã nguồn
 
-### 4. Thiết kế kỹ thuật & Offline-First
-- Chuyển đổi toàn bộ giao diện giữa tiếng Việt và tiếng Anh tức thời mà không cần reload.
-- Lưu trữ cấu hình và kết quả gần nhất trong `localStorage`.
-- Đóng gói toàn bộ tài nguyên (JS, CSS, Chart.js) thành một file HTML duy nhất **`A9EGacha_1.2.4.html`** có thể chạy trực tiếp qua giao diện file (`file://`) hoàn toàn không cần kết nối mạng hay server.
+Clone repository rồi mở `index.html`. Repository lưu sẵn `js/bundle.js`, vì vậy trang có thể chạy trực tiếp mà không cần build trước.
 
----
+## Ba chế độ chính
 
-## Hướng dẫn phát triển và kiểm thử
+### Quay tương tác
 
-### Cài đặt dependencies
+Dùng chế độ này để tự quay banner nhân vật và vũ khí:
+
+- Quay x1, x10 và Weapon Issue.
+- Theo dõi pity 5★, pity 6★, bảo hiểm Featured 120 và các mốc banner.
+- Quản lý vé nhân vật, Dossier, Bond Quota và Arsenal.
+- Xem lịch sử kết quả, nhân vật/vũ khí sở hữu và đánh giá may mắn.
+- Chuyển banner trong khi vẫn giữ các trạng thái được phép kế thừa.
+
+### Mô phỏng chiến thuật
+
+Dùng chế độ này để so sánh năm cách sử dụng tài nguyên trên cùng một cấu hình:
+
+- Save & Commit.
+- Save & Commit — Quay lẻ.
+- Yolo / Dùng hết.
+- Mốc 60.
+- Quay theo Meta.
+
+Nhập số người chơi, số banner, tài nguyên ban đầu và thu nhập mỗi banner, sau đó chọn **Chạy giả lập**. Kết quả gồm số Featured trung bình, hiệu suất sử dụng vé, kết quả vũ khí, tỷ lệ hoàn thành toàn bộ Limited và biểu đồ phân phối.
+
+Mô phỏng Monte Carlo phản ánh kết quả trung bình của nhiều lượt chạy ngẫu nhiên; đây không phải bảo đảm cho tài khoản thật.
+
+### Gacha Simulator — một người chơi
+
+Chế độ này chạy đúng một người chơi và hiển thị chi tiết từng banner:
+
+- Quyết định roll hoặc skip của chiến thuật.
+- Các lượt Standard, Limited, Urgent và Dossier.
+- Thay đổi pity, Bond Quota, Arsenal và số dư cuối banner.
+- Vị trí chính xác nhận Featured Operator hoặc Featured Weapon.
+
+Có thể nhập lại cùng một seed và cấu hình để tái tạo kết quả.
+
+## Ngôn ngữ và lưu dữ liệu
+
+- Chọn `VI` hoặc `EN` ở góc trên bên phải để đổi ngôn ngữ giao diện.
+- Cấu hình, trạng thái quay tương tác và kết quả gần nhất được lưu trong `localStorage` của trình duyệt.
+- Nút reset trong ứng dụng sẽ đưa cấu hình liên quan về mặc định.
+
+## Luật và giả định mô phỏng
+
+- [Luật gacha](docs/gacha_rules.md)
+- [Chi tiết các chiến thuật](docs/strategies.md)
+- [Snapshot dữ liệu thu nhập](data/bookkeeping.md)
+
+Một số dữ liệu như pool sở hữu, Bond Quota và xác suất lệch Limited là giả định của mô hình, không phải toàn bộ đều là luật chính thức. Các giả định đang dùng được ghi rõ trong tài liệu.
+
+## Dành cho nhà phát triển
+
+Yêu cầu: Node.js 20 trở lên và npm.
+
 ```bash
 npm ci
-```
-
-### Chạy kiểm thử tự động
-```bash
 npm test
 ```
 
-### Biên dịch lại mã nguồn khi có thay đổi (js/ -> js/bundle.js)
+Sau khi sửa bất kỳ file nguồn JavaScript nào trong `js/`, phải tạo lại bundle để `index.html` chạy ngay:
+
 ```bash
 npm run build
 ```
 
-### Theo dõi thay đổi tự động khi phát triển
+Có thể tự động build lại trong lúc phát triển:
+
 ```bash
 npm run watch
 ```
 
-### Đóng gói bản phát hành offline đơn nhất
+Chỉ tạo hoặc cập nhật file trong `release/` khi tăng phiên bản hoặc khi được yêu cầu phát hành:
+
 ```bash
 npm run package
 ```
-Sau khi hoàn tất, file HTML độc lập sẽ được tạo tại:
-- Thư mục gốc: `A9EGacha_1.2.4.html`
-- Thư mục phát hành: `release/A9EGacha_1.2.4.html` (đi kèm mã băm SHA-256 để kiểm chứng toàn vẹn).
 
----
+Các đầu ra:
 
-## Cấu trúc mã nguồn
+- `js/bundle.js`: bundle được commit để `index.html` chạy trực tiếp.
+- `dist/`: bản production trung gian, có thể xóa và tạo lại.
+- `release/A9EGacha_<phiên-bản>.html`: file offline đơn nhất kèm checksum SHA-256.
 
-- `index.html`: Giao diện ứng dụng chính.
-- `css/style.css`: Hệ thống CSS, bố cục và hiệu ứng responsive.
-- `js/gacha-math.js`: Xác suất, pity, bảo hiểm động và kết quả quay gacha.
-- `js/strategies.js`: Trạng thái người chơi và logic 5 chiến thuật mô phỏng.
-- `js/simulator.js`: Bộ điều phối chạy Monte Carlo.
-- `js/single-run.js`: Trình chạy một người chơi có seed để tái lập và kết xuất timeline.
-- `js/chart-helper.js`: Tích hợp vẽ biểu đồ Chart.js.
-- `js/app.js`: Điểm khởi chạy (entry point), điều khiển DOM và đồng bộ LocalStorage.
-- `js/i18n.js`: Quản lý đa ngôn ngữ VI/EN và định dạng số theo locale.
-- `js/bundle.js`: File đóng gói runtime hoàn chỉnh cho trình duyệt.
-- `reports/detailed_gacha_run.md`: Báo cáo chạy Save & Commit một người qua 10 banner mẫu để kiểm chứng simulator.
+## Cấu trúc dự án
+
+```text
+css/       Giao diện và responsive layout
+data/      Snapshot dữ liệu dùng để đối chiếu
+docs/      Luật gacha và mô tả chiến thuật
+js/        Mã nguồn ứng dụng và bundle trình duyệt
+scripts/   Công cụ build, đóng gói và phát hành
+test/      Kiểm thử tự động
+dist/      Build production tạm thời, không commit
+release/   File HTML phát hành và checksum, không commit
+```
+
+## Lưu ý
+
+Đây là công cụ mô phỏng cộng đồng, không phải sản phẩm chính thức của Hypergryph. Không sử dụng kết quả mô phỏng như cam kết nhận được nhân vật hoặc vũ khí cụ thể.

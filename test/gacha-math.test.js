@@ -150,6 +150,98 @@ test('Pull 60 counts Dossier toward its budget', () => {
     assert.equal(player.currentBannerDossierTickets, 0);
 });
 
+test('all guaranteed rolls are resolved before the wallet budget decision', () => {
+    const player = new SimulatorPlayer(1);
+    player.charTickets = 120;
+    player.nextBannerDossierTickets = 10;
+    const charState = characterState();
+    const weaponState = { issuesCount: 0, issuesSince6: 0, issuesSinceFeatured: 0, featuredGuaranteeConsumed: false };
+    useRandomSequence([]);
+
+    const result = runSingleBannerForPlayer('save_commit', player, charState, weaponState, 0, 0, 0, 1);
+    const firstWalletPull = result.charPulls.find(item => item.actionPhase === 'commit');
+
+    assert.equal(result.decisionState.dossierPullsUsed, 10);
+    assert.equal(result.decisionState.dossierTickets, 0);
+    assert.equal(result.decisionState.bannerPullsCount, 30);
+    assert.equal(result.decisionState.preBudgetWalletPullsUsed, 10);
+    assert.equal(player.totalUrgentPulls, 10);
+    assert.ok(result.charPulls.slice(10, 20).every(item => item.actionPhase === 'dossier'));
+    assert.ok(result.charPulls.slice(20, 40).every(item => item.actionPhase === 'optimize30'));
+    assert.equal(firstWalletPull.bannerPullsCountAfter, 31);
+});
+
+test('Save & Commit can disable spending up to 10 wallet pulls to turn Dossier into Urgent', () => {
+    const runVariant = (optimizeDossierToUrgent) => {
+        const player = new SimulatorPlayer(1);
+        player.charTickets = 10;
+        player.nextBannerDossierTickets = 10;
+        const charState = characterState();
+        const weaponState = { issuesCount: 0, issuesSince6: 0, issuesSinceFeatured: 0, featuredGuaranteeConsumed: false };
+        useRandomSequence([]);
+
+        const result = runSingleBannerForPlayer(
+            'save_commit',
+            player,
+            charState,
+            weaponState,
+            0,
+            0,
+            0,
+            1,
+            { optimizeDossierToUrgent }
+        );
+        return { player, charState, result };
+    };
+
+    const disabled = runVariant(false);
+    assert.equal(disabled.charState.bannerPullsCount, 20);
+    assert.equal(disabled.player.totalUrgentPulls, 0);
+    assert.equal(disabled.result.decisionState.bannerPullsCount, 20);
+    assert.equal(disabled.result.decisionState.preBudgetWalletPullsUsed, 0);
+
+    const enabled = runVariant(true);
+    assert.equal(enabled.charState.bannerPullsCount, 30);
+    assert.equal(enabled.player.totalUrgentPulls, 10);
+    assert.equal(enabled.result.decisionState.bannerPullsCount, 30);
+    assert.equal(enabled.result.decisionState.preBudgetWalletPullsUsed, 10);
+});
+
+test('pre-budget pulls are deducted from the remaining guarantee budget', () => {
+    const player = new SimulatorPlayer(1);
+    player.charTickets = 94;
+    player.nextBannerDossierTickets = 10;
+    const charState = characterState();
+    const weaponState = { issuesCount: 0, issuesSince6: 0, issuesSinceFeatured: 0, featuredGuaranteeConsumed: false };
+    useRandomSequence([]);
+
+    const result = runSingleBannerForPlayer('save_commit', player, charState, weaponState, 0, 0, 0, 1);
+    const firstCommitPull = result.charPulls.find(item => item.actionPhase === 'commit');
+
+    assert.equal(result.decisionState.bannerPullsCount, 30);
+    assert.equal(result.decisionState.worstCaseWalletCost120, 86);
+    assert.equal(result.decisionState.charTickets, 86);
+    assert.equal(result.decisionState.canAfford120, true);
+    assert.equal(firstCommitPull.bannerPullsCountAfter, 31);
+});
+
+test('a guaranteed pre-budget target finishes even if Featured appears on the way to pull 30', () => {
+    const player = new SimulatorPlayer(1);
+    player.charTickets = 10;
+    player.nextBannerDossierTickets = 10;
+    const charState = characterState({ pity6: 59 });
+    const weaponState = { issuesCount: 0, issuesSince6: 0, issuesSinceFeatured: 0, featuredGuaranteeConsumed: false };
+    useRandomSequence([...Array(39).fill(0.99), 0.1]);
+
+    const result = runSingleBannerForPlayer('save_commit', player, charState, weaponState, 0, 0, 0, 1);
+    const optimizedPulls = result.charPulls.filter(item => item.actionPhase === 'optimize30');
+
+    assert.ok(optimizedPulls.some(item => !item.isUrgent && item.isFeatured));
+    assert.equal(result.decisionState.bannerPullsCount, 30);
+    assert.equal(player.totalUrgentPulls, 10);
+    assert.equal(optimizedPulls.length, 20);
+});
+
 test('Pull 60 waits for 8 saved weapon Issues before pulling weapons', () => {
     const runWithArsenal = (arsenalTickets) => {
         const player = new SimulatorPlayer(1);
