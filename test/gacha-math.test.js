@@ -150,7 +150,7 @@ test('Pull 60 counts Dossier toward its budget', () => {
     assert.equal(player.currentBannerDossierTickets, 0);
 });
 
-test('all guaranteed rolls are resolved before the wallet budget decision', () => {
+test('budget checkpoint is captured after Free and Dossier but before paid pull 30 optimization', () => {
     const player = new SimulatorPlayer(1);
     player.charTickets = 120;
     player.nextBannerDossierTickets = 10;
@@ -163,7 +163,7 @@ test('all guaranteed rolls are resolved before the wallet budget decision', () =
 
     assert.equal(result.decisionState.dossierPullsUsed, 10);
     assert.equal(result.decisionState.dossierTickets, 0);
-    assert.equal(result.decisionState.bannerPullsCount, 30);
+    assert.equal(result.decisionState.bannerPullsCount, 20);
     assert.equal(result.decisionState.preBudgetWalletPullsUsed, 10);
     assert.equal(player.totalUrgentPulls, 10);
     assert.ok(result.charPulls.slice(10, 20).every(item => item.actionPhase === 'dossier'));
@@ -171,10 +171,10 @@ test('all guaranteed rolls are resolved before the wallet budget decision', () =
     assert.equal(firstWalletPull.bannerPullsCountAfter, 31);
 });
 
-test('Save & Commit can disable spending up to 10 wallet pulls to turn Dossier into Urgent', () => {
-    const runVariant = (optimizeDossierToUrgent) => {
+test('Save & Commit only optimizes pull 30 after the pull 120 budget is approved', () => {
+    const runVariant = (charTickets, optimizeDossierToUrgent) => {
         const player = new SimulatorPlayer(1);
-        player.charTickets = 10;
+        player.charTickets = charTickets;
         player.nextBannerDossierTickets = 10;
         const charState = characterState();
         const weaponState = { issuesCount: 0, issuesSince6: 0, issuesSinceFeatured: 0, featuredGuaranteeConsumed: false };
@@ -194,20 +194,27 @@ test('Save & Commit can disable spending up to 10 wallet pulls to turn Dossier i
         return { player, charState, result };
     };
 
-    const disabled = runVariant(false);
-    assert.equal(disabled.charState.bannerPullsCount, 20);
-    assert.equal(disabled.player.totalUrgentPulls, 0);
+    const insufficient = runVariant(10, true);
+    assert.equal(insufficient.charState.bannerPullsCount, 20);
+    assert.equal(insufficient.player.totalUrgentPulls, 0);
+    assert.equal(insufficient.result.decisionState.canAfford120, false);
+    assert.equal(insufficient.result.decisionState.preBudgetWalletPullsUsed, 0);
+
+    const disabled = runVariant(120, false);
+    assert.equal(disabled.charState.bannerPullsCount, 120);
+    assert.equal(disabled.player.totalUrgentPulls, 10);
     assert.equal(disabled.result.decisionState.bannerPullsCount, 20);
     assert.equal(disabled.result.decisionState.preBudgetWalletPullsUsed, 0);
+    assert.equal(disabled.result.charPulls.some(item => item.actionPhase === 'optimize30'), false);
 
-    const enabled = runVariant(true);
-    assert.equal(enabled.charState.bannerPullsCount, 30);
+    const enabled = runVariant(120, true);
+    assert.equal(enabled.charState.bannerPullsCount, 120);
     assert.equal(enabled.player.totalUrgentPulls, 10);
-    assert.equal(enabled.result.decisionState.bannerPullsCount, 30);
+    assert.equal(enabled.result.decisionState.bannerPullsCount, 20);
     assert.equal(enabled.result.decisionState.preBudgetWalletPullsUsed, 10);
 });
 
-test('pre-budget pulls are deducted from the remaining guarantee budget', () => {
+test('Save & Commit skips paid optimization when one ticket short of the safe pull 120 budget', () => {
     const player = new SimulatorPlayer(1);
     player.charTickets = 94;
     player.nextBannerDossierTickets = 10;
@@ -216,18 +223,17 @@ test('pre-budget pulls are deducted from the remaining guarantee budget', () => 
     useRandomSequence([]);
 
     const result = runSingleBannerForPlayer('save_commit', player, charState, weaponState, 0, 0, 0, 1);
-    const firstCommitPull = result.charPulls.find(item => item.actionPhase === 'commit');
-
-    assert.equal(result.decisionState.bannerPullsCount, 30);
-    assert.equal(result.decisionState.worstCaseWalletCost120, 86);
-    assert.equal(result.decisionState.charTickets, 86);
-    assert.equal(result.decisionState.canAfford120, true);
-    assert.equal(firstCommitPull.bannerPullsCountAfter, 31);
+    assert.equal(result.decisionState.bannerPullsCount, 20);
+    assert.equal(result.decisionState.worstCaseWalletCost120, 96);
+    assert.equal(result.decisionState.charTickets, 95);
+    assert.equal(result.decisionState.canAfford120, false);
+    assert.equal(result.decisionState.preBudgetWalletPullsUsed, 0);
+    assert.equal(result.charPulls.some(item => item.actionPhase === 'commit'), false);
 });
 
-test('a guaranteed pre-budget target finishes even if Featured appears on the way to pull 30', () => {
+test('an authorized pull 30 optimization finishes even if Featured appears on the way', () => {
     const player = new SimulatorPlayer(1);
-    player.charTickets = 10;
+    player.charTickets = 120;
     player.nextBannerDossierTickets = 10;
     const charState = characterState({ pity6: 59 });
     const weaponState = { issuesCount: 0, issuesSince6: 0, issuesSinceFeatured: 0, featuredGuaranteeConsumed: false };
@@ -237,7 +243,7 @@ test('a guaranteed pre-budget target finishes even if Featured appears on the wa
     const optimizedPulls = result.charPulls.filter(item => item.actionPhase === 'optimize30');
 
     assert.ok(optimizedPulls.some(item => !item.isUrgent && item.isFeatured));
-    assert.equal(result.decisionState.bannerPullsCount, 30);
+    assert.equal(result.decisionState.bannerPullsCount, 20);
     assert.equal(player.totalUrgentPulls, 10);
     assert.equal(optimizedPulls.length, 20);
 });
@@ -268,6 +274,210 @@ test('Pull 60 waits for 8 saved weapon Issues before pulling weapons', () => {
     assert.equal(atThreshold.result.gotFeaturedChar, true);
     assert.ok(atThreshold.result.weaponIssues.length > 0);
     assert.ok(atThreshold.result.weaponIssues.length <= 8);
+});
+
+test('Pull 60 budget check targets 60 instead of the 120 guarantee', () => {
+    const player = new SimulatorPlayer(1);
+    player.charTickets = 50;
+    const charState = characterState();
+    const weaponState = { issuesCount: 0, issuesSince6: 0, issuesSinceFeatured: 0, featuredGuaranteeConsumed: false };
+    useRandomSequence([]);
+
+    const result = runSingleBannerForPlayer('pull_60', player, charState, weaponState, 0, 0, 0, 1);
+
+    assert.equal(result.decisionState.budgetTargetPulls, 60);
+    assert.equal(result.decisionState.budgetRequiredTickets, 48);
+    assert.equal(result.decisionState.canAffordTarget, true);
+    assert.equal(result.decisionState.selectedTargetPulls, 60);
+    assert.equal(charState.bannerPullsCount, 60);
+});
+
+test('Pull 60 budget check falls back to pull 30 instead of skipping', () => {
+    const player = new SimulatorPlayer(1);
+    player.charTickets = 20;
+    const charState = characterState();
+    const weaponState = { issuesCount: 0, issuesSince6: 0, issuesSinceFeatured: 0, featuredGuaranteeConsumed: false };
+    useRandomSequence([]);
+
+    const result = runSingleBannerForPlayer('pull_60', player, charState, weaponState, 0, 0, 0, 1);
+
+    assert.equal(result.decisionState.budgetTargetPulls, 30);
+    assert.equal(result.decisionState.budgetRequiredTickets, 19);
+    assert.equal(result.decisionState.canAffordTarget, true);
+    assert.equal(result.decisionState.selectedTargetPulls, 30);
+    assert.equal(result.decisionState.fellBackTo30, true);
+    assert.equal(charState.bannerPullsCount, 30);
+});
+
+test('Pull 60 rechecks pull 60 at pull 30 using actual Quota and Urgent results', () => {
+    const player = new SimulatorPlayer(1);
+    player.charTickets = 47;
+    const charState = characterState();
+    const weaponState = { issuesCount: 0, issuesSince6: 0, issuesSinceFeatured: 0, featuredGuaranteeConsumed: false };
+
+    // Hai kết quả 5★ thêm trong đoạn 10 -> 30 tạo đủ một vé để vượt qua
+    // checkpoint lần hai, dù checkpoint đầu banner thiếu một vé cho mốc 60.
+    useRandomSequence([
+        ...Array(35).fill(0.99),
+        0.05,
+        0.05,
+        ...Array(200).fill(0.99)
+    ]);
+
+    const result = runSingleBannerForPlayer(
+        'pull_60',
+        player,
+        charState,
+        weaponState,
+        0,
+        0,
+        0,
+        2,
+        { ticketIncomeSchedule: [0, 0] }
+    );
+
+    assert.equal(result.decisionState.checks.pull60.affordable, false);
+    assert.equal(result.decisionState.checks.pull30.affordable, true);
+    assert.equal(result.decisionState.checks.pull60At30.affordable, true);
+    assert.equal(result.decisionState.selectedTargetPulls, 60);
+    assert.equal(charState.bannerPullsCount, 60);
+});
+
+test('Pull 60 cannot borrow next-banner income to reach pull 120 now', () => {
+    const player = new SimulatorPlayer(1);
+    player.charTickets = 97;
+    const charState = characterState();
+    const weaponState = { issuesCount: 0, issuesSince6: 0, issuesSinceFeatured: 0, featuredGuaranteeConsumed: false };
+    useRandomSequence([]);
+
+    const result = runSingleBannerForPlayer(
+        'pull_60',
+        player,
+        charState,
+        weaponState,
+        0,
+        0,
+        0,
+        2,
+        { ticketIncomeSchedule: [0, 100] }
+    );
+
+    assert.equal(result.decisionState.checks.pull120At60.requiredTickets, 58);
+    assert.equal(result.decisionState.checks.pull120At60.availableTickets, 50);
+    assert.equal(result.decisionState.checks.pull120At60.affordable, false);
+    assert.equal(result.decisionState.upgradedTo120, false);
+    assert.equal(charState.bannerPullsCount, 60);
+});
+
+test('Pull 60 upgrades at pull 60 when current 120 and next 60 are both protected', () => {
+    const player = new SimulatorPlayer(1);
+    player.charTickets = 105;
+    const charState = characterState();
+    const weaponState = { issuesCount: 0, issuesSince6: 0, issuesSinceFeatured: 0, featuredGuaranteeConsumed: false };
+    useRandomSequence([]);
+
+    const result = runSingleBannerForPlayer(
+        'pull_60',
+        player,
+        charState,
+        weaponState,
+        0,
+        0,
+        0,
+        2,
+        { ticketIncomeSchedule: [0, 40] }
+    );
+
+    assert.equal(result.decisionState.checks.pull120At60.availableTickets, 58);
+    assert.equal(result.decisionState.checks.pull120At60.futureIncome, 40);
+    assert.equal(result.decisionState.checks.pull120At60.affordable, true);
+    assert.equal(result.decisionState.upgradedTo120, true);
+    assert.equal(charState.bannerPullsCount, 120);
+});
+
+test('Roll Meta uses a rolling 95-ticket reserve for an adjacent Meta banner', () => {
+    const runWithTickets = (tickets) => {
+        const player = new SimulatorPlayer(1);
+        player.charTickets = tickets;
+        player.metaBannersSet = new Set([1]);
+        const charState = characterState();
+        const weaponState = { issuesCount: 0, issuesSince6: 0, issuesSinceFeatured: 0, featuredGuaranteeConsumed: false };
+        useRandomSequence([]);
+
+        const result = runSingleBannerForPlayer(
+            'roll_meta',
+            player,
+            charState,
+            weaponState,
+            0,
+            0,
+            0,
+            2,
+            { ticketIncomeSchedule: [0, 0] }
+        );
+        return { charState, result };
+    };
+
+    const short = runWithTickets(199);
+    assert.equal(short.result.decisionState.checks.metaReserve.reserveTickets, 95);
+    assert.equal(short.result.decisionState.checks.metaReserve.affordable, false);
+    assert.equal(short.charState.bannerPullsCount, 10);
+
+    const enough = runWithTickets(200);
+    assert.equal(enough.result.decisionState.checks.metaReserve.affordable, true);
+    assert.equal(enough.charState.bannerPullsCount, 120);
+});
+
+test('Roll Meta uses a 105-ticket reserve when an intermediate banner consumes Dossier', () => {
+    const player = new SimulatorPlayer(1);
+    player.charTickets = 110;
+    player.metaBannersSet = new Set([2]);
+    const charState = characterState();
+    const weaponState = { issuesCount: 0, issuesSince6: 0, issuesSinceFeatured: 0, featuredGuaranteeConsumed: false };
+    useRandomSequence([]);
+
+    const result = runSingleBannerForPlayer(
+        'roll_meta',
+        player,
+        charState,
+        weaponState,
+        0,
+        0,
+        0,
+        3,
+        { ticketIncomeSchedule: [0, 50, 50] }
+    );
+
+    assert.equal(result.decisionState.checks.metaReserve.reserveTickets, 105);
+    assert.equal(result.decisionState.checks.metaReserve.futureIncome, 100);
+    assert.equal(result.decisionState.checks.metaReserve.affordable, true);
+    assert.equal(charState.bannerPullsCount, 120);
+});
+
+test('current Meta banner spends available tickets even without full pull 120 insurance', () => {
+    const player = new SimulatorPlayer(1);
+    player.charTickets = 20;
+    player.metaBannersSet = new Set([0]);
+    const charState = characterState();
+    const weaponState = { issuesCount: 0, issuesSince6: 0, issuesSinceFeatured: 0, featuredGuaranteeConsumed: false };
+    useRandomSequence([]);
+
+    const result = runSingleBannerForPlayer(
+        'roll_meta',
+        player,
+        charState,
+        weaponState,
+        0,
+        0,
+        0,
+        2,
+        { ticketIncomeSchedule: [0, 0] }
+    );
+
+    assert.equal(result.decisionState.canAfford120, false);
+    assert.equal(result.decisionState.selectedTargetPulls, 120);
+    assert.ok(charState.bannerPullsCount > 10);
+    assert.equal(player.charTickets, 0);
 });
 
 test('all strategies switch to x1 only when fewer than 10 pulls remain to 30/60/120', () => {

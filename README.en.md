@@ -6,6 +6,15 @@ A9E Gacha Simulator is an **Arknights: Endfield** gacha simulation app. It suppo
 
 The app runs fully offline, sends no data externally, and can switch instantly between Vietnamese and English.
 
+## What's new in 1.4.0
+
+- All character strategies share a conservative formula for the current tickets required to reach 30/60/120 milestones and short cross-banner routes.
+- Pull 60 now has separate checks at banner start, pull 30, and pull 60, allowing actual Quota outcomes to unlock the next step.
+- Roll Meta uses a 95/105-ticket rolling reserve and only forecasts as far as the next Meta banner.
+- Budget checks occur before the optional Dossier → Urgent optimization can spend wallet tickets.
+
+See [CHANGELOG.md](CHANGELOG.md) for the full release history.
+
 ## Quick start
 
 ### Use a release build
@@ -43,6 +52,8 @@ Use this mode to compare five resource strategies under the same configuration:
 Enter the player count, banner count, starting resources, and per-banner income, then select **Run simulation**. Results include average Featured acquisitions, ticket efficiency, weapon results, full Limited completion rate, and distribution charts.
 
 Monte Carlo results describe averages across many randomized runs. They are not guarantees for a real account.
+
+Strategies make budget decisions from the current state. Pull 60 rechecks at milestones 30 and 60, while Roll Meta protects the nearest Meta reserve instead of forecasting exact gacha outcomes across many distant banners.
 
 ### Gacha Simulator — single player
 

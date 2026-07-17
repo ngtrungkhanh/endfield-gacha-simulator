@@ -125,6 +125,7 @@ export function runSingleDetailedSimulation(config) {
         Math.random = mulberry32(runConfig.numericSeed);
         const metaRandom = mulberry32(runConfig.numericSeed + 9999);
         const metaBannersSet = generateMetaBannerIndices(runConfig.numBanners, runConfig.numMetaBanners, metaRandom);
+        const ticketIncomeSchedule = Array(runConfig.numBanners).fill(runConfig.incomePerBanner);
         player.metaBannersSet = metaBannersSet;
         for (let bannerIndex = 0; bannerIndex < runConfig.numBanners; bannerIndex++) {
             const before = snapshotPlayer(player);
@@ -137,7 +138,8 @@ export function runSingleDetailedSimulation(config) {
                 runConfig.incomePerBanner,
                 runConfig.weaponIncomePerBanner,
                 bannerIndex,
-                runConfig.numBanners
+                runConfig.numBanners,
+                { ticketIncomeSchedule }
             );
             const after = snapshotPlayer(player);
             const regularLimited = result.charPulls.filter(item => !item.isUrgent);

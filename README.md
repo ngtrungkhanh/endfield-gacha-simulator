@@ -6,6 +6,15 @@ A9E Gacha Simulator là ứng dụng mô phỏng gacha dành cho **Arknights: En
 
 Ứng dụng chạy hoàn toàn offline, không gửi dữ liệu ra ngoài và hỗ trợ chuyển đổi tức thời giữa tiếng Việt và tiếng Anh.
 
+## Mới trong 1.4.0
+
+- Các chiến thuật dùng chung công thức bảo thủ để tính số vé hiện tại cần cho mốc 30/60/120 và lộ trình qua banner kế tiếp.
+- Pull 60 có checkpoint riêng ở đầu banner, pull 30 và pull 60; kết quả Quota thực tế có thể mở khóa bước tiếp theo.
+- Roll Meta dùng rolling reserve 95/105 vé và chỉ dự báo tới banner Meta kế tiếp.
+- Budget check diễn ra trước khi tùy chọn tối ưu Dossier → Urgent được phép chi vé.
+
+Xem toàn bộ thay đổi tại [CHANGELOG.md](CHANGELOG.md).
+
 ## Bắt đầu nhanh
 
 ### Dùng bản phát hành
@@ -43,6 +52,8 @@ Dùng chế độ này để so sánh năm cách sử dụng tài nguyên trên 
 Nhập số người chơi, số banner, tài nguyên ban đầu và thu nhập mỗi banner, sau đó chọn **Chạy giả lập**. Kết quả gồm số Featured trung bình, hiệu suất sử dụng vé, kết quả vũ khí, tỷ lệ hoàn thành toàn bộ Limited và biểu đồ phân phối.
 
 Mô phỏng Monte Carlo phản ánh kết quả trung bình của nhiều lượt chạy ngẫu nhiên; đây không phải bảo đảm cho tài khoản thật.
+
+Các chiến thuật dùng checkpoint ngân sách theo trạng thái hiện tại. Pull 60 kiểm tra lại ở mốc 30/60, còn Roll Meta giữ quỹ dự phòng cho Meta gần nhất thay vì dự báo chính xác nhiều banner xa.
 
 ### Gacha Simulator — một người chơi
 

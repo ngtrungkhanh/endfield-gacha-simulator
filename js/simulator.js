@@ -32,6 +32,12 @@ export class MonteCarloSimulator {
 
         const metaBannersSet = generateMetaBannerIndices(numBanners, config.numMetaBanners !== undefined ? config.numMetaBanners : Math.floor(numBanners * 0.3));
         const results = {};
+        const ticketIncomeSchedule = Array.from({ length: numBanners }, (_, bannerIdx) => {
+            if (mode === 'pulls' && bannerIdx === numBanners - 1) {
+                return totalPullsAllocated - (numBanners - 1) * incomePerBanner;
+            }
+            return incomePerBanner;
+        });
 
         strategyIds.forEach(strategyId => {
             // Khởi tạo danh sách người chơi cho chiến thuật này
@@ -66,15 +72,7 @@ export class MonteCarloSimulator {
 
             // Chạy qua từng banner gacha
             for (let b = 0; b < numBanners; b++) {
-                // Xác định lượng vé nhận được trong banner này
-                let bannerIncome = incomePerBanner;
-                
-                if (mode === 'pulls') {
-                    if (b === numBanners - 1) {
-                        // Banner cuối cùng nhận phần còn lại của tổng số pull
-                        bannerIncome = totalPullsAllocated - (numBanners - 1) * incomePerBanner;
-                    }
-                }
+                const bannerIncome = ticketIncomeSchedule[b];
 
                 for (let p = 0; p < numPlayers; p++) {
                     const player = players[p];
@@ -90,7 +88,8 @@ export class MonteCarloSimulator {
                         bannerIncome,
                         weaponIncomeNonGacha,
                         b,
-                        numBanners
+                        numBanners,
+                        { ticketIncomeSchedule }
                     );
                 }
             }

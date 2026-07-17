@@ -14648,6 +14648,83 @@
     }
     return { rarity: 4, isFeatured: false, isUrgent: false };
   }
+  function calculateMinimumTicketsRequired({ pity5, pity120, quota, targetRolls }) {
+    const assertIntegerInRange = (name, value, min, max) => {
+      if (!Number.isInteger(value) || value < min || value > max) {
+        throw new RangeError(`${name} must be an integer from ${min} to ${max}.`);
+      }
+    };
+    assertIntegerInRange("pity5", pity5, 0, 9);
+    assertIntegerInRange("pity120", pity120, 0, 119);
+    if (!Number.isInteger(quota) || quota < 0) {
+      throw new RangeError("quota must be a non-negative integer.");
+    }
+    const targets = Array.isArray(targetRolls) ? [...targetRolls] : [targetRolls];
+    if (targets.length === 0) {
+      throw new RangeError("targetRolls must contain at least one milestone.");
+    }
+    targets.forEach((target, index2) => {
+      assertIntegerInRange(`targetRolls[${index2}]`, target, 0, 120);
+    });
+    if (targets[0] < pity120) {
+      throw new RangeError("The current-banner target cannot be lower than pity120.");
+    }
+    let limitedPity5 = pity5;
+    let bannerPulls = pity120;
+    let accumulatedQuota = quota;
+    let cumulativePaidPulls = 0;
+    let requiredTickets = 0;
+    const applyLimitedPulls = (pulls, isPaid) => {
+      if (pulls <= 0) return;
+      const highBeforeLast = Math.floor((limitedPity5 + pulls - 1) / 10);
+      const reaches120 = bannerPulls + pulls >= 120;
+      const highTotal = reaches120 ? highBeforeLast + 1 : Math.floor((limitedPity5 + pulls) / 10);
+      if (isPaid) {
+        cumulativePaidPulls += pulls;
+        const quotaBeforeLastPull = accumulatedQuota + highBeforeLast * 10;
+        const quotaTicketsAvailable = Math.floor(quotaBeforeLastPull / 25);
+        requiredTickets = Math.max(
+          requiredTickets,
+          cumulativePaidPulls - quotaTicketsAvailable
+        );
+      }
+      accumulatedQuota += highTotal * 10;
+      if (reaches120) {
+        limitedPity5 = 0;
+        bannerPulls = 0;
+      } else {
+        limitedPity5 = (limitedPity5 + pulls) % 10;
+        bannerPulls += pulls;
+      }
+    };
+    const reachBannerTarget = (target) => {
+      if (bannerPulls < 30 && target >= 30) {
+        applyLimitedPulls(30 - bannerPulls, true);
+        accumulatedQuota += 10;
+        bannerPulls = 30;
+      }
+      applyLimitedPulls(target - bannerPulls, true);
+      bannerPulls = target;
+    };
+    reachBannerTarget(targets[0]);
+    for (let index2 = 1; index2 < targets.length; index2++) {
+      const previousTarget = targets[index2 - 1];
+      const target = targets[index2];
+      const dossierPulls = previousTarget >= 60 ? 10 : 0;
+      const mandatoryLimitedPulls = 10 + dossierPulls;
+      if (target < mandatoryLimitedPulls) {
+        throw new RangeError(
+          `targetRolls[${index2}] cannot be lower than ${mandatoryLimitedPulls} because the future banner has mandatory Free/Dossier pulls.`
+        );
+      }
+      bannerPulls = 0;
+      accumulatedQuota += 10;
+      applyLimitedPulls(10, false);
+      applyLimitedPulls(dossierPulls, false);
+      reachBannerTarget(target);
+    }
+    return Math.max(0, requiredTickets);
+  }
 
   // js/strategies.js
   var SimulatorPlayer = class {
@@ -14850,14 +14927,38 @@
     }
     return new Set(indices.slice(0, numMeta));
   }
-  function calculateWorstCaseNetWalletSpent(player, targetPulls, hasDossier) {
-    const grossWallet = Math.max(0, targetPulls - 10 - (hasDossier ? 10 : 0));
-    const max6Stars = Math.ceil(targetPulls / 80);
-    const guaranteed5Stars = Math.max(0, Math.floor((targetPulls - max6Stars) / 10));
-    const guaranteedQuota = guaranteed5Stars * 10;
-    const totalQuota = (player.bondQuota || 0) + guaranteedQuota;
-    const guaranteedRebate = Math.floor(totalQuota / 25);
-    return Math.max(0, grossWallet - guaranteedRebate);
+  var META_RESERVE_NO_DOSSIER = calculateMinimumTicketsRequired({
+    pity5: 0,
+    pity120: 0,
+    quota: 0,
+    targetRolls: [0, 120]
+  });
+  var META_RESERVE_WITH_DOSSIER = calculateMinimumTicketsRequired({
+    pity5: 0,
+    pity120: 60,
+    quota: 0,
+    targetRolls: [60, 120]
+  });
+  function calculateRequiredTickets(player, bannerState, targetRolls) {
+    return calculateMinimumTicketsRequired({
+      pity5: bannerState.pity5 || 0,
+      // Nếu Featured ra sớm thì chiến thuật thông thường đã dừng. Pull 60 vẫn
+      // tiếp tục tới mốc đã chọn, nên dùng tiến độ banner thay vì bộ đếm đã reset.
+      pity120: bannerState.bannerPullsCount || 0,
+      quota: player.bondQuota || 0,
+      targetRolls
+    });
+  }
+  function calculateFutureTicketIncome(ticketIncome, bannerIdx, targetBannerIdx, options) {
+    const schedule = options.ticketIncomeSchedule;
+    if (Array.isArray(schedule)) {
+      let total = 0;
+      for (let idx = bannerIdx + 1; idx <= targetBannerIdx; idx++) {
+        total += Number(schedule[idx]) || 0;
+      }
+      return total;
+    }
+    return Math.max(0, targetBannerIdx - bannerIdx) * ticketIncome;
   }
   function shouldForceSingleNearMilestone(bannerState, currentBannerPulls) {
     const distanceTo30 = 30 - currentBannerPulls;
@@ -14976,7 +15077,7 @@
     }
     return { pullsRecord, gotFeatured };
   }
-  function executePreBudgetGuaranteedRolls(player, bannerState, gotFeaturedChar, strategyId, bannerIdx, totalBanners, options) {
+  function executeAuthorizedMilestoneRolls(player, bannerState, gotFeaturedChar, strategyId, bannerIdx, totalBanners, options) {
     const pullsRecord = [];
     let gotFeatured = gotFeaturedChar;
     let walletPullsSpent = 0;
@@ -15169,40 +15270,80 @@
       allCharPulls.push(...res.pullsRecord);
       gotFeaturedChar = gotFeaturedChar || res.gotFeatured;
     }
-    const preBudgetResult = executePreBudgetGuaranteedRolls(
-      player,
-      charBannerState,
-      gotFeaturedChar,
-      strategyId,
-      bannerIdx,
-      totalBanners,
-      options
-    );
-    allCharPulls.push(...preBudgetResult.pullsRecord);
-    gotFeaturedChar = gotFeaturedChar || preBudgetResult.gotFeatured;
-    const worstCaseWalletCost120 = Math.max(
-      0,
-      calculateWorstCaseNetWalletSpent(player, 120, dossierPullsAtStart > 0) - preBudgetResult.walletPullsSpent
-    );
+    const required120 = calculateRequiredTickets(player, charBannerState, 120);
     const decisionState = {
       charTickets: player.charTickets,
       dossierTickets: player.currentBannerDossierTickets,
       totalAvailable: player.charTickets + player.currentBannerDossierTickets,
       dossierPullsUsed: dossierPullsAtStart,
-      preBudgetWalletPullsUsed: preBudgetResult.walletPullsSpent,
-      worstCaseWalletCost120,
-      walletShortfall120: Math.max(0, worstCaseWalletCost120 - player.charTickets),
-      canAfford120: player.charTickets >= worstCaseWalletCost120,
+      preBudgetWalletPullsUsed: 0,
+      worstCaseWalletCost120: required120,
+      walletShortfall120: Math.max(0, required120 - player.charTickets),
+      canAfford120: player.charTickets >= required120,
       pity6: charBannerState.pity6,
       pity5: charBannerState.pity5,
       pullsSinceFeatured: charBannerState.pullsSinceFeatured,
       bannerPullsCount: charBannerState.bannerPullsCount,
-      guarantee120Consumed: charBannerState.guarantee120Consumed === true
+      guarantee120Consumed: charBannerState.guarantee120Consumed === true,
+      budgetTargetPulls: 120,
+      budgetRequiredTickets: required120,
+      budgetShortfall: Math.max(0, required120 - player.charTickets),
+      canAffordTarget: player.charTickets >= required120,
+      selectedTargetPulls: player.charTickets >= required120 ? 120 : 0,
+      initialSelectedTargetPulls: player.charTickets >= required120 ? 120 : 0,
+      fellBackTo30: false,
+      upgradedTo120: false,
+      checks: {
+        pull120: {
+          requiredTickets: required120,
+          availableTickets: player.charTickets,
+          affordable: player.charTickets >= required120
+        }
+      }
     };
+    const executeAuthorizedOptimize30 = () => {
+      const result = executeAuthorizedMilestoneRolls(
+        player,
+        charBannerState,
+        gotFeaturedChar,
+        strategyId,
+        bannerIdx,
+        totalBanners,
+        options
+      );
+      allCharPulls.push(...result.pullsRecord);
+      gotFeaturedChar = gotFeaturedChar || result.gotFeatured;
+      decisionState.preBudgetWalletPullsUsed += result.walletPullsSpent;
+    };
+    if (strategyId === "pull_60") {
+      const required60 = calculateRequiredTickets(player, charBannerState, 60);
+      const required30 = calculateRequiredTickets(player, charBannerState, 30);
+      const canAfford60 = player.charTickets >= required60;
+      const canAfford30 = player.charTickets >= required30;
+      const budgetTargetPulls = canAfford60 ? 60 : 30;
+      const budgetRequiredTickets = canAfford60 ? required60 : required30;
+      decisionState.budgetTargetPulls = budgetTargetPulls;
+      decisionState.budgetRequiredTickets = budgetRequiredTickets;
+      decisionState.budgetShortfall = Math.max(0, budgetRequiredTickets - player.charTickets);
+      decisionState.canAffordTarget = canAfford60 || canAfford30;
+      decisionState.selectedTargetPulls = canAfford60 ? 60 : canAfford30 ? 30 : 0;
+      decisionState.initialSelectedTargetPulls = decisionState.selectedTargetPulls;
+      decisionState.fellBackTo30 = !canAfford60;
+      decisionState.checks.pull30 = {
+        requiredTickets: required30,
+        availableTickets: player.charTickets,
+        affordable: canAfford30
+      };
+      decisionState.checks.pull60 = {
+        requiredTickets: required60,
+        availableTickets: player.charTickets,
+        affordable: canAfford60
+      };
+    }
     let pullsRecord = [];
-    const totalCharacterTicketsAvailable = player.charTickets;
     if (strategyId === "save_commit") {
       if (decisionState.canAfford120) {
+        executeAuthorizedOptimize30();
         const res = executeCharacterPullSequence(player, charBannerState, 120, true, bannerIdx, gotFeaturedChar, false, totalBanners);
         res.pullsRecord.forEach((item) => {
           item.actionPhase = "commit";
@@ -15212,6 +15353,7 @@
       }
     } else if (strategyId === "save_commit_single") {
       if (decisionState.canAfford120) {
+        executeAuthorizedOptimize30();
         const res = executeCharacterPullSequence(player, charBannerState, 120, true, bannerIdx, gotFeaturedChar, true, totalBanners);
         res.pullsRecord.forEach((item) => {
           item.actionPhase = "commit";
@@ -15220,6 +15362,7 @@
         gotFeaturedChar = gotFeaturedChar || res.gotFeatured;
       }
     } else if (strategyId === "yolo") {
+      executeAuthorizedOptimize30();
       const res = executeCharacterPullSequence(player, charBannerState, Infinity, true, bannerIdx, gotFeaturedChar, false, totalBanners);
       res.pullsRecord.forEach((item) => {
         item.actionPhase = "strategy";
@@ -15227,39 +15370,66 @@
       pullsRecord = res.pullsRecord;
       gotFeaturedChar = gotFeaturedChar || res.gotFeatured;
     } else if (strategyId === "pull_60") {
-      let targetPulls = 0;
-      const pullsNeededTo60 = Math.max(0, 60 - charBannerState.bannerPullsCount);
-      const pullsNeededTo30 = Math.max(0, 30 - charBannerState.bannerPullsCount);
-      if (totalCharacterTicketsAvailable >= pullsNeededTo60) {
-        targetPulls = 60;
-      } else if (totalCharacterTicketsAvailable >= pullsNeededTo30) {
-        targetPulls = 30;
-      }
-      if (targetPulls > 0) {
-        const res = executeCharacterPullSequence(player, charBannerState, targetPulls, false, bannerIdx, gotFeaturedChar, false, totalBanners);
+      const initialTarget = decisionState.selectedTargetPulls;
+      if (initialTarget > 0) {
+        const res = executeCharacterPullSequence(player, charBannerState, initialTarget, false, bannerIdx, gotFeaturedChar, false, totalBanners);
         res.pullsRecord.forEach((item) => {
           item.actionPhase = "strategy";
         });
         pullsRecord = res.pullsRecord;
         gotFeaturedChar = gotFeaturedChar || res.gotFeatured;
-        if (targetPulls === 60 && !gotFeaturedChar) {
-          const costCurrentAdditional = Math.max(0, 60 - Math.floor(((player.bondQuota || 0) + 50) / 25));
-          const remainingQuotaAfterCurrent = ((player.bondQuota || 0) + 50) % 25;
-          const costNext = Math.max(0, 40 - Math.floor((remainingQuotaAfterCurrent + 50) / 25));
-          if (player.charTickets >= costCurrentAdditional + costNext - ticketIncome) {
-            const res2 = executeCharacterPullSequence(player, charBannerState, 120, true, bannerIdx, gotFeaturedChar, false, totalBanners);
-            res2.pullsRecord.forEach((item) => {
-              item.actionPhase = "strategy_upgraded";
-            });
-            pullsRecord.push(...res2.pullsRecord);
-            gotFeaturedChar = gotFeaturedChar || res2.gotFeatured;
-          }
+      }
+      if (initialTarget === 30 && charBannerState.bannerPullsCount === 30) {
+        const required60At30 = calculateRequiredTickets(player, charBannerState, 60);
+        const canAfford60At30 = player.charTickets >= required60At30;
+        decisionState.checks.pull60At30 = {
+          requiredTickets: required60At30,
+          availableTickets: player.charTickets,
+          affordable: canAfford60At30
+        };
+        if (canAfford60At30) {
+          const res = executeCharacterPullSequence(player, charBannerState, 60, false, bannerIdx, gotFeaturedChar, false, totalBanners);
+          res.pullsRecord.forEach((item) => {
+            item.actionPhase = "strategy";
+          });
+          pullsRecord.push(...res.pullsRecord);
+          gotFeaturedChar = gotFeaturedChar || res.gotFeatured;
+          decisionState.selectedTargetPulls = 60;
+        }
+      }
+      if (charBannerState.bannerPullsCount === 60 && !gotFeaturedChar) {
+        const requiredCurrent120 = calculateRequiredTickets(player, charBannerState, 120);
+        let requiredProtectedRoute = requiredCurrent120;
+        let futureIncome = 0;
+        let canUpgrade = player.charTickets >= requiredCurrent120;
+        if (bannerIdx + 1 < totalBanners) {
+          requiredProtectedRoute = calculateRequiredTickets(player, charBannerState, [120, 60]);
+          futureIncome = calculateFutureTicketIncome(ticketIncome, bannerIdx, bannerIdx + 1, options);
+          canUpgrade = canUpgrade && player.charTickets + futureIncome >= requiredProtectedRoute;
+        }
+        decisionState.checks.pull120At60 = {
+          requiredTickets: requiredCurrent120,
+          protectedRouteRequiredTickets: requiredProtectedRoute,
+          availableTickets: player.charTickets,
+          futureIncome,
+          affordable: canUpgrade
+        };
+        if (canUpgrade) {
+          const res = executeCharacterPullSequence(player, charBannerState, 120, true, bannerIdx, gotFeaturedChar, false, totalBanners);
+          res.pullsRecord.forEach((item) => {
+            item.actionPhase = "strategy_upgraded";
+          });
+          pullsRecord.push(...res.pullsRecord);
+          gotFeaturedChar = gotFeaturedChar || res.gotFeatured;
+          decisionState.selectedTargetPulls = 120;
+          decisionState.upgradedTo120 = true;
         }
       }
     } else if (strategyId === "roll_meta") {
-      const isMeta = isMetaBanner(player, bannerIdx, totalBanners);
+      const currentIsMeta = isMetaBanner(player, bannerIdx, totalBanners);
+      decisionState.isMetaBanner = currentIsMeta;
       let shouldPull = false;
-      if (isMeta) {
+      if (currentIsMeta) {
         shouldPull = true;
       } else {
         let nextMetaIdx = -1;
@@ -15270,25 +15440,29 @@
           }
         }
         if (nextMetaIdx !== -1) {
-          const K = nextMetaIdx - bannerIdx;
-          const expectedEarnings = K * ticketIncome;
-          const costCurrent = decisionState.worstCaseWalletCost120;
-          const remainingQuotaAfterCurrent = ((player.bondQuota || 0) + 110) % 25;
-          const quotaBeforeMeta = remainingQuotaAfterCurrent + (K > 1 ? 10 : 0);
-          const hasDossierMeta = K === 1;
-          const grossWalletMeta = Math.max(0, 120 - 10 - (hasDossierMeta ? 10 : 0));
-          const costMeta = Math.max(0, grossWalletMeta - Math.floor((quotaBeforeMeta + 110) / 25));
-          if (player.charTickets >= costCurrent + costMeta - expectedEarnings) {
-            shouldPull = true;
-          }
+          const bannersUntilMeta = nextMetaIdx - bannerIdx;
+          const futureIncome = calculateFutureTicketIncome(ticketIncome, bannerIdx, nextMetaIdx, options);
+          const metaReserve = bannersUntilMeta === 1 ? META_RESERVE_WITH_DOSSIER : META_RESERVE_NO_DOSSIER;
+          const remainingAfterCurrent = player.charTickets - required120;
+          shouldPull = player.charTickets >= required120 && remainingAfterCurrent + futureIncome >= metaReserve;
+          decisionState.checks.metaReserve = {
+            nextMetaBanner: nextMetaIdx,
+            bannersUntilMeta,
+            requiredCurrentTickets: required120,
+            reserveTickets: metaReserve,
+            futureIncome,
+            remainingAfterCurrent,
+            affordable: shouldPull
+          };
         } else {
-          const costCurrent = decisionState.worstCaseWalletCost120;
-          if (player.charTickets >= costCurrent) {
-            shouldPull = true;
-          }
+          shouldPull = player.charTickets >= required120;
         }
       }
+      decisionState.selectedTargetPulls = shouldPull ? 120 : 0;
+      decisionState.initialSelectedTargetPulls = decisionState.selectedTargetPulls;
+      decisionState.canAffordTarget = currentIsMeta ? decisionState.canAfford120 : shouldPull;
       if (shouldPull) {
+        executeAuthorizedOptimize30();
         const res = executeCharacterPullSequence(player, charBannerState, 120, true, bannerIdx, gotFeaturedChar, false, totalBanners);
         res.pullsRecord.forEach((item) => {
           item.actionPhase = "strategy";
@@ -15477,6 +15651,7 @@
       Math.random = mulberry32(runConfig.numericSeed);
       const metaRandom = mulberry32(runConfig.numericSeed + 9999);
       const metaBannersSet = generateMetaBannerIndices(runConfig.numBanners, runConfig.numMetaBanners, metaRandom);
+      const ticketIncomeSchedule = Array(runConfig.numBanners).fill(runConfig.incomePerBanner);
       player.metaBannersSet = metaBannersSet;
       for (let bannerIndex = 0; bannerIndex < runConfig.numBanners; bannerIndex++) {
         const before = snapshotPlayer(player);
@@ -15489,7 +15664,8 @@
           runConfig.incomePerBanner,
           runConfig.weaponIncomePerBanner,
           bannerIndex,
-          runConfig.numBanners
+          runConfig.numBanners,
+          { ticketIncomeSchedule }
         );
         const after = snapshotPlayer(player);
         const regularLimited = result.charPulls.filter((item) => !item.isUrgent);
@@ -15674,6 +15850,12 @@
       }
       const metaBannersSet = generateMetaBannerIndices(numBanners, config.numMetaBanners !== void 0 ? config.numMetaBanners : Math.floor(numBanners * 0.3));
       const results = {};
+      const ticketIncomeSchedule = Array.from({ length: numBanners }, (_, bannerIdx) => {
+        if (mode === "pulls" && bannerIdx === numBanners - 1) {
+          return totalPullsAllocated - (numBanners - 1) * incomePerBanner;
+        }
+        return incomePerBanner;
+      });
       strategyIds.forEach((strategyId) => {
         const players = [];
         for (let i = 0; i < numPlayers; i++) {
@@ -15700,12 +15882,7 @@
           featuredGuaranteeConsumed: false
         }));
         for (let b = 0; b < numBanners; b++) {
-          let bannerIncome = incomePerBanner;
-          if (mode === "pulls") {
-            if (b === numBanners - 1) {
-              bannerIncome = totalPullsAllocated - (numBanners - 1) * incomePerBanner;
-            }
-          }
+          const bannerIncome = ticketIncomeSchedule[b];
           for (let p = 0; p < numPlayers; p++) {
             const player = players[p];
             const charPity = playerCharPities[p];
@@ -15718,7 +15895,8 @@
               bannerIncome,
               weaponIncomeNonGacha,
               b,
-              numBanners
+              numBanners,
+              { ticketIncomeSchedule }
             );
           }
         }
@@ -16013,6 +16191,8 @@
       "single.decisionAfterMandatory": "Sau to\xE0n b\u1ED9 roll b\u1EAFt bu\u1ED9c",
       "single.decisionEnough": "\u0110\u1EE7 b\u1EA3o hi\u1EC3m 120",
       "single.decisionShort": "Thi\u1EBFu {count} v\xE9 \u0111\u1EC3 b\u1EA3o hi\u1EC3m 120",
+      "single.decisionEnoughTarget": "\u0110\u1EE7 t\xE0i nguy\xEAn m\u1ED1c {target}",
+      "single.decisionShortTarget": "Thi\u1EBFu {count} v\xE9 \u0111\u1EC3 ch\u1EA1m m\u1ED1c {target}",
       "single.decisionFeatured": "\u0110\xE3 nh\u1EADn Featured",
       "single.featuredStopDecision": "D\u1EEBng quay nh\xE2n v\u1EADt v\xE0 chuy\u1EC3n sang ki\u1EC3m tra v\u0169 kh\xED.",
       "single.decisionProgressLabel": "\u0110\xE3 quay",
@@ -16022,7 +16202,15 @@
       "single.skipCommit": "Kh\xF4ng commit to\xE0n b\u1ED9; ch\u1EC9 x\u1EED l\xFD ph\u1EA7n b\u1EAFt bu\u1ED9c ho\u1EB7c m\u1ED1c t\u1ED1i \u01B0u n\u1EBFu \u0111\u1EE7 \u0111i\u1EC1u ki\u1EC7n.",
       "single.yoloDecision": "D\xF9ng t\xE0i nguy\xEAn kh\u1EA3 d\u1EE5ng cho \u0111\u1EBFn khi g\u1EB7p Featured ho\u1EB7c h\u1EBFt v\xE9.",
       "single.pull60Decision": "Nh\u1EAFm m\u1ED1c 60 n\u1EBFu \u0111\u1EE7 t\xE0i nguy\xEAn, n\u1EBFu kh\xF4ng s\u1EBD c\xE2n nh\u1EAFc m\u1ED1c 30.",
+      "single.pull30FallbackDecision": "Kh\xF4ng \u0111\u1EE7 t\xE0i nguy\xEAn cho m\u1ED1c 60; h\u1EA1 m\u1EE5c ti\xEAu xu\u1ED1ng m\u1ED1c 30.",
+      "single.pull60SkipDecision": "Kh\xF4ng \u0111\u1EE7 t\xE0i nguy\xEAn cho c\u1EA3 m\u1ED1c 60 v\xE0 m\u1ED1c 30; gi\u1EEF v\xE9 cho banner sau.",
+      "single.pull60RecheckPassDecision": "Ch\u1EC9 \u0111\u1EE7 m\u1ED1c 30 \u1EDF \u0111\u1EA7u banner; sau Urgent \u0111\xE3 \u0111\u1EE7 t\xE0i nguy\xEAn \u0111\u1EC3 ti\u1EBFp t\u1EE5c t\u1EDBi 60.",
+      "single.pull60RecheckStopDecision": "\u0110\xE3 t\u1EDBi m\u1ED1c 30 nh\u01B0ng l\u1EA7n ki\u1EC3m tra l\u1EA1i v\u1EABn ch\u01B0a \u0111\u1EE7 t\xE0i nguy\xEAn cho m\u1ED1c 60.",
+      "single.pull120UpgradeDecision": "\u0110\u1EA1t m\u1ED1c 60 ch\u01B0a c\xF3 Featured; ng\xE2n s\xE1ch b\u1EA3o v\u1EC7 \u0111\u01B0\u1EE3c 120 hi\u1EC7n t\u1EA1i v\xE0 60 banner sau n\xEAn n\xE2ng m\u1EE5c ti\xEAu l\xEAn 120.",
       "single.metaDecision": "Quy\u1EBFt \u0111\u1ECBnh chi ti\xEAu theo v\u1ECB tr\xED banner Meta v\xE0 ng\xE2n s\xE1ch cho c\xE1c banner k\u1EBF ti\u1EBFp.",
+      "single.metaCurrentDecision": "\u0110\xE2y l\xE0 banner Meta; s\u1EED d\u1EE5ng t\xE0i nguy\xEAn kh\u1EA3 d\u1EE5ng t\u1EDBi Featured ho\u1EB7c m\u1ED1c 120.",
+      "single.metaReservePassDecision": "Banner th\u01B0\u1EDDng \u0111\u01B0\u1EE3c ph\xE9p quay; sau k\u1ECBch b\u1EA3n x\u1EA5u nh\u1EA5t v\u1EABn gi\u1EEF \u0111\u01B0\u1EE3c qu\u1EF9 Meta {reserve} v\xE9.",
+      "single.metaReserveStopDecision": "B\u1ECF banner th\u01B0\u1EDDng \u0111\u1EC3 b\u1EA3o to\xE0n qu\u1EF9 Meta {reserve} v\xE9.",
       "single.phaseCommit": "Commit b\u1EB1ng v\xE9",
       "single.phaseStrategy": "Th\u1EF1c thi chi\u1EBFn thu\u1EADt",
       "single.phaseDossier": "X\u1EA3 Dossier s\u1EAFp h\u1EBFt h\u1EA1n",
@@ -16380,6 +16568,8 @@
       "single.decisionAfterMandatory": "After all mandatory rolls",
       "single.decisionEnough": "120 guarantee covered",
       "single.decisionShort": "{count} tickets short of 120 guarantee",
+      "single.decisionEnoughTarget": "Enough resources for pull {target}",
+      "single.decisionShortTarget": "{count} tickets short of pull {target}",
       "single.decisionFeatured": "Featured obtained",
       "single.featuredStopDecision": "Stop character pulls and continue to the weapon check.",
       "single.decisionProgressLabel": "Pulled",
@@ -16389,7 +16579,15 @@
       "single.skipCommit": "No full commit; only mandatory spending or milestone optimization may occur.",
       "single.yoloDecision": "Spend available resources until Featured appears or tickets run out.",
       "single.pull60Decision": "Target pull 60 when affordable, otherwise consider pull 30.",
+      "single.pull30FallbackDecision": "Not enough resources for pull 60; lower the target to pull 30.",
+      "single.pull60SkipDecision": "Not enough resources for pull 60 or pull 30; save tickets for the next banner.",
+      "single.pull60RecheckPassDecision": "Only pull 30 was affordable initially; Urgent rewards unlocked enough resources to continue to pull 60.",
+      "single.pull60RecheckStopDecision": "Pull 30 was reached, but the second budget check still cannot cover pull 60.",
+      "single.pull120UpgradeDecision": "Pull 60 missed Featured; the budget protects current pull 120 and next-banner pull 60, so the target is upgraded to 120.",
       "single.metaDecision": "Spend according to Meta-banner placement and the budget required by future banners.",
+      "single.metaCurrentDecision": "This is a Meta banner; spend available resources until Featured or pull 120.",
+      "single.metaReservePassDecision": "This regular banner is allowed; the worst case still preserves the {reserve}-ticket Meta reserve.",
+      "single.metaReserveStopDecision": "Skip this regular banner to preserve the {reserve}-ticket Meta reserve.",
       "single.phaseCommit": "Ticket commit",
       "single.phaseStrategy": "Strategy execution",
       "single.phaseDossier": "Expiring Dossier spend",
@@ -17201,7 +17399,7 @@
     loadSimulatorLastResults();
     updateInteractiveUI();
     calculateVersionIncome();
-    document.getElementById("build-info").textContent = t("app.version", { version: "1.3.0", commit: "bc26631" });
+    document.getElementById("build-info").textContent = t("app.version", { version: "1.4.0", commit: "b9f8d5f" });
     subscribe(() => {
       applyTranslations();
       updateLocaleControls();
@@ -17211,7 +17409,7 @@
       updateSingleRunIncome();
       loadSimulatorLastResults();
       if (lastSingleRun) renderSingleRun(lastSingleRun);
-      document.getElementById("build-info").textContent = t("app.version", { version: "1.3.0", commit: "bc26631" });
+      document.getElementById("build-info").textContent = t("app.version", { version: "1.4.0", commit: "b9f8d5f" });
     });
   });
   function updateLocaleControls() {
@@ -18149,7 +18347,19 @@
   function singleDecisionText(strategyId, decision) {
     if (decision.guarantee120Consumed) return t("single.featuredStopDecision");
     if (strategyId === "yolo") return t("single.yoloDecision");
+    if (strategyId === "pull_60" && decision.upgradedTo120) return t("single.pull120UpgradeDecision");
+    if (strategyId === "pull_60" && decision.checks?.pull60At30?.affordable) return t("single.pull60RecheckPassDecision");
+    if (strategyId === "pull_60" && decision.checks?.pull60At30 && !decision.checks.pull60At30.affordable) return t("single.pull60RecheckStopDecision");
+    if (strategyId === "pull_60" && decision.fellBackTo30 && decision.selectedTargetPulls === 30) return t("single.pull30FallbackDecision");
+    if (strategyId === "pull_60" && decision.selectedTargetPulls === 0) return t("single.pull60SkipDecision");
     if (strategyId === "pull_60") return t("single.pull60Decision");
+    if (strategyId === "roll_meta" && decision.isMetaBanner) return t("single.metaCurrentDecision");
+    if (strategyId === "roll_meta" && decision.checks?.metaReserve?.affordable) {
+      return t("single.metaReservePassDecision", { reserve: decision.checks.metaReserve.reserveTickets });
+    }
+    if (strategyId === "roll_meta" && decision.checks?.metaReserve) {
+      return t("single.metaReserveStopDecision", { reserve: decision.checks.metaReserve.reserveTickets });
+    }
     if (strategyId === "roll_meta") return t("single.metaDecision");
     return decision.canAfford120 ? t("single.commit") : t("single.skipCommit");
   }
@@ -18223,8 +18433,12 @@
   </article>`;
   }
   function renderDecisionGroup(strategyId, decision) {
-    const insurance = decision.guarantee120Consumed ? `<span class="milestone-chip featured">${t("single.decisionFeatured")}</span>` : decision.canAfford120 ? `<span class="milestone-chip featured">${t("single.decisionEnough")}</span>` : `<span class="milestone-chip decision-shortfall">${t("single.decisionShort", { count: decision.walletShortfall120 })}</span>`;
-    const worstCase = decision.guarantee120Consumed ? "" : `<span><b>${t("single.decisionWorstCaseLabel")}</b> ${decision.worstCaseWalletCost120} ${t("single.ticketUnit")}</span>`;
+    const targetPulls = decision.budgetTargetPulls || 120;
+    const requiredTickets = Number.isFinite(decision.budgetRequiredTickets) ? decision.budgetRequiredTickets : decision.worstCaseWalletCost120;
+    const shortfall = Number.isFinite(decision.budgetShortfall) ? decision.budgetShortfall : decision.walletShortfall120;
+    const canAffordTarget = decision.canAffordTarget ?? decision.canAfford120;
+    const insurance = decision.guarantee120Consumed ? `<span class="milestone-chip featured">${t("single.decisionFeatured")}</span>` : canAffordTarget ? `<span class="milestone-chip featured">${targetPulls === 120 ? t("single.decisionEnough") : t("single.decisionEnoughTarget", { target: targetPulls })}</span>` : `<span class="milestone-chip decision-shortfall">${targetPulls === 120 ? t("single.decisionShort", { count: shortfall }) : t("single.decisionShortTarget", { count: shortfall, target: targetPulls })}</span>`;
+    const worstCase = decision.guarantee120Consumed ? "" : `<span><b>${t("single.decisionWorstCaseLabel")}</b> ${requiredTickets} ${t("single.ticketUnit")}</span>`;
     return `<article class="pull-group decision-group">
       <div class="pull-group-heading">
           <div><strong>${t("single.decisionTitle")}</strong><span>${t("single.decisionAfterMandatory", {
@@ -18233,7 +18447,7 @@
           <div class="pull-results"><span class="decision-action">${singleDecisionText(strategyId, decision)}</span>${insurance}</div>
       </div>
       <div class="pull-group-stats">
-          <span><b>${t("single.decisionProgressLabel")}</b> ${decision.bannerPullsCount}/120</span>
+          <span><b>${t("single.decisionProgressLabel")}</b> ${decision.bannerPullsCount}/${targetPulls}</span>
           ${worstCase}
           <span class="stat-wallet"><b>${t("single.ticketShort")}</b> ${decision.charTickets}</span>
           <span class="stat-pity"><b>${t("single.pityAfterShort")}</b> 6\u2605 ${decision.pity6}/80 \xB7 120 ${decision.guarantee120Consumed ? "\u2713" : `${decision.pullsSinceFeatured}/120`}</span>
@@ -18242,7 +18456,7 @@
   }
   function renderCharacterTimeline(banner, strategyId) {
     const groups = buildCharacterPullGroups(banner);
-    const preBudgetPhases = /* @__PURE__ */ new Set(["dossier", "optimize30"]);
+    const preBudgetPhases = /* @__PURE__ */ new Set(["dossier"]);
     const firstPaidGroup = groups.findIndex((group) => !["standard", "free"].includes(group.kind) && !preBudgetPhases.has(group.phase));
     const splitAt = firstPaidGroup === -1 ? groups.length : firstPaidGroup;
     const beforeDecision = groups.slice(0, splitAt).map(renderPullGroup).join("");

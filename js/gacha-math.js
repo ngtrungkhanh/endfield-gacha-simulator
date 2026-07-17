@@ -249,3 +249,133 @@ export function rollStandardCharacter(state) {
     // Trúng 4★
     return { rarity: 4, isFeatured: false, isUrgent: false };
 }
+
+/**
+ * Tính số vé thường tối thiểu phải có ở hiện tại để đi hết một lộ trình roll.
+ *
+ * Công thức cố ý chỉ dùng bảo hiểm 5★ mỗi 10 Limited pull và Featured ở mốc
+ * 120. Pity 6★/80 bị bỏ qua khi tính Quota, vì vậy kết quả thiên an toàn và có
+ * thể yêu cầu dư tối đa khoảng 1 vé cho mỗi banner so với mô hình đầy đủ.
+ *
+ * `targetRolls` nhận một số cho banner hiện tại hoặc một mảng cho các banner
+ * liên tiếp. Ví dụ `[120, 60]` nghĩa là đi tới 120 ở banner hiện tại, sau đó
+ * tới 60 ở banner kế tiếp. Mỗi banner tương lai tự tính 15 Standard miễn phí,
+ * 10 Limited miễn phí, 10 Dossier nếu banner trước đạt 60, và 10 Urgent khi
+ * đi qua mốc 30.
+ *
+ * Hàm giả định trạng thái hiện tại đã xử lý xong mọi pull/quà trước thời điểm
+ * gọi. Do bỏ qua trường hợp Featured xuất hiện sớm, `pity120` đồng thời là số
+ * Limited pull hiện tại của banner đang xét.
+ *
+ * @param {Object} input
+ * @param {number} input.pity5 - Pity 5★ Limited hiện tại, từ 0 đến 9.
+ * @param {number} input.pity120 - Tiến độ bảo hiểm Featured hiện tại, từ 0 đến 119.
+ * @param {number} input.quota - Bond Quota hiện tại.
+ * @param {number|number[]} input.targetRolls - Mốc của banner hiện tại và các banner tương lai.
+ * @returns {number} Số vé thường tối thiểu cần có ngay tại thời điểm gọi.
+ */
+export function calculateMinimumTicketsRequired({ pity5, pity120, quota, targetRolls }) {
+    const assertIntegerInRange = (name, value, min, max) => {
+        if (!Number.isInteger(value) || value < min || value > max) {
+            throw new RangeError(`${name} must be an integer from ${min} to ${max}.`);
+        }
+    };
+
+    assertIntegerInRange('pity5', pity5, 0, 9);
+    assertIntegerInRange('pity120', pity120, 0, 119);
+
+    if (!Number.isInteger(quota) || quota < 0) {
+        throw new RangeError('quota must be a non-negative integer.');
+    }
+
+    const targets = Array.isArray(targetRolls) ? [...targetRolls] : [targetRolls];
+    if (targets.length === 0) {
+        throw new RangeError('targetRolls must contain at least one milestone.');
+    }
+    targets.forEach((target, index) => {
+        assertIntegerInRange(`targetRolls[${index}]`, target, 0, 120);
+    });
+
+    if (targets[0] < pity120) {
+        throw new RangeError('The current-banner target cannot be lower than pity120.');
+    }
+
+    let limitedPity5 = pity5;
+    let bannerPulls = pity120;
+    let accumulatedQuota = quota;
+    let cumulativePaidPulls = 0;
+    let requiredTickets = 0;
+
+    // Áp dụng một đoạn Limited pull. Với đoạn trả phí, chỉ Quota nhận trước
+    // pull cuối mới được dùng để trả cho chính pull cuối đó.
+    const applyLimitedPulls = (pulls, isPaid) => {
+        if (pulls <= 0) return;
+
+        const highBeforeLast = Math.floor((limitedPity5 + pulls - 1) / 10);
+        const reaches120 = bannerPulls + pulls >= 120;
+        const highTotal = reaches120
+            ? highBeforeLast + 1
+            : Math.floor((limitedPity5 + pulls) / 10);
+
+        if (isPaid) {
+            cumulativePaidPulls += pulls;
+            const quotaBeforeLastPull = accumulatedQuota + highBeforeLast * 10;
+            const quotaTicketsAvailable = Math.floor(quotaBeforeLastPull / 25);
+            requiredTickets = Math.max(
+                requiredTickets,
+                cumulativePaidPulls - quotaTicketsAvailable
+            );
+        }
+
+        accumulatedQuota += highTotal * 10;
+
+        if (reaches120) {
+            // Featured guarantee là một kết quả 6★ và reset cả pity 5★.
+            limitedPity5 = 0;
+            bannerPulls = 0;
+        } else {
+            limitedPity5 = (limitedPity5 + pulls) % 10;
+            bannerPulls += pulls;
+        }
+    };
+
+    // Đi từ tiến độ hiện tại tới target trong cùng banner. Urgent chỉ nhận
+    // sau khi đã trả xong pull chạm mốc 30, nhưng dùng được cho pull 31 trở đi.
+    const reachBannerTarget = (target) => {
+        if (bannerPulls < 30 && target >= 30) {
+            applyLimitedPulls(30 - bannerPulls, true);
+            accumulatedQuota += 10; // 10 Urgent chắc chắn có ít nhất một 5★+.
+            bannerPulls = 30;
+        }
+
+        applyLimitedPulls(target - bannerPulls, true);
+        bannerPulls = target;
+    };
+
+    reachBannerTarget(targets[0]);
+
+    for (let index = 1; index < targets.length; index++) {
+        const previousTarget = targets[index - 1];
+        const target = targets[index];
+        const dossierPulls = previousTarget >= 60 ? 10 : 0;
+        const mandatoryLimitedPulls = 10 + dossierPulls;
+
+        if (target < mandatoryLimitedPulls) {
+            throw new RangeError(
+                `targetRolls[${index}] cannot be lower than ${mandatoryLimitedPulls} ` +
+                'because the future banner has mandatory Free/Dossier pulls.'
+            );
+        }
+
+        // Sang banner mới: bảo hiểm 120 reset, pity 5★ Limited tiếp tục carry.
+        bannerPulls = 0;
+        accumulatedQuota += 10; // 15 Standard bảo đảm tối thiểu một 5★+.
+
+        applyLimitedPulls(10, false); // 10 Limited miễn phí.
+        applyLimitedPulls(dossierPulls, false);
+
+        reachBannerTarget(target);
+    }
+
+    return Math.max(0, requiredTickets);
+}

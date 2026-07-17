@@ -1188,7 +1188,19 @@ function singlePullType(item) {
 function singleDecisionText(strategyId, decision) {
   if (decision.guarantee120Consumed) return t("single.featuredStopDecision");
   if (strategyId === "yolo") return t("single.yoloDecision");
+  if (strategyId === "pull_60" && decision.upgradedTo120) return t("single.pull120UpgradeDecision");
+  if (strategyId === "pull_60" && decision.checks?.pull60At30?.affordable) return t("single.pull60RecheckPassDecision");
+  if (strategyId === "pull_60" && decision.checks?.pull60At30 && !decision.checks.pull60At30.affordable) return t("single.pull60RecheckStopDecision");
+  if (strategyId === "pull_60" && decision.fellBackTo30 && decision.selectedTargetPulls === 30) return t("single.pull30FallbackDecision");
+  if (strategyId === "pull_60" && decision.selectedTargetPulls === 0) return t("single.pull60SkipDecision");
   if (strategyId === "pull_60") return t("single.pull60Decision");
+  if (strategyId === "roll_meta" && decision.isMetaBanner) return t("single.metaCurrentDecision");
+  if (strategyId === "roll_meta" && decision.checks?.metaReserve?.affordable) {
+    return t("single.metaReservePassDecision", { reserve: decision.checks.metaReserve.reserveTickets });
+  }
+  if (strategyId === "roll_meta" && decision.checks?.metaReserve) {
+    return t("single.metaReserveStopDecision", { reserve: decision.checks.metaReserve.reserveTickets });
+  }
   if (strategyId === "roll_meta") return t("single.metaDecision");
   return decision.canAfford120 ? t("single.commit") : t("single.skipCommit");
 }
@@ -1264,14 +1276,18 @@ function renderPullGroup(group) {
   </article>`;
 }
 function renderDecisionGroup(strategyId, decision) {
+  const targetPulls = decision.budgetTargetPulls || 120;
+  const requiredTickets = Number.isFinite(decision.budgetRequiredTickets) ? decision.budgetRequiredTickets : decision.worstCaseWalletCost120;
+  const shortfall = Number.isFinite(decision.budgetShortfall) ? decision.budgetShortfall : decision.walletShortfall120;
+  const canAffordTarget = decision.canAffordTarget ?? decision.canAfford120;
   const insurance = decision.guarantee120Consumed
     ? `<span class="milestone-chip featured">${t("single.decisionFeatured")}</span>`
-    : decision.canAfford120
-      ? `<span class="milestone-chip featured">${t("single.decisionEnough")}</span>`
-      : `<span class="milestone-chip decision-shortfall">${t("single.decisionShort", { count: decision.walletShortfall120 })}</span>`;
+    : canAffordTarget
+      ? `<span class="milestone-chip featured">${targetPulls === 120 ? t("single.decisionEnough") : t("single.decisionEnoughTarget", { target: targetPulls })}</span>`
+      : `<span class="milestone-chip decision-shortfall">${targetPulls === 120 ? t("single.decisionShort", { count: shortfall }) : t("single.decisionShortTarget", { count: shortfall, target: targetPulls })}</span>`;
   const worstCase = decision.guarantee120Consumed
     ? ""
-    : `<span><b>${t("single.decisionWorstCaseLabel")}</b> ${decision.worstCaseWalletCost120} ${t("single.ticketUnit")}</span>`;
+    : `<span><b>${t("single.decisionWorstCaseLabel")}</b> ${requiredTickets} ${t("single.ticketUnit")}</span>`;
   return `<article class="pull-group decision-group">
       <div class="pull-group-heading">
           <div><strong>${t("single.decisionTitle")}</strong><span>${t("single.decisionAfterMandatory", {
@@ -1280,7 +1296,7 @@ function renderDecisionGroup(strategyId, decision) {
           <div class="pull-results"><span class="decision-action">${singleDecisionText(strategyId, decision)}</span>${insurance}</div>
       </div>
       <div class="pull-group-stats">
-          <span><b>${t("single.decisionProgressLabel")}</b> ${decision.bannerPullsCount}/120</span>
+          <span><b>${t("single.decisionProgressLabel")}</b> ${decision.bannerPullsCount}/${targetPulls}</span>
           ${worstCase}
           <span class="stat-wallet"><b>${t("single.ticketShort")}</b> ${decision.charTickets}</span>
           <span class="stat-pity"><b>${t("single.pityAfterShort")}</b> 6★ ${decision.pity6}/80 · 120 ${decision.guarantee120Consumed ? "✓" : `${decision.pullsSinceFeatured}/120`}</span>
@@ -1289,7 +1305,7 @@ function renderDecisionGroup(strategyId, decision) {
 }
 function renderCharacterTimeline(banner, strategyId) {
   const groups = buildCharacterPullGroups(banner);
-  const preBudgetPhases = new Set(["dossier", "optimize30"]);
+  const preBudgetPhases = new Set(["dossier"]);
   const firstPaidGroup = groups.findIndex((group) => !["standard", "free"].includes(group.kind) && !preBudgetPhases.has(group.phase));
   const splitAt = firstPaidGroup === -1 ? groups.length : firstPaidGroup;
   const beforeDecision = groups.slice(0, splitAt).map(renderPullGroup).join("");

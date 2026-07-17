@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { runSingleDetailedSimulation, seedToUint32 } from '../js/single-run.js';
-import { calculateWorstCaseNetWalletSpent } from '../js/strategies.js';
 
 const referenceConfig = {
     strategyId: 'save_commit',
@@ -23,20 +22,19 @@ test('single run is reproducible and restores Math.random', () => {
     assert.deepEqual(first, second);
     assert.equal(first.config.numericSeed, 20260711);
 });
-
 test('reference seed produces stable detailed run totals', () => {
     const run = runSingleDetailedSimulation(referenceConfig);
 
     assert.equal(run.banners.length, 10);
     assert.equal(run.summary.featuredCharacters, 6);
-    assert.equal(run.summary.featuredWeapons, 6);
-    assert.equal(run.summary.totalCharPulls, 820);
-    assert.equal(run.summary.totalUrgentPulls, 90);
+    assert.equal(run.summary.featuredWeapons, 5);
+    assert.equal(run.summary.totalCharPulls, 760);
+    assert.equal(run.summary.totalUrgentPulls, 60);
     assert.equal(run.summary.totalDossierPulls, 50);
-    assert.equal(run.summary.totalWeaponPulls, 310);
-    assert.equal(run.summary.charTickets, 60);
-    assert.equal(run.summary.arsenalTickets, 16440);
-    assert.equal(run.summary.bondQuota, 10);
+    assert.equal(run.summary.totalWeaponPulls, 260);
+    assert.equal(run.summary.charTickets, 115);
+    assert.equal(run.summary.arsenalTickets, 22200);
+    assert.equal(run.summary.bondQuota, 5);
     assert.ok(typeof run.summary.timesHit120Guarantee === 'number');
     assert.equal(
         run.summary.offBannerStandard6,
@@ -113,44 +111,4 @@ test('meta banners are randomly selected and seed-reproducible', () => {
     
     // Check they are not identical arrays
     assert.notDeepEqual(set1.sort(), set3.sort());
-});
-
-test('calculateWorstCaseNetWalletSpent calculates accurate cost with quota rebates and dossier checks', () => {
-    const player = { bondQuota: 0 };
-
-    // target 120, hasDossier = true. 
-    // Gross: 120 - 10 (free) - 10 (dossier) = 100 wallet pulls.
-    // Max 6-stars is 2. Guaranteed 5-stars = Math.floor((120-2)/10) = 11.
-    // Guaranteed quota = 110. Rebate tickets = Math.floor(110/25) = 4.
-    // Net: 100 - 4 = 96.
-    const net1 = calculateWorstCaseNetWalletSpent(player, 120, true);
-    assert.equal(net1, 96);
-
-    // target 120, hasDossier = false.
-    // Gross: 120 - 10 = 110 wallet pulls.
-    // Net: 110 - 4 = 106.
-    const net2 = calculateWorstCaseNetWalletSpent(player, 120, false);
-    assert.equal(net2, 106);
-
-    // target 60, hasDossier = true.
-    // Gross: 60 - 20 = 40 wallet pulls.
-    // Max 6-stars is 1. Guaranteed 5-stars = Math.floor(59/10) = 5.
-    // Guaranteed quota = 50. Rebate = 2.
-    // Net: 40 - 2 = 38.
-    const net3 = calculateWorstCaseNetWalletSpent(player, 60, true);
-    assert.equal(net3, 38);
-
-    // target 60, hasDossier = false.
-    // Gross: 60 - 10 = 50. Rebate = 2.
-    // Net: 50 - 2 = 48.
-    const net4 = calculateWorstCaseNetWalletSpent(player, 60, false);
-    assert.equal(net4, 48);
-
-    // Test with initial player quota
-    const playerWithQuota = { bondQuota: 15 };
-    // target 120, hasDossier = true.
-    // Guaranteed quota = 110 + 15 = 125. Rebate = Math.floor(125/25) = 5.
-    // Net: 100 - 5 = 95.
-    const net5 = calculateWorstCaseNetWalletSpent(playerWithQuota, 120, true);
-    assert.equal(net5, 95);
 });

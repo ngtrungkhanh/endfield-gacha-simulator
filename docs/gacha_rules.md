@@ -76,6 +76,18 @@ Các giá trị dưới đây là quy ước mô hình của dự án và chưa 
 - Vé nhận từ quy đổi được cộng ngay vào ví tại lượt phát sinh, vì vậy có thể được dùng cho các lượt tiếp theo trong cùng banner.
 - Phần Bond Quota chưa đủ 25 được giữ lại qua banner.
 
+#### Ước tính vé tối thiểu cho checkpoint chiến thuật
+
+Simulator dùng một công thức bảo thủ để tính số vé thường phải có **ngay tại thời điểm check** nhằm đi tới một mốc tương lai:
+
+- Mỗi kết quả 5★ hoặc 6★ được tính là 10 Bond Quota.
+- Pity 5★ và Featured guarantee 120 là hai nguồn kết quả tối thiểu được đưa vào công thức.
+- Pity 6★/80 bị bỏ qua; Featured ra trước 120 cũng bị bỏ qua.
+- Với lộ trình qua banner tương lai, công thức tự cộng Quota tối thiểu từ 15 Standard miễn phí, 10 Limited miễn phí, 10 Dossier nếu banner trước đạt 60 và 10 Urgent khi đạt mốc 30.
+- Quota phát sinh ở một pull chỉ có thể đổi thành vé dùng từ pull kế tiếp.
+
+Việc bỏ qua pity 80 làm kết quả thiên an toàn và thường chỉ dư khoảng một vé trên mỗi banner so với mô hình đầy đủ. Đây là quy tắc lập ngân sách của simulator, không phải luật gacha chính thức. Cách áp dụng cho từng chiến thuật được mô tả trong [`strategies.md`](strategies.md).
+
 ## 2. Arsenal Exchange
 
 ### Mua trực tiếp
