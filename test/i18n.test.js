@@ -87,6 +87,31 @@ test('single-run paid options exist and Interactive Pull has no Free Banner cont
     assert.doesNotMatch(html, /id="wallet-next-dossier-tickets"/);
 });
 
+test('documentation identifies the 15 Standard pulls as a simulator convention', () => {
+    const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+    const docs = html.match(/<dialog class="docs-dialog"[\s\S]*?<\/dialog>/)?.[0] || '';
+    assert.match(docs, /data-i18n="docs\.modelTitle"/);
+    assert.match(docs, /data-i18n="docs\.freePulls"/);
+    assert.match(catalogs.vi['docs.freePulls'], /15 Standard/);
+    assert.match(catalogs.vi['docs.freePulls'], /không phải luật gacha chính thức/);
+    assert.match(catalogs.en['docs.freePulls'], /not an official gacha rule/);
+    assert.doesNotMatch(catalogs.vi['strategy.helpSave'], /110 vé/);
+    assert.doesNotMatch(catalogs.en['strategy.helpSave'], /110 tickets/);
+    assert.match(catalogs.vi['rule.optimize'], /sau khi chiến thuật cho phép chi vé/);
+    assert.match(catalogs.en['rule.optimize'], /after a strategy authorizes spending/);
+});
+
+test('strategy copy matches the 1.4.1 future-protection rules', () => {
+    assert.match(catalogs.vi['docs.saveCommit'], /bảo vệ được mốc 120 banner sau/);
+    assert.match(catalogs.en['docs.saveCommit'], /protects next-banner pull 120/);
+    assert.match(catalogs.vi['docs.pull60'], /luôn dừng tại 30/);
+    assert.match(catalogs.en['docs.pull60'], /always stop at 30/);
+    assert.match(catalogs.vi['docs.strategyCommon'], /banner kế tiếp ảo/);
+    assert.match(catalogs.en['docs.strategyCommon'], /virtual next banner/);
+    assert.equal(catalogs.vi['single.pull60RecheckPassDecision'], undefined);
+    assert.equal(catalogs.en['single.pull60RecheckPassDecision'], undefined);
+});
+
 test('strategy simulator is the default tab and tabs follow the requested order', () => {
     const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
     const nav = html.match(/<nav class="tabs-navigation"[\s\S]*?<\/nav>/)?.[0] || '';
@@ -101,12 +126,13 @@ test('strategy simulator is the default tab and tabs follow the requested order'
     assert.match(html, /<main class="tab-content" id="interactive-tab"[^>]*hidden/);
 });
 
-test('strategy comparison table uses the compact ten-column layout', () => {
+test('strategy comparison table uses the compact nine-column layout', () => {
     const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
     const table = html.match(/<table class="comparison-table">([\s\S]*?)<\/table>/)?.[1] || '';
     const headerRow = table.match(/<thead>[\s\S]*?<tr>([\s\S]*?)<\/tr>/)?.[1] || '';
-    assert.equal((headerRow.match(/<th\b/g) || []).length, 10);
-    assert.match(table, /colspan="10"/);
+    assert.equal((headerRow.match(/<th\b/g) || []).length, 9);
+    assert.match(table, /colspan="9"/);
     assert.match(headerRow, /data-i18n="table\.charResults"/);
     assert.match(headerRow, /data-i18n="table\.weaponResults"/);
+    assert.doesNotMatch(headerRow, /data-i18n="table\.featuredRange"/);
 });

@@ -6,12 +6,12 @@ A9E Gacha Simulator is an **Arknights: Endfield** gacha simulation app. It suppo
 
 The app runs fully offline, sends no data externally, and can switch instantly between Vietnamese and English.
 
-## What's new in 1.4.0
+## What's new in 1.4.1
 
-- All character strategies share a conservative formula for the current tickets required to reach 30/60/120 milestones and short cross-banner routes.
-- Pull 60 now has separate checks at banner start, pull 30, and pull 60, allowing actual Quota outcomes to unlock the next step.
-- Roll Meta uses a 95/105-ticket rolling reserve and only forecasts as far as the next Meta banner.
-- Budget checks occur before the optional Dossier → Urgent optimization can spend wallet tickets.
+- Save & Commit finishes a nearby pull-30/60 milestone after Featured only when next-banner pull 120 remains protected; Yolo still takes it whenever the current wallet can pay.
+- Pull 60 goes directly to 60 when affordable at banner start. Its fallback reaches 30 only when next-banner pull 60 remains protected and never rechecks to upgrade at pull 30.
+- After missing Featured at pull 60, an upgrade must always protect the route `current 120 → next 60`.
+- Future-protection checks on the final simulated banner use one virtual next banner with normal income, avoiding an end-of-run liquidation exception.
 
 See [CHANGELOG.md](CHANGELOG.md) for the full release history.
 
@@ -53,14 +53,14 @@ Enter the player count, banner count, starting resources, and per-banner income,
 
 Monte Carlo results describe averages across many randomized runs. They are not guarantees for a real account.
 
-Strategies make budget decisions from the current state. Pull 60 rechecks at milestones 30 and 60, while Roll Meta protects the nearest Meta reserve instead of forecasting exact gacha outcomes across many distant banners.
+Strategies make budget decisions from the current state. Pull 60 goes straight to 60 when initially affordable; its pull-30 fallback runs only when next-banner pull 60 remains protected and always stops at 30. Roll Meta protects the nearest Meta reserve instead of forecasting exact gacha outcomes across many distant banners.
 
 ### Gacha Simulator — single player
 
 This mode runs exactly one player and shows every banner in detail:
 
 - Strategy roll and skip decisions.
-- Standard, Limited, Urgent, and Dossier pulls.
+- Standard, Limited, Urgent, and Dossier pulls, including the model's automatic 15 free Standard + 10 free Limited pulls per banner.
 - Pity, Bond Quota, Arsenal, and ending wallet changes.
 - Exact Featured Operator and Featured Weapon positions.
 
@@ -78,7 +78,7 @@ Reuse the same seed and configuration to reproduce a result.
 - [Strategy details — Vietnamese](docs/strategies.md)
 - [Income data snapshot](data/bookkeeping.md)
 
-Some ownership pools, Bond Quota values, and off-banner Limited probabilities are model assumptions rather than confirmed official rules. The documentation identifies these assumptions explicitly.
+The 15 free Standard pulls per simulated banner, ownership pools, Bond Quota values, and off-banner Limited probabilities are model inputs or assumptions rather than confirmed official rules. The documentation identifies these conventions explicitly.
 
 ## Development
 

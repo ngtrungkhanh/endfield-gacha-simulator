@@ -318,16 +318,15 @@
                                         <th class="tooltip-header col-char-wallet" data-i18n="table.charRemaining" data-i18n-tooltip="table.tooltip.charRemaining">Vé NV còn lại</th>
                                         <th class="tooltip-header col-char-results" data-i18n="table.charResults" data-i18n-tooltip="table.tooltip.charResults">Kết quả nhân vật</th>
                                         <th class="tooltip-header col-efficiency" data-i18n="table.efficiency" data-i18n-tooltip="table.tooltip.efficiency">Hiệu quả</th>
-                                        <th class="tooltip-header col-range" data-i18n="table.featuredRange" data-i18n-tooltip="table.tooltip.featuredRange">Khoảng Limited</th>
-                                        <th class="tooltip-header col-meta" data-i18n="table.metaObtained" data-i18n-tooltip="table.tooltip.metaObtained">Meta (NV/Vũ khí)</th>
-                                        <th class="tooltip-header col-weapon-results" data-i18n="table.weaponResults" data-i18n-tooltip="table.tooltip.weaponResults">Kết quả vũ khí</th>
+                                        <th class="tooltip-header col-meta" data-i18n="table.metaObtained" data-i18n-tooltip="table.tooltip.metaObtained">Meta NV/VK</th>
+                                        <th class="tooltip-header col-weapon-results" data-i18n="table.weaponResults" data-i18n-tooltip="table.tooltip.weaponResults">Vũ khí</th>
                                         <th class="tooltip-header col-weapon-pulls" data-i18n="table.weaponUsed" data-i18n-tooltip="table.tooltip.weaponUsed">Lượt quay VK</th>
                                         <th class="tooltip-header col-ownership" data-i18n="table.ownership" data-i18n-tooltip="table.tooltip.ownership">Hoàn thành Limited (%)</th>
                                     </tr>
                                 </thead>
                                 <tbody id="comparison-table-body">
                                     <tr>
-                                        <td colspan="10" style="text-align: center; color: var(--text-secondary); font-style: italic; padding: 30px;">
+                                        <td colspan="9" style="text-align: center; color: var(--text-secondary); font-style: italic; padding: 30px;">
                                             <span data-i18n="table.empty">Nhấn nút “Chạy giả lập” để xem kết quả so sánh...</span>
                                         </td>
                                     </tr>
@@ -487,7 +486,7 @@
                 <div>
                     <span class="eyebrow" data-i18n="docs.eyebrow">REFERENCE · OFFLINE</span>
                     <h2 id="docs-dialog-title" data-i18n="docs.title">Tài liệu liên quan</h2>
-                    <p data-i18n="docs.intro">Tóm tắt luật gacha và năm chiến thuật đang được triển khai trực tiếp trong ứng dụng.</p>
+                    <p data-i18n="docs.intro">Tóm tắt luật gacha, quy ước mô hình và năm chiến thuật đang được triển khai trực tiếp trong ứng dụng.</p>
                 </div>
                 <button class="docs-close" id="btn-close-docs" type="button" data-i18n-aria-label="docs.close" aria-label="Đóng">×</button>
             </div>
@@ -498,27 +497,41 @@
                     <div class="docs-rule-grid">
                         <article>
                             <strong data-i18n="docs.characterRatesTitle">Tỷ lệ nhân vật</strong>
-                            <p data-i18n="docs.characterRates">6★ 0,8% · 5★ 8% · 4★ 91,2%. Mỗi chuỗi 10 lượt bảo đảm ít nhất một 5★ trở lên.</p>
+                            <p data-i18n="docs.characterRates">6★ 0,8% · 5★ 8% · 4★ 91,2%. Mỗi chuỗi 10 lượt bảo đảm ít nhất một 5★ trở lên; pity 5★ được bảo lưu khi đổi banner.</p>
                         </article>
                         <article>
                             <strong data-i18n="docs.pityTitle">Pity 6★</strong>
-                            <p data-i18n="docs.pity">Tỷ lệ tăng từ lượt 66 và bảo đảm 6★ ở lượt 80. Pity được giữ khi đổi banner.</p>
+                            <p data-i18n="docs.pity">Tỷ lệ tăng từ lượt 66 và bảo đảm 6★ ở lượt 80. Limited và Standard có pity riêng; mỗi pity được giữ khi đổi banner cùng loại.</p>
                         </article>
                         <article>
                             <strong data-i18n="docs.featuredTitle">Featured 120</strong>
-                            <p data-i18n="docs.featured">Mỗi 6★ có 50% là Featured. Nếu chưa nhận Featured, pull hợp lệ thứ 120 của banner chắc chắn là Featured.</p>
+                            <p data-i18n="docs.featured">Mỗi 6★ có 50% là Featured; lệch không bảo đảm 6★ kế tiếp. Pull hợp lệ thứ 120 chắc chắn là Featured, nhưng tiến độ này reset khi đổi banner.</p>
                         </article>
                         <article>
                             <strong data-i18n="docs.milestonesTitle">Mốc banner</strong>
-                            <p data-i18n="docs.milestones">Pull 30 kích hoạt 10 Urgent ngay lập tức; pull 60 cấp 10 Dossier chỉ dùng ở banner kế tiếp; mỗi 240 pull nhận một Potential token.</p>
-                        </article>
-                        <article>
-                            <strong data-i18n="docs.quotaTitle">Bond Quota</strong>
-                            <p data-i18n="docs.quota">5★ nhận 10 Quota; Standard 6★ lệch nhận 50 Quota theo quy ước mô hình. Mỗi 25 Quota tự đổi thành một vé nhân vật.</p>
+                            <p data-i18n="docs.milestones">Pull 30 kích hoạt ngay 10 Urgent không tăng pity/mốc; pull 60 cấp 10 Dossier cho banner kế tiếp và các lượt Dossier vẫn tính pity/mốc. Mỗi 240 pull nhận một Potential token.</p>
                         </article>
                         <article>
                             <strong data-i18n="docs.weaponTitle">Arsenal Exchange</strong>
-                            <p data-i18n="docs.weapon">Một Issue tốn 1.980 Arsenal và cho 10 vũ khí. Tỷ lệ 6★/5★/4★ là 4%/15%/81%; Issue thứ 8 bảo đảm Featured một lần.</p>
+                            <p data-i18n="docs.weapon">Một Issue tốn 1.980 Arsenal và cho 10 vũ khí. Tỷ lệ 6★/5★/4★ là 4%/15%/81%; Issue 8 bảo đảm Featured một lần. Mốc 10 cho hộp chọn 6★; từ mốc 18, Featured và hộp chọn luân phiên mỗi 8 Issue.</p>
+                        </article>
+                    </div>
+                </section>
+
+                <section class="docs-section">
+                    <h3 data-i18n="docs.modelTitle">Quy ước của simulator</h3>
+                    <div class="docs-rule-grid">
+                        <article>
+                            <strong data-i18n="docs.freePullsTitle">15 Standard + 10 Limited miễn phí</strong>
+                            <p data-i18n="docs.freePulls">Mỗi banner mô phỏng tự quay 15 Standard rồi 10 Limited miễn phí trước khi kiểm tra ngân sách. Standard dùng pity riêng, không tăng mốc 30/60/120 của Limited, nhưng kết quả vẫn tạo Bond Quota và Arsenal rebate. Đây là nguồn cố định của mô hình, không phải luật gacha chính thức.</p>
+                        </article>
+                        <article>
+                            <strong data-i18n="docs.quotaTitle">Bond Quota và quyền sở hữu</strong>
+                            <p data-i18n="docs.quota">Mô hình tài khoản lâu năm coi mọi 5★ và Standard 6★ lệch là bản trùng, lần lượt nhận 10/50 Quota; Featured/Limited 6★ chỉ nhận Quota khi trùng. Mỗi 25 Quota tự đổi thành một vé nhân vật.</p>
+                        </article>
+                        <article class="docs-rule-wide">
+                            <strong data-i18n="docs.budgetTitle">Ước tính vé an toàn</strong>
+                            <p data-i18n="docs.budget">Với banner tương lai, checkpoint 30/60/120 tính cả Quota tối thiểu từ pity 5★, 15 Standard, 10 Limited miễn phí cùng Dossier/Urgent khi được mở khóa; cố ý bỏ qua pity 6★/80 và Featured ra sớm để thiên an toàn.</p>
                         </article>
                     </div>
                 </section>
@@ -528,19 +541,19 @@
                     <div class="docs-rule-grid docs-strategy-common">
                         <article class="docs-rule-wide">
                             <strong data-i18n="docs.strategyCommonTitle">Quy tắc chung khi quyết định roll/skip</strong>
-                            <p data-i18n="docs.strategyCommon">Mọi banner thực hiện các lượt miễn phí trước khi chiến thuật ra quyết định; Dossier sắp hết hạn và tối ưu mốc 30 vẫn có thể chạy dù chiến thuật skip.</p>
+                            <p data-i18n="docs.strategyCommon">Mỗi banner xử lý 15 Standard, 10 Limited miễn phí và Dossier sắp hết hạn trước khi kiểm tra ngân sách. Tối ưu mốc 30 chỉ được chi vé sau khi chiến thuật cho phép; “skip” nghĩa là không commit thêm vé ví.</p>
                         </article>
                     </div>
                     <div class="docs-strategy-list">
-                        <article><span>01</span><div><strong data-i18n="strategy.save_commit.name">Save &amp; Commit</strong><p data-i18n="docs.saveCommit">Chỉ roll khi có đủ vé bảo hiểm 120 lượt (ví + Dossier); dừng sau cụm chứa Featured hoặc tại mốc 120.</p></div></article>
-                        <article><span>02</span><div><strong data-i18n="strategy.save_commit_single.name">Save &amp; Commit (Quay lẻ)</strong><p data-i18n="docs.saveSingle">Điều kiện tích vé giống Save &amp; Commit nhưng quay từng lượt và dừng ngay khi nhận Featured.</p></div></article>
-                        <article><span>03</span><div><strong data-i18n="strategy.yolo.name">Yolo / Dùng hết</strong><p data-i18n="docs.yolo">Dùng toàn bộ vé khả dụng cho đến khi nhận Featured hoặc hết tài nguyên.</p></div></article>
-                        <article><span>04</span><div><strong data-i18n="strategy.pull_60.name">Mốc 60</strong><p data-i18n="docs.pull60">Ưu tiên chạm mốc 60 nếu đủ 50 vé ngoài 10 free; nếu không, cân nhắc mốc 30.</p></div></article>
-                        <article><span>05</span><div><strong data-i18n="strategy.roll_meta.name">Quay theo Meta</strong><p data-i18n="docs.rollMeta">Chọn ngẫu nhiên đúng số banner Meta đã cấu hình và chỉ commit banner thường khi vẫn bảo toàn quỹ cho Meta kế tiếp.</p></div></article>
+                        <article><span>01</span><div><strong data-i18n="strategy.save_commit.name">Save &amp; Commit</strong><p data-i18n="docs.saveCommit">Sau phần miễn phí/Dossier, chỉ commit khi vé ví đủ chi phí an toàn đến 120; quay x10, chuyển x1 gần mốc và dừng sau cụm chứa Featured hoặc tại 120.</p></div></article>
+                        <article><span>02</span><div><strong data-i18n="strategy.save_commit_single.name">Save &amp; Commit (Quay lẻ)</strong><p data-i18n="docs.saveSingle">Dùng cùng phép kiểm tra 120 như Save &amp; Commit nhưng toàn bộ phần commit quay x1, nên dừng đúng lượt nhận Featured.</p></div></article>
+                        <article><span>03</span><div><strong data-i18n="strategy.yolo.name">Yolo / Dùng hết</strong><p data-i18n="docs.yolo">Sau phần bắt buộc, dùng toàn bộ vé ví đến khi nhận Featured hoặc hết tài nguyên; vũ khí không cần tích đủ 8 Issue trước.</p></div></article>
+                        <article><span>04</span><div><strong data-i18n="strategy.pull_60.name">Mốc 60</strong><p data-i18n="docs.pull60">Dùng phép tính vé động để chọn mốc 60, hạ xuống 30 hoặc skip; kiểm tra lại ở pull 30 và có thể nâng từ 60 lên 120 nếu vẫn bảo vệ được mốc 60 banner sau.</p></div></article>
+                        <article><span>05</span><div><strong data-i18n="strategy.roll_meta.name">Quay theo Meta</strong><p data-i18n="docs.rollMeta">Chọn ngẫu nhiên đúng số banner Meta đã cấu hình. Banner thường chỉ commit khi đủ bảo hiểm hiện tại và vẫn giữ được quỹ an toàn 95/105 vé cho Meta kế tiếp.</p></div></article>
                     </div>
                 </section>
 
-                <p class="docs-footnote" data-i18n="docs.footnote">Nội dung này được đóng gói trực tiếp trong ứng dụng và không tải file hay dữ liệu bên ngoài.</p>
+                <p class="docs-footnote" data-i18n="docs.footnote">Các mục “quy ước của simulator” mô tả đầu vào/giả định của mô hình, không khẳng định đó là luật gacha chính thức. Nội dung được đóng gói trực tiếp trong ứng dụng.</p>
             </div>
         </div>
     </dialog>

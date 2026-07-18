@@ -8,8 +8,8 @@ Mọi chiến thuật đều thực hiện theo thứ tự sau:
 
 1. Vé Dossier tích lũy từ banner trước trở thành vé khả dụng; Dossier cũ chưa dùng sẽ hết hạn.
 2. Nhận thu nhập vé nhân vật được cấu hình cho banner hiện tại.
-3. Quay 15 lượt Standard miễn phí.
-4. Quay 10 lượt Limited miễn phí.
+3. Quay 15 lượt Standard miễn phí theo quy ước mô hình. Các lượt này dùng pity Standard riêng, không tăng mốc Limited 30/60/120 nhưng vẫn tạo Bond Quota và Arsenal rebate.
+4. Quay 10 lượt Limited miễn phí; các lượt này dùng pity Limited và tăng tiến độ mốc như lượt Limited thông thường.
 5. Dùng hết Dossier sắp hết hạn.
 6. Chụp trạng thái và kiểm tra ngân sách chiến thuật. Đây là checkpoint chính, trước khi tiêu bất kỳ vé thường nào.
 7. Nếu chiến thuật cho phép chi vé, thực hiện mục tiêu đã chọn. Tùy chọn tối ưu Dossier → Urgent chỉ được chạy sau bước duyệt ngân sách này.
@@ -38,6 +38,12 @@ Mô hình dùng các bảo đảm tối thiểu sau:
 
 Hàm chạy theo từng đoạn giữa các mốc 30/60/120, không mô phỏng từng pull. Do số đoạn cố định và rất nhỏ, chi phí của mỗi lần check là `O(số banner trong lộ trình)`; các checkpoint hiện tại chỉ dùng một hoặc hai banner.
 
+### Quy ước banner kế tiếp ảo
+
+Mọi phép kiểm tra cần bảo vệ tài nguyên cho banner sau đều được áp dụng giống nhau ở mọi vị trí. Nếu đang ở banner cuối của lượt mô phỏng, simulator vẫn dựng một **banner kế tiếp ảo** với mức thu nhập vé chuẩn đã cấu hình để tính lộ trình. Banner ảo chỉ phục vụ quyết định ngân sách, không được thực sự quay và không xuất hiện trong kết quả.
+
+Quy ước này tránh ngoại lệ “xả tài nguyên ở banner cuối”, nhờ đó cùng một trạng thái luôn cho cùng một quyết định dù người dùng mô phỏng dài hay ngắn hơn một banner.
+
 ### Tối ưu Dossier → Urgent
 
 Khi tùy chọn này bật, nếu sau Free/Dossier người chơi đang ở pull 20–29, chưa có Featured và đủ vé để chạm 30, simulator có thể bù đúng phần thiếu để nhận 10 Urgent.
@@ -57,13 +63,16 @@ Sau khi chạm mốc, chiến thuật có thể quay lại x10 nếu vẫn tiế
 
 Một cụm x10 đã bắt đầu không thể bị ngắt giữa chừng. Nếu Featured xuất hiện giữa cụm, các lượt còn lại của cụm vẫn hoàn tất; chiến thuật chỉ dừng chi vé sau khi cụm kết thúc. Nếu cụm đó chạm mốc 30, 10 lượt Urgent vẫn phải thực hiện ngay sau lượt thứ 30.
 
+Save & Commit và Yolo có thêm ngoại lệ sau khi nhận Featured nếu còn từ 1 đến 10 lượt để chạm mốc thưởng 30 hoặc 60. Yolo chỉ cần ví đủ phần thiếu. Save & Commit còn yêu cầu lộ trình `mốc hiện tại → 120 banner sau` an toàn; nếu không bảo vệ được 120 banner sau thì dừng ngay dù có đủ vé chạm mốc. Quy tắc không nối tiếp từ 30 lên 60. Save & Commit — Roll lẻ không dùng ngoại lệ này để giữ mục tiêu dừng chính xác tại Featured.
+
 ## 1. Save & Commit
 
 ID: `save_commit`
 
 - Tại checkpoint sau Free/Dossier, tính số vé hiện tại cần để bảo hiểm mốc 120 bằng hàm ước tính chung.
 - Chỉ cam kết quay nếu ví vé thường hiện tại đạt ngưỡng đó.
-- Nếu được phép quay, có thể thực hiện tối ưu mốc 30 rồi quay đến khi nhận Featured 6★ hoặc đạt mốc 120.
+- Nếu được phép quay, chỉ check ngân sách một lần, sau đó quay đến khi nhận Featured 6★ hoặc đạt mốc 120 mà không check lại tại 30/60.
+- Sau Featured, chỉ hoàn tất mốc 30/60 gần nhất nếu còn tối đa 10 lượt, ví đủ phần thiếu và tổng tài nguyên vẫn bảo vệ được mốc 120 của banner sau; nếu banner sau thiếu 120 dù có hoặc không hoàn tất mốc thì dừng ngay.
 - Nếu Featured xuất hiện giữa cụm x10 thì hoàn tất cụm trước khi dừng.
 - Chỉ bắt đầu quay vũ khí sau khi đã nhận Featured Operator và có ít nhất 15.840 Arsenal Tickets, tương đương tám Issue.
 - Dừng quay vũ khí khi nhận Featured hoặc phần thưởng mốc được simulator tính là Featured.
@@ -84,13 +93,14 @@ ID: `yolo`
 - Luôn cho phép chi vé sau các lượt Free/Dossier bắt buộc.
 - Nếu bật tối ưu mốc 30, bù phần thiếu trước rồi tiếp tục dùng toàn bộ vé khả dụng.
 - Dừng khi nhận Featured 6★; nếu chưa nhận Featured thì tiếp tục đến khi hết vé.
+- Sau Featured, hoàn tất mốc 30/60 gần nhất nếu còn tối đa 10 lượt và đủ vé, rồi dừng; Yolo không giữ quỹ cho banner sau.
 - Sau khi nhận Featured Operator, dùng Arsenal Tickets cho các Issue cho đến khi nhận Featured Weapon hoặc không còn đủ 1.980 vé.
 
 ## 4. Pull 60
 
 ID: `pull_60`
 
-Pull 60 dùng ba checkpoint liên tiếp, luôn dựa trên trạng thái thật tại thời điểm check:
+Pull 60 dùng hai checkpoint quyết định: đầu banner và tại pull 60.
 
 ### Checkpoint đầu banner: mốc 30 và 60
 
@@ -98,32 +108,24 @@ Sau 10 Limited miễn phí và Dossier bắt buộc:
 
 1. Tính đồng thời số vé cần cho mốc 60 và mốc 30.
 2. Nếu đủ mốc 60, quay thẳng tới 60.
-3. Nếu chưa đủ 60 nhưng đủ 30, quay tới 30.
-4. Nếu không đủ cả 30, skip và giữ vé.
+3. Nếu chưa đủ 60 nhưng đủ 30, chỉ quay tới 30 khi phần dư cộng thu nhập banner kế tiếp vẫn bảo vệ được mốc 60 của banner sau.
+4. Nếu không đủ 30, hoặc lộ trình `30 hiện tại → 60 banner sau` không an toàn, skip và giữ vé.
 
-Chiến thuật không dừng sớm khi nhận Featured trong đoạn đã cam kết; mục tiêu là hoàn thành mốc được chọn.
+Nếu đã chọn mục tiêu 60 ngay từ đầu, chiến thuật đi thẳng tới 60 kể cả nhận Featured sớm và không kiểm tra lại tại pull 30.
 
-### Checkpoint tại pull 30: kiểm tra lại mốc 60
-
-Nếu checkpoint đầu chỉ cho phép mốc 30, sau khi hoàn tất pull 30 và 10 Urgent:
-
-1. Cập nhật pity 5★, Bond Quota và vé quy đổi thực tế.
-2. Tính lại số vé cần để tới 60.
-3. Nếu đủ, nâng mục tiêu và quay tiếp tới 60; nếu thiếu thì dừng ở 30.
-
-Checkpoint này cho phép kết quả thực tế tốt hơn dự báo tối thiểu mở khóa mốc 60, nhưng không vay thu nhập của banner sau.
+Nếu checkpoint đầu chỉ cho phép fallback 30, chiến thuật hoàn tất pull 30 cùng 10 Urgent rồi **luôn dừng tại đó**. Kết quả Quota thực tế tại 30 không được dùng để mở lại quyết định lên 60; muốn đi thẳng tới 60 thì ngân sách phải đạt điều kiện 60 ngay từ checkpoint đầu banner.
 
 ### Checkpoint tại pull 60: cân nhắc nâng lên 120
 
 Nếu đạt pull 60 mà vẫn chưa có Featured:
 
 1. Tính số vé hiện tại cần để hoàn thành 120 của banner này.
-2. Nếu còn banner kế tiếp, đồng thời tính lộ trình `[120, 60]` để bảo vệ mốc 60 của banner sau.
+2. Đồng thời tính lộ trình `[120, 60]` để bảo vệ mốc 60 của banner sau, kể cả khi banner sau là banner ảo.
 3. Chỉ nâng lên 120 khi:
    - ví hiện tại tự đủ cho 120 hiện tại; và
    - ví hiện tại cộng thu nhập vé của banner kế tiếp đủ cho toàn lộ trình `[120, 60]`.
 
-Thu nhập banner sau chỉ được dùng để bảo vệ mốc 60 của banner sau, không được tài trợ ngược cho 120 hiện tại. Nếu đây là banner cuối, chỉ cần bảo hiểm 120 hiện tại.
+Thu nhập banner sau chỉ được dùng để bảo vệ mốc 60 của banner sau, không được tài trợ ngược cho 120 hiện tại. Banner cuối không có ngoại lệ: phép kiểm tra vẫn dùng banner kế tiếp ảo.
 
 Sau khi nhận Featured Operator, chính sách vũ khí giữ nguyên: chỉ bắt đầu khi đã tích đủ 15.840 Arsenal Tickets và dừng khi nhận Featured Weapon.
 

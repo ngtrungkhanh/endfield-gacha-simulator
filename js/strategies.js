@@ -288,14 +288,19 @@ function calculateRequiredTickets(player, bannerState, targetRolls) {
 
 function calculateFutureTicketIncome(ticketIncome, bannerIdx, targetBannerIdx, options) {
     const schedule = options.ticketIncomeSchedule;
+    const fallbackIncome = Number.isFinite(Number(options.defaultTicketIncome))
+        ? Number(options.defaultTicketIncome)
+        : ticketIncome;
     if (Array.isArray(schedule)) {
         let total = 0;
         for (let idx = bannerIdx + 1; idx <= targetBannerIdx; idx++) {
-            total += Number(schedule[idx]) || 0;
+            total += idx < schedule.length
+                ? (Number(schedule[idx]) || 0)
+                : fallbackIncome;
         }
         return total;
     }
-    return Math.max(0, targetBannerIdx - bannerIdx) * ticketIncome;
+    return Math.max(0, targetBannerIdx - bannerIdx) * fallbackIncome;
 }
 
 /**
@@ -502,6 +507,68 @@ function executeAuthorizedMilestoneRolls(player, bannerState, gotFeaturedChar, s
     return { pullsRecord, gotFeatured, walletPullsSpent };
 }
 
+/**
+ * Sau khi đã nhận Featured, người chơi dùng tối đa 10 vé còn lại để chạm mốc
+ * thưởng gần nhất. Pull 30 trả 10 Urgent ngay; pull 60 trả 10 Dossier.
+ * Chỉ hoàn thành một mốc, không nối tiếp từ 30 lên 60.
+ */
+function executeNearbyRewardMilestoneAfterFeatured(
+    player,
+    bannerState,
+    gotFeaturedChar,
+    bannerIdx,
+    totalBanners,
+    ticketIncome,
+    options,
+    protectNext120 = false
+) {
+    if (!gotFeaturedChar) return { pullsRecord: [], gotFeatured: false, check: null };
+
+    const currentPulls = bannerState.bannerPullsCount;
+    let targetPulls = 0;
+    if (!bannerState.milestone30Triggered && currentPulls < 30 && 30 - currentPulls <= 10) {
+        targetPulls = 30;
+    } else if (!bannerState.milestone60Triggered && currentPulls < 60 && 60 - currentPulls <= 10) {
+        targetPulls = 60;
+    }
+
+    const pullsNeeded = targetPulls - currentPulls;
+    if (targetPulls === 0 || player.charTickets < pullsNeeded) {
+        return { pullsRecord: [], gotFeatured: true, check: null };
+    }
+
+    let check = null;
+    if (protectNext120) {
+        const requiredRouteTickets = calculateRequiredTickets(player, bannerState, [targetPulls, 120]);
+        const futureIncome = calculateFutureTicketIncome(ticketIncome, bannerIdx, bannerIdx + 1, options);
+        const affordable = player.charTickets + futureIncome >= requiredRouteTickets;
+        check = {
+            targetPulls,
+            nextTargetPulls: 120,
+            requiredRouteTickets,
+            availableTickets: player.charTickets,
+            futureIncome,
+            affordable
+        };
+        if (!affordable) {
+            return { pullsRecord: [], gotFeatured: true, check };
+        }
+    }
+
+    const result = executeCharacterPullSequence(
+        player,
+        bannerState,
+        targetPulls,
+        false,
+        bannerIdx,
+        true,
+        false,
+        totalBanners
+    );
+    result.pullsRecord.forEach(item => { item.actionPhase = 'finish_milestone'; });
+    return { ...result, check };
+}
+
 // Helper thực hiện vòng quay vũ khí hợp nhất
 function executeWeaponPullSequence(player, bannerState, totalArsenalTicketsEarned, gotFeaturedChar, maxSpend = Infinity, bannerIdx = 0, totalBanners = 10) {
     player.arsenalTickets += totalArsenalTicketsEarned;
@@ -563,7 +630,7 @@ export const strategies = {
     save_commit: {
         id: 'save_commit',
         name: 'Save & Commit',
-        desc: 'Nhân vật: Chỉ roll khi có đủ vé bảo hiểm 120 lượt (ví + Dossier). Sử dụng cụm x10 và tự động chuyển sang x1 khi gần mốc pity hoặc bảo hiểm, dừng ngay khi ra Featured. Vũ khí: Quay khi tích đủ 8 Issues (15.840 vé).',
+        desc: 'Nhân vật: Sau phần miễn phí/Dossier, chỉ roll khi vé ví đạt chi phí an toàn động đến mốc 120. Sau Featured, chỉ hoàn tất mốc 30/60 gần nhất trong 10 lượt nếu vẫn bảo vệ được mốc 120 banner sau. Vũ khí: Quay khi tích đủ 8 Issues (15.840 vé).',
         
         runCharacterPull(player, bannerState, ticketIncome, bannerIdx, totalBanners) {
             return [];
@@ -576,7 +643,7 @@ export const strategies = {
     save_commit_single: {
         id: 'save_commit_single',
         name: 'Save & Commit (Roll lẻ)',
-        desc: 'Nhân vật: Điều kiện tích lũy giống Save & Commit, nhưng sử dụng roll lẻ x1 từ đầu đến cuối để tối ưu tiết kiệm vé. Vũ khí: Chỉ quay khi tích đủ 8 Issues (15.840 vé).',
+        desc: 'Nhân vật: Dùng phép kiểm tra ngân sách động giống Save & Commit, nhưng phần commit quay lẻ x1 từ đầu đến cuối để dừng đúng lượt nhận Featured. Vũ khí: Chỉ quay khi tích đủ 8 Issues (15.840 vé).',
         
         runCharacterPull(player, bannerState, ticketIncome, bannerIdx, totalBanners) {
             return [];
@@ -593,7 +660,7 @@ export const strategies = {
     yolo: {
         id: 'yolo',
         name: 'Yolo / Spend All',
-        desc: 'Nhân vật: Có bao nhiêu vé nhân vật khả dụng xả sạch bấy nhiêu, dừng ngay khi có Featured. Vũ khí: Nếu trúng nhân vật, xả sạch vé vũ khí hiện có cho đến khi trúng Featured Weapon hoặc hết vé.',
+        desc: 'Nhân vật: Có bao nhiêu vé khả dụng dùng tới Featured hoặc hết vé. Sau Featured, nếu còn tối đa 10 lượt tới mốc 30/60 và đủ vé thì hoàn tất mốc gần nhất rồi dừng. Vũ khí: Nếu trúng nhân vật, dùng từng Issue cho đến Featured Weapon hoặc hết Arsenal.',
         
         runCharacterPull(player, bannerState, ticketIncome, bannerIdx, totalBanners) {
             return [];
@@ -610,7 +677,7 @@ export const strategies = {
     pull_60: {
         id: 'pull_60',
         name: 'Pull 60',
-        desc: 'Nhân vật: Hướng tới mốc 60 pull để lấy 10 vé Dossier (không dừng khi trúng Featured sớm). Nếu thiếu vé, hạ mục tiêu xuống mốc 30 để nhận 10 Urgent free; nếu vẫn thiếu sẽ skip để tích lũy. Đặc biệt, nếu đạt mốc 60 mà tạch Featured, sẽ tự động nâng lên mốc 120 để lấy bảo hiểm nếu ngân sách của banner hiện tại và banner kế tiếp vẫn an toàn. Vũ khí: Chỉ quay sau khi có nhân vật và tích đủ 8 Issues (15.840 vé).',
+        desc: 'Nhân vật: Đủ mốc 60 thì đi thẳng tới 60 kể cả ra Featured sớm. Nếu chỉ đủ mốc 30, fallback chỉ khi vẫn bảo vệ mốc 60 banner sau và luôn dừng tại 30. Chưa có Featured ở 60 mới cân nhắc 120 hiện tại đồng thời bảo vệ 60 banner sau. Vũ khí: Chỉ quay sau khi có nhân vật và tích đủ 8 Issues (15.840 vé).',
         
         runCharacterPull(player, bannerState, ticketIncome, bannerIdx, totalBanners) {
             return [];
@@ -627,7 +694,7 @@ export const strategies = {
     roll_meta: {
         id: 'roll_meta',
         name: 'Roll Meta',
-        desc: 'Nhân vật: Chọn ngẫu nhiên đúng số banner Meta do người dùng cấu hình (cam kết 120 roll). Banner thường chỉ roll nếu số vé dư bảo đảm 120 roll cho banner Meta kế tiếp. Vũ khí: Quay ở banner Meta, hoặc banner thường nếu ví đủ bảo hiểm 8 Issues cho cả banner hiện tại lẫn banner Meta kế tiếp.',
+        desc: 'Nhân vật: Chọn ngẫu nhiên đúng số banner Meta đã cấu hình. Banner Meta dùng tài nguyên khả dụng; banner thường chỉ roll nếu đủ bảo hiểm hiện tại và vẫn giữ quỹ 95/105 vé cho Meta gần nhất. Vũ khí: Banner thường phải bảo vệ 8 Issues cho Meta kế tiếp.',
         
         runCharacterPull(player, bannerState, ticketIncome, bannerIdx, totalBanners) {
             return [];
@@ -759,16 +826,32 @@ export function runSingleBannerForPlayer(strategyId, player, charBannerState, we
         const required30 = calculateRequiredTickets(player, charBannerState, 30);
         const canAfford60 = player.charTickets >= required60;
         const canAfford30 = player.charTickets >= required30;
+        let requiredProtectedRoute30Then60 = required30;
+        let futureIncomeForNext60 = 0;
+        let protectsNext60 = canAfford30;
+
+        if (!canAfford60 && canAfford30) {
+            requiredProtectedRoute30Then60 = calculateRequiredTickets(player, charBannerState, [30, 60]);
+            futureIncomeForNext60 = calculateFutureTicketIncome(ticketIncome, bannerIdx, bannerIdx + 1, options);
+            protectsNext60 = player.charTickets + futureIncomeForNext60 >= requiredProtectedRoute30Then60;
+        }
+
+        const canFallbackTo30 = !canAfford60 && canAfford30 && protectsNext60;
         const budgetTargetPulls = canAfford60 ? 60 : 30;
         const budgetRequiredTickets = canAfford60 ? required60 : required30;
 
         decisionState.budgetTargetPulls = budgetTargetPulls;
         decisionState.budgetRequiredTickets = budgetRequiredTickets;
-        decisionState.budgetShortfall = Math.max(0, budgetRequiredTickets - player.charTickets);
-        decisionState.canAffordTarget = canAfford60 || canAfford30;
-        decisionState.selectedTargetPulls = canAfford60 ? 60 : (canAfford30 ? 30 : 0);
+        decisionState.budgetShortfall = canFallbackTo30 || canAfford60
+            ? 0
+            : Math.max(
+                Math.max(0, budgetRequiredTickets - player.charTickets),
+                Math.max(0, requiredProtectedRoute30Then60 - player.charTickets - futureIncomeForNext60)
+            );
+        decisionState.canAffordTarget = canAfford60 || canFallbackTo30;
+        decisionState.selectedTargetPulls = canAfford60 ? 60 : (canFallbackTo30 ? 30 : 0);
         decisionState.initialSelectedTargetPulls = decisionState.selectedTargetPulls;
-        decisionState.fellBackTo30 = !canAfford60;
+        decisionState.fellBackTo30 = canFallbackTo30;
         decisionState.checks.pull30 = {
             requiredTickets: required30,
             availableTickets: player.charTickets,
@@ -779,6 +862,14 @@ export function runSingleBannerForPlayer(strategyId, player, charBannerState, we
             availableTickets: player.charTickets,
             affordable: canAfford60
         };
+        if (!canAfford60 && canAfford30) {
+            decisionState.checks.pull30ProtectsNext60 = {
+                requiredTickets: requiredProtectedRoute30Then60,
+                availableTickets: player.charTickets,
+                futureIncome: futureIncomeForNext60,
+                affordable: protectsNext60
+            };
+        }
     }
 
     // 6. Quyết định quay tiếp bằng tài nguyên trong ví dựa trên chiến thuật.
@@ -790,6 +881,21 @@ export function runSingleBannerForPlayer(strategyId, player, charBannerState, we
             res.pullsRecord.forEach(item => { item.actionPhase = 'commit'; });
             pullsRecord = res.pullsRecord;
             gotFeaturedChar = gotFeaturedChar || res.gotFeatured;
+            const milestoneResult = executeNearbyRewardMilestoneAfterFeatured(
+                player,
+                charBannerState,
+                gotFeaturedChar,
+                bannerIdx,
+                totalBanners,
+                ticketIncome,
+                options,
+                true
+            );
+            if (milestoneResult.check) {
+                decisionState.checks.finishMilestoneProtectsNext120 = milestoneResult.check;
+            }
+            pullsRecord.push(...milestoneResult.pullsRecord);
+            gotFeaturedChar = gotFeaturedChar || milestoneResult.gotFeatured;
         }
     } else if (strategyId === 'save_commit_single') {
         if (decisionState.canAfford120) {
@@ -805,6 +911,18 @@ export function runSingleBannerForPlayer(strategyId, player, charBannerState, we
         res.pullsRecord.forEach(item => { item.actionPhase = 'strategy'; });
         pullsRecord = res.pullsRecord;
         gotFeaturedChar = gotFeaturedChar || res.gotFeatured;
+        const milestoneResult = executeNearbyRewardMilestoneAfterFeatured(
+            player,
+            charBannerState,
+            gotFeaturedChar,
+            bannerIdx,
+            totalBanners,
+            ticketIncome,
+            options,
+            false
+        );
+        pullsRecord.push(...milestoneResult.pullsRecord);
+        gotFeaturedChar = gotFeaturedChar || milestoneResult.gotFeatured;
     } else if (strategyId === 'pull_60') {
         const initialTarget = decisionState.selectedTargetPulls;
 
@@ -815,39 +933,14 @@ export function runSingleBannerForPlayer(strategyId, player, charBannerState, we
             gotFeaturedChar = gotFeaturedChar || res.gotFeatured;
         }
 
-        // Fallback 30 được phép check lại 60 bằng Quota và kết quả thật vừa nhận.
-        if (initialTarget === 30 && charBannerState.bannerPullsCount === 30) {
-            const required60At30 = calculateRequiredTickets(player, charBannerState, 60);
-            const canAfford60At30 = player.charTickets >= required60At30;
-            decisionState.checks.pull60At30 = {
-                requiredTickets: required60At30,
-                availableTickets: player.charTickets,
-                affordable: canAfford60At30
-            };
-
-            if (canAfford60At30) {
-                const res = executeCharacterPullSequence(player, charBannerState, 60, false, bannerIdx, gotFeaturedChar, false, totalBanners);
-                res.pullsRecord.forEach(item => { item.actionPhase = 'strategy'; });
-                pullsRecord.push(...res.pullsRecord);
-                gotFeaturedChar = gotFeaturedChar || res.gotFeatured;
-                decisionState.selectedTargetPulls = 60;
-            }
-        }
-
         // Tại 60, chỉ nâng lên 120 khi chưa có Featured và vẫn bảo vệ được
         // mốc 60 banner sau. Income banner sau không được tài trợ ngược cho 120 hiện tại.
         if (charBannerState.bannerPullsCount === 60 && !gotFeaturedChar) {
             const requiredCurrent120 = calculateRequiredTickets(player, charBannerState, 120);
-            let requiredProtectedRoute = requiredCurrent120;
-            let futureIncome = 0;
-            let canUpgrade = player.charTickets >= requiredCurrent120;
-
-            if (bannerIdx + 1 < totalBanners) {
-                requiredProtectedRoute = calculateRequiredTickets(player, charBannerState, [120, 60]);
-                futureIncome = calculateFutureTicketIncome(ticketIncome, bannerIdx, bannerIdx + 1, options);
-                canUpgrade = canUpgrade &&
-                    player.charTickets + futureIncome >= requiredProtectedRoute;
-            }
+            const requiredProtectedRoute = calculateRequiredTickets(player, charBannerState, [120, 60]);
+            const futureIncome = calculateFutureTicketIncome(ticketIncome, bannerIdx, bannerIdx + 1, options);
+            const canUpgrade = player.charTickets >= requiredCurrent120 &&
+                player.charTickets + futureIncome >= requiredProtectedRoute;
 
             decisionState.checks.pull120At60 = {
                 requiredTickets: requiredCurrent120,

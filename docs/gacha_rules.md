@@ -6,7 +6,7 @@ Tài liệu này chỉ chứa luật gacha. Dữ liệu thu nhập tài nguyên 
 
 - Luật Headhunting: [Endfield Talos Wiki — Headhunting](https://endfield.wiki.gg/wiki/Headhunting).
 - Luật Arsenal Exchange: [Endfield Talos Wiki — Arsenal Exchange](https://endfield.wiki.gg/wiki/Arsenal_Exchange).
-- Các cơ chế Urgent Recruitment, Headhunting Dossier, rebate và quy ước vòng đời vé không xuất hiện trên hai trang wiki trên nhưng vẫn được giữ theo dữ liệu và yêu cầu của dự án.
+- Các cơ chế Urgent Recruitment, Headhunting Dossier, rebate, 15 lượt Standard miễn phí mỗi banner mô phỏng và quy ước vòng đời vé không xuất hiện trên hai trang wiki trên nhưng vẫn được giữ theo dữ liệu và yêu cầu của dự án.
 - Khi tài liệu wiki và quy ước dự án khác nhau, phải ghi rõ nguồn thay vì trộn chúng với dữ liệu bookkeeping.
 
 ## 1. Headhunting
@@ -66,6 +66,16 @@ Tài liệu này chỉ chứa luật gacha. Dữ liệu thu nhập tài nguyên 
 - Vé Dossier chỉ khả dụng ở banner liền sau. Phần chưa dùng sẽ hết hạn khi chuyển sang banner tiếp theo nữa.
 - Lượt quay bằng Dossier được tính vào pity và các mốc giống lượt quay thông thường.
 
+### 15 Standard và 10 Limited miễn phí trong Strategy Simulator
+
+Đây là **quy ước đầu vào của mô hình**, không phải luật gacha chính thức được xác nhận từ hai trang wiki nêu trên:
+
+- Trước checkpoint quyết định của mỗi banner mô phỏng, hệ thống tự thực hiện 15 lượt Standard miễn phí rồi 10 lượt Limited miễn phí.
+- 15 lượt Standard dùng bộ đếm pity 5★/6★ riêng và pity đó được giữ qua các banner Standard mô phỏng.
+- Standard không tăng tiến độ các mốc 30/60/120 của banner Limited và không thể nhận Featured Limited.
+- Kết quả Standard vẫn tạo Bond Quota, Arsenal rebate và thống kê sở hữu; vì vậy chúng có thể gián tiếp tăng số vé khả dụng trước khi chiến thuật quyết định roll hay skip.
+- 10 lượt Limited miễn phí dùng pity Limited hiện tại và có tính vào các mốc 30/60/120 như lượt Limited thông thường.
+
 ### Bond Quota và quy đổi vé trong simulator
 
 Các giá trị dưới đây là quy ước mô hình của dự án và chưa được xác nhận từ hai trang wiki nêu ở đầu tài liệu:
@@ -85,6 +95,7 @@ Simulator dùng một công thức bảo thủ để tính số vé thường ph
 - Pity 6★/80 bị bỏ qua; Featured ra trước 120 cũng bị bỏ qua.
 - Với lộ trình qua banner tương lai, công thức tự cộng Quota tối thiểu từ 15 Standard miễn phí, 10 Limited miễn phí, 10 Dossier nếu banner trước đạt 60 và 10 Urgent khi đạt mốc 30.
 - Quota phát sinh ở một pull chỉ có thể đổi thành vé dùng từ pull kế tiếp.
+- Khi một chiến thuật cần bảo vệ banner sau ở cuối lượt mô phỏng, công thức vẫn dùng một banner kế tiếp ảo với mức thu nhập chuẩn đã cấu hình. Banner ảo chỉ phục vụ budget check, không được quay hay tính vào kết quả.
 
 Việc bỏ qua pity 80 làm kết quả thiên an toàn và thường chỉ dư khoảng một vé trên mỗi banner so với mô hình đầy đủ. Đây là quy tắc lập ngân sách của simulator, không phải luật gacha chính thức. Cách áp dụng cho từng chiến thuật được mô tả trong [`strategies.md`](strategies.md).
 

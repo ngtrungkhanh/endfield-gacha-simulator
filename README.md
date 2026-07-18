@@ -6,12 +6,12 @@ A9E Gacha Simulator là ứng dụng mô phỏng gacha dành cho **Arknights: En
 
 Ứng dụng chạy hoàn toàn offline, không gửi dữ liệu ra ngoài và hỗ trợ chuyển đổi tức thời giữa tiếng Việt và tiếng Anh.
 
-## Mới trong 1.4.0
+## Mới trong 1.4.1
 
-- Các chiến thuật dùng chung công thức bảo thủ để tính số vé hiện tại cần cho mốc 30/60/120 và lộ trình qua banner kế tiếp.
-- Pull 60 có checkpoint riêng ở đầu banner, pull 30 và pull 60; kết quả Quota thực tế có thể mở khóa bước tiếp theo.
-- Roll Meta dùng rolling reserve 95/105 vé và chỉ dự báo tới banner Meta kế tiếp.
-- Budget check diễn ra trước khi tùy chọn tối ưu Dossier → Urgent được phép chi vé.
+- Save & Commit chỉ hoàn tất mốc 30/60 sau Featured khi vẫn bảo vệ được mốc 120 của banner sau; Yolo vẫn ưu tiên lấy mốc nếu ví hiện tại đủ.
+- Pull 60 đi thẳng tới 60 khi đủ ngay từ đầu. Nhánh fallback chỉ đi tới 30 khi vẫn bảo vệ được mốc 60 banner sau và không kiểm tra nâng lại ở pull 30.
+- Tại pull 60 chưa có Featured, lộ trình nâng cấp luôn phải bảo vệ `120 hiện tại → 60 banner sau`.
+- Mọi phép bảo vệ tương lai ở banner cuối dùng một banner kế tiếp ảo với thu nhập chuẩn, tránh ngoại lệ xả vé cuối kỳ.
 
 Xem toàn bộ thay đổi tại [CHANGELOG.md](CHANGELOG.md).
 
@@ -53,14 +53,14 @@ Nhập số người chơi, số banner, tài nguyên ban đầu và thu nhập 
 
 Mô phỏng Monte Carlo phản ánh kết quả trung bình của nhiều lượt chạy ngẫu nhiên; đây không phải bảo đảm cho tài khoản thật.
 
-Các chiến thuật dùng checkpoint ngân sách theo trạng thái hiện tại. Pull 60 kiểm tra lại ở mốc 30/60, còn Roll Meta giữ quỹ dự phòng cho Meta gần nhất thay vì dự báo chính xác nhiều banner xa.
+Các chiến thuật dùng checkpoint ngân sách theo trạng thái hiện tại. Pull 60 đi thẳng tới 60 nếu đủ ngay từ đầu; nhánh fallback 30 chỉ chạy khi vẫn bảo vệ được mốc 60 banner sau và luôn dừng tại 30. Roll Meta giữ quỹ dự phòng cho Meta gần nhất thay vì dự báo chính xác nhiều banner xa.
 
 ### Gacha Simulator — một người chơi
 
 Chế độ này chạy đúng một người chơi và hiển thị chi tiết từng banner:
 
 - Quyết định roll hoặc skip của chiến thuật.
-- Các lượt Standard, Limited, Urgent và Dossier.
+- Các lượt Standard, Limited, Urgent và Dossier, gồm 15 Standard + 10 Limited miễn phí được mô hình tự chạy mỗi banner.
 - Thay đổi pity, Bond Quota, Arsenal và số dư cuối banner.
 - Vị trí chính xác nhận Featured Operator hoặc Featured Weapon.
 
@@ -78,7 +78,7 @@ Có thể nhập lại cùng một seed và cấu hình để tái tạo kết q
 - [Chi tiết các chiến thuật](docs/strategies.md)
 - [Snapshot dữ liệu thu nhập](data/bookkeeping.md)
 
-Một số dữ liệu như pool sở hữu, Bond Quota và xác suất lệch Limited là giả định của mô hình, không phải toàn bộ đều là luật chính thức. Các giả định đang dùng được ghi rõ trong tài liệu.
+Một số dữ liệu như 15 Standard miễn phí mỗi banner mô phỏng, pool sở hữu, Bond Quota và xác suất lệch Limited là giả định/đầu vào của mô hình, không phải luật chính thức. Các quy ước đang dùng được ghi rõ trong tài liệu.
 
 ## Dành cho nhà phát triển
 

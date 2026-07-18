@@ -89,7 +89,10 @@ export class MonteCarloSimulator {
                         weaponIncomeNonGacha,
                         b,
                         numBanners,
-                        { ticketIncomeSchedule }
+                        {
+                            ticketIncomeSchedule,
+                            defaultTicketIncome: incomePerBanner
+                        }
                     );
                 }
             }

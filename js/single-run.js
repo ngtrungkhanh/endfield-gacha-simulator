@@ -139,7 +139,10 @@ export function runSingleDetailedSimulation(config) {
                 runConfig.weaponIncomePerBanner,
                 bannerIndex,
                 runConfig.numBanners,
-                { ticketIncomeSchedule }
+                {
+                    ticketIncomeSchedule,
+                    defaultTicketIncome: runConfig.incomePerBanner
+                }
             );
             const after = snapshotPlayer(player);
             const regularLimited = result.charPulls.filter(item => !item.isUrgent);

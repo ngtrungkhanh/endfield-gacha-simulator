@@ -1047,18 +1047,19 @@ function displaySimulatorResults(results, numBanners) {
           <td class="metric-cell">
               <strong class="metric-main accent-efficiency">${t("table.metric.efficiency", { value: Number.isFinite(eff) ? eff.toFixed(1) : "N/A" })}</strong>
               <span class="metric-detail">${t("table.metric.pity120", { value: (res.avgTimesHit120Guarantee || 0).toFixed(2) })}</span>
-          </td>
-          <td class="metric-cell compact">
-              <strong class="metric-main accent-range">${res.bestLuckChar}\u2013${res.worstLuckChar}</strong>
               <span class="metric-detail">${t("table.metric.highLow")}</span>
+              <strong class="metric-subvalue accent-range">${res.bestLuckChar}/${res.worstLuckChar}</strong>
           </td>
           <td class="metric-cell compact">
-              <strong class="metric-main accent-meta">${t("table.metric.metaChar", { count: res.avgMetaFeaturedChars.toFixed(2) })}</strong>
-              <span class="metric-detail">${t("table.metric.metaWeapon", { count: res.avgMetaFeaturedWeapons.toFixed(2) })}</span>
+              <strong class="metric-main accent-meta">${t("table.metric.metaPair", {
+    char: res.avgMetaFeaturedChars.toFixed(2),
+    weapon: res.avgMetaFeaturedWeapons.toFixed(2)
+  })}</strong>
           </td>
           <td class="metric-cell">
-              <strong class="metric-main accent-weapon">${t("table.metric.sixCompact", { count: total6StarWeap.toFixed(2) })}</strong>
-              <span class="metric-detail featured-detail">${t("table.metric.featuredCompact", { count: res.avgFeaturedWeapons.toFixed(2) })}</span>
+              <strong class="metric-main accent-weapon">${res.avgFeaturedWeapons.toFixed(2)}/${total6StarWeap.toFixed(2)}</strong>
+              <span class="metric-detail">${t("table.metric.featuredTotalShort")}</span>
+              <strong class="metric-subvalue accent-weapon">${res.bestLuckWeapon}/${res.worstLuckWeapon}</strong>
               <span class="metric-detail arsenal-detail">${t("table.metric.arsenalRemaining", { count: formatNumber(res.avgUnspentWeapon, { maximumFractionDigits: 0 }) })}</span>
           </td>
           <td class="metric-cell">
@@ -1189,9 +1190,10 @@ function singleDecisionText(strategyId, decision) {
   if (decision.guarantee120Consumed) return t("single.featuredStopDecision");
   if (strategyId === "yolo") return t("single.yoloDecision");
   if (strategyId === "pull_60" && decision.upgradedTo120) return t("single.pull120UpgradeDecision");
-  if (strategyId === "pull_60" && decision.checks?.pull60At30?.affordable) return t("single.pull60RecheckPassDecision");
-  if (strategyId === "pull_60" && decision.checks?.pull60At30 && !decision.checks.pull60At30.affordable) return t("single.pull60RecheckStopDecision");
   if (strategyId === "pull_60" && decision.fellBackTo30 && decision.selectedTargetPulls === 30) return t("single.pull30FallbackDecision");
+  if (strategyId === "pull_60" && decision.checks?.pull30ProtectsNext60 && !decision.checks.pull30ProtectsNext60.affordable) {
+    return t("single.pull30ProtectionSkipDecision");
+  }
   if (strategyId === "pull_60" && decision.selectedTargetPulls === 0) return t("single.pull60SkipDecision");
   if (strategyId === "pull_60") return t("single.pull60Decision");
   if (strategyId === "roll_meta" && decision.isMetaBanner) return t("single.metaCurrentDecision");
@@ -1209,7 +1211,8 @@ function phaseLabel(phase) {
     commit: t("single.phaseCommit"),
     strategy: t("single.phaseStrategy"),
     dossier: t("single.phaseDossier"),
-    optimize30: t("single.phaseOptimize")
+    optimize30: t("single.phaseOptimize"),
+    finish_milestone: t("single.phaseFinishMilestone")
   }[phase] || t("single.strategyPhase");
 }
 function pullGroupLabel(group) {
