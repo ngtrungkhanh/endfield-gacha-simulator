@@ -6,10 +6,10 @@ A9E Gacha Simulator là ứng dụng mô phỏng gacha dành cho **Arknights: En
 
 Ứng dụng chạy hoàn toàn offline, không gửi dữ liệu ra ngoài và hỗ trợ chuyển đổi tức thời giữa tiếng Việt và tiếng Anh.
 
-## Mới trong 1.4.1
+## Mới trong 1.4.2
 
-- Save & Commit chỉ hoàn tất mốc 30/60 sau Featured khi vẫn bảo vệ được mốc 120 của banner sau; Yolo vẫn ưu tiên lấy mốc nếu ví hiện tại đủ.
-- Pull 60 đi thẳng tới 60 khi đủ ngay từ đầu. Nhánh fallback chỉ đi tới 30 khi vẫn bảo vệ được mốc 60 banner sau và không kiểm tra nâng lại ở pull 30.
+- Save & Commit chỉ hoàn tất mốc 60 sau Featured khi vẫn bảo vệ được mốc 120 của banner sau; Yolo cũng chỉ cố mốc 60 khi ví hiện tại đủ. Không chiến thuật nào chi thêm chỉ để cố mốc 30 sau Featured.
+- Pull 60 đi thẳng tới 60 khi đủ ngay từ đầu; không đủ 60 thì skip và không fallback về pull 30.
 - Tại pull 60 chưa có Featured, lộ trình nâng cấp luôn phải bảo vệ `120 hiện tại → 60 banner sau`.
 - Mọi phép bảo vệ tương lai ở banner cuối dùng một banner kế tiếp ảo với thu nhập chuẩn, tránh ngoại lệ xả vé cuối kỳ.
 
@@ -53,7 +53,7 @@ Nhập số người chơi, số banner, tài nguyên ban đầu và thu nhập 
 
 Mô phỏng Monte Carlo phản ánh kết quả trung bình của nhiều lượt chạy ngẫu nhiên; đây không phải bảo đảm cho tài khoản thật.
 
-Các chiến thuật dùng checkpoint ngân sách theo trạng thái hiện tại. Pull 60 đi thẳng tới 60 nếu đủ ngay từ đầu; nhánh fallback 30 chỉ chạy khi vẫn bảo vệ được mốc 60 banner sau và luôn dừng tại 30. Roll Meta giữ quỹ dự phòng cho Meta gần nhất thay vì dự báo chính xác nhiều banner xa.
+Các chiến thuật dùng checkpoint ngân sách theo trạng thái hiện tại. Pull 60 đi thẳng tới 60 nếu đủ ngay từ đầu; không đủ thì skip, không cố mốc 30. Roll Meta giữ quỹ dự phòng cho Meta gần nhất thay vì dự báo chính xác nhiều banner xa.
 
 ### Gacha Simulator — một người chơi
 

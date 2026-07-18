@@ -150,7 +150,7 @@ test('Pull 60 counts Dossier toward its budget', () => {
     assert.equal(player.currentBannerDossierTickets, 0);
 });
 
-test('budget checkpoint is captured after Free and Dossier but before paid pull 30 optimization', () => {
+test('budget checkpoint is captured after Free and Dossier before the normal commit', () => {
     const player = new SimulatorPlayer(1);
     player.charTickets = 120;
     player.nextBannerDossierTickets = 10;
@@ -164,15 +164,14 @@ test('budget checkpoint is captured after Free and Dossier but before paid pull 
     assert.equal(result.decisionState.dossierPullsUsed, 10);
     assert.equal(result.decisionState.dossierTickets, 0);
     assert.equal(result.decisionState.bannerPullsCount, 20);
-    assert.equal(result.decisionState.preBudgetWalletPullsUsed, 10);
     assert.equal(player.totalUrgentPulls, 10);
     assert.ok(result.charPulls.slice(10, 20).every(item => item.actionPhase === 'dossier'));
-    assert.ok(result.charPulls.slice(20, 40).every(item => item.actionPhase === 'optimize30'));
-    assert.equal(firstWalletPull.bannerPullsCountAfter, 31);
+    assert.ok(result.charPulls.slice(20, 40).every(item => item.actionPhase === 'commit'));
+    assert.equal(firstWalletPull.bannerPullsCountAfter, 21);
 });
 
-test('Save & Commit only optimizes pull 30 after the pull 120 budget is approved', () => {
-    const runVariant = (charTickets, optimizeDossierToUrgent) => {
+test('Save & Commit reaches pull 30 only as part of an approved pull 120 commit', () => {
+    const runVariant = (charTickets) => {
         const player = new SimulatorPlayer(1);
         player.charTickets = charTickets;
         player.nextBannerDossierTickets = 10;
@@ -180,41 +179,22 @@ test('Save & Commit only optimizes pull 30 after the pull 120 budget is approved
         const weaponState = { issuesCount: 0, issuesSince6: 0, issuesSinceFeatured: 0, featuredGuaranteeConsumed: false };
         useRandomSequence([]);
 
-        const result = runSingleBannerForPlayer(
-            'save_commit',
-            player,
-            charState,
-            weaponState,
-            0,
-            0,
-            0,
-            1,
-            { optimizeDossierToUrgent }
-        );
+        const result = runSingleBannerForPlayer('save_commit', player, charState, weaponState, 0, 0, 0, 1);
         return { player, charState, result };
     };
 
-    const insufficient = runVariant(10, true);
+    const insufficient = runVariant(10);
     assert.equal(insufficient.charState.bannerPullsCount, 20);
     assert.equal(insufficient.player.totalUrgentPulls, 0);
     assert.equal(insufficient.result.decisionState.canAfford120, false);
-    assert.equal(insufficient.result.decisionState.preBudgetWalletPullsUsed, 0);
 
-    const disabled = runVariant(120, false);
-    assert.equal(disabled.charState.bannerPullsCount, 120);
-    assert.equal(disabled.player.totalUrgentPulls, 10);
-    assert.equal(disabled.result.decisionState.bannerPullsCount, 20);
-    assert.equal(disabled.result.decisionState.preBudgetWalletPullsUsed, 0);
-    assert.equal(disabled.result.charPulls.some(item => item.actionPhase === 'optimize30'), false);
-
-    const enabled = runVariant(120, true);
-    assert.equal(enabled.charState.bannerPullsCount, 120);
-    assert.equal(enabled.player.totalUrgentPulls, 10);
-    assert.equal(enabled.result.decisionState.bannerPullsCount, 20);
-    assert.equal(enabled.result.decisionState.preBudgetWalletPullsUsed, 10);
+    const approved = runVariant(120);
+    assert.equal(approved.charState.bannerPullsCount, 120);
+    assert.equal(approved.player.totalUrgentPulls, 10);
+    assert.equal(approved.result.decisionState.bannerPullsCount, 20);
 });
 
-test('Save & Commit skips paid optimization when one ticket short of the safe pull 120 budget', () => {
+test('Save & Commit spends no wallet tickets when one ticket short of the safe pull 120 budget', () => {
     const player = new SimulatorPlayer(1);
     player.charTickets = 94;
     player.nextBannerDossierTickets = 10;
@@ -227,28 +207,10 @@ test('Save & Commit skips paid optimization when one ticket short of the safe pu
     assert.equal(result.decisionState.worstCaseWalletCost120, 96);
     assert.equal(result.decisionState.charTickets, 95);
     assert.equal(result.decisionState.canAfford120, false);
-    assert.equal(result.decisionState.preBudgetWalletPullsUsed, 0);
     assert.equal(result.charPulls.some(item => item.actionPhase === 'commit'), false);
 });
 
-test('an authorized pull 30 optimization finishes even if Featured appears on the way', () => {
-    const player = new SimulatorPlayer(1);
-    player.charTickets = 120;
-    player.nextBannerDossierTickets = 10;
-    const charState = characterState({ pity6: 59 });
-    const weaponState = { issuesCount: 0, issuesSince6: 0, issuesSinceFeatured: 0, featuredGuaranteeConsumed: false };
-    useRandomSequence([...Array(39).fill(0.99), 0.1]);
-
-    const result = runSingleBannerForPlayer('save_commit', player, charState, weaponState, 0, 0, 0, 1);
-    const optimizedPulls = result.charPulls.filter(item => item.actionPhase === 'optimize30');
-
-    assert.ok(optimizedPulls.some(item => !item.isUrgent && item.isFeatured));
-    assert.equal(result.decisionState.bannerPullsCount, 20);
-    assert.equal(player.totalUrgentPulls, 10);
-    assert.equal(optimizedPulls.length, 20);
-});
-
-test('Save & Commit and Yolo finish pull 30 when Featured is obtained at pull 20', () => {
+test('Save & Commit and Yolo do not spend extra tickets for pull 30 after Featured at pull 20', () => {
     for (const strategyId of ['save_commit', 'yolo']) {
         const player = new SimulatorPlayer(1);
         player.charTickets = 120;
@@ -260,9 +222,9 @@ test('Save & Commit and Yolo finish pull 30 when Featured is obtained at pull 20
         const result = runSingleBannerForPlayer(strategyId, player, charState, weaponState, 0, 0, 0, 1);
 
         assert.equal(result.gotFeaturedChar, true, strategyId);
-        assert.equal(charState.bannerPullsCount, 30, strategyId);
-        assert.equal(player.totalUrgentPulls, 10, strategyId);
-        assert.ok(result.charPulls.some(item => item.actionPhase === 'finish_milestone'), strategyId);
+        assert.equal(charState.bannerPullsCount, 20, strategyId);
+        assert.equal(player.totalUrgentPulls, 0, strategyId);
+        assert.equal(result.charPulls.some(item => item.actionPhase === 'finish_milestone'), false, strategyId);
     }
 });
 
@@ -385,7 +347,7 @@ test('Pull 60 budget check targets 60 instead of the 120 guarantee', () => {
     assert.equal(charState.bannerPullsCount, 60);
 });
 
-test('Pull 60 budget check falls back to pull 30 instead of skipping', () => {
+test('Pull 60 skips instead of falling back when pull 60 is unaffordable', () => {
     const player = new SimulatorPlayer(1);
     player.charTickets = 20;
     const charState = characterState();
@@ -407,76 +369,27 @@ test('Pull 60 budget check falls back to pull 30 instead of skipping', () => {
         }
     );
 
-    assert.equal(result.decisionState.budgetTargetPulls, 30);
-    assert.equal(result.decisionState.budgetRequiredTickets, 19);
-    assert.equal(result.decisionState.canAffordTarget, true);
-    assert.equal(result.decisionState.selectedTargetPulls, 30);
-    assert.equal(result.decisionState.fellBackTo30, true);
-    assert.equal(charState.bannerPullsCount, 30);
+    assert.equal(result.decisionState.budgetTargetPulls, 60);
+    assert.equal(result.decisionState.budgetRequiredTickets, 48);
+    assert.equal(result.decisionState.budgetShortfall, 28);
+    assert.equal(result.decisionState.canAffordTarget, false);
+    assert.equal(result.decisionState.selectedTargetPulls, 0);
+    assert.equal(result.decisionState.checks.pull30, undefined);
+    assert.equal(charState.bannerPullsCount, 10);
 });
 
-test('Pull 60 only falls back to pull 30 when next-banner pull 60 remains protected', () => {
-    const runVariant = (nextBannerIncome) => {
+test('no strategy selects pull 30 as a standalone spending target', () => {
+    for (const strategyId of ['save_commit', 'save_commit_single', 'yolo', 'pull_60', 'roll_meta']) {
         const player = new SimulatorPlayer(1);
         player.charTickets = 20;
         const charState = characterState();
         const weaponState = { issuesCount: 0, issuesSince6: 0, issuesSinceFeatured: 0, featuredGuaranteeConsumed: false };
         useRandomSequence([]);
 
-        const result = runSingleBannerForPlayer(
-            'pull_60',
-            player,
-            charState,
-            weaponState,
-            0,
-            0,
-            0,
-            2,
-            { ticketIncomeSchedule: [0, nextBannerIncome] }
-        );
-        return { charState, result };
-    };
+        const result = runSingleBannerForPlayer(strategyId, player, charState, weaponState, 0, 0, 0, 1);
 
-    const short = runVariant(45);
-    assert.equal(short.result.decisionState.checks.pull30.affordable, true);
-    assert.equal(short.result.decisionState.checks.pull30ProtectsNext60.affordable, false);
-    assert.equal(short.result.decisionState.selectedTargetPulls, 0);
-    assert.equal(short.charState.bannerPullsCount, 10);
-
-    const protectedRoute = runVariant(46);
-    assert.equal(protectedRoute.result.decisionState.checks.pull30ProtectsNext60.affordable, true);
-    assert.equal(protectedRoute.result.decisionState.selectedTargetPulls, 30);
-    assert.equal(protectedRoute.charState.bannerPullsCount, 30);
-});
-
-test('Pull 60 fallback always stops at pull 30 without rechecking current pull 60', () => {
-    const player = new SimulatorPlayer(1);
-    player.charTickets = 47;
-    const charState = characterState();
-    const weaponState = { issuesCount: 0, issuesSince6: 0, issuesSinceFeatured: 0, featuredGuaranteeConsumed: false };
-    useRandomSequence([
-        ...Array(35).fill(0.99),
-        0.05,
-        0.05,
-        ...Array(200).fill(0.99)
-    ]);
-
-    const result = runSingleBannerForPlayer(
-        'pull_60',
-        player,
-        charState,
-        weaponState,
-        0,
-        0,
-        0,
-        2,
-        { ticketIncomeSchedule: [0, 19] }
-    );
-
-    assert.equal(result.decisionState.initialSelectedTargetPulls, 30);
-    assert.equal(result.decisionState.checks.pull60At30, undefined);
-    assert.equal(result.decisionState.selectedTargetPulls, 30);
-    assert.equal(charState.bannerPullsCount, 30);
+        assert.notEqual(result.decisionState.selectedTargetPulls, 30, strategyId);
+    }
 });
 
 test('Pull 60 cannot borrow next-banner income to reach pull 120 now', () => {

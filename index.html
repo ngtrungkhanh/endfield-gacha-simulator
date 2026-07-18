@@ -350,11 +350,7 @@
                             </div>
                         </div>
                         
-                        <div style="margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 16px; font-size: 12px; line-height: 1.5; color: var(--text-secondary); display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; width: 100%;">
-                            <div>
-                                <strong data-i18n="rule.optimizeTitle" style="color: var(--orange-primary);">[i] Luật tối ưu mốc 30</strong>
-                                <p data-i18n="rule.optimize">Nếu đã quay đến 20 pull...</p>
-                            </div>
+                        <div style="margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 16px; font-size: 12px; line-height: 1.5; color: var(--text-secondary); display: grid; grid-template-columns: 1fr 1fr; gap: 20px; width: 100%;">
                             <div>
                                 <strong data-i18n="rule.urgentTitle" style="color: var(--orange-primary);">[i] Bảo hiểm 5★ Urgent</strong>
                                 <p data-i18n="rule.urgent">10 lượt Urgent miễn phí...</p>
@@ -541,14 +537,14 @@
                     <div class="docs-rule-grid docs-strategy-common">
                         <article class="docs-rule-wide">
                             <strong data-i18n="docs.strategyCommonTitle">Quy tắc chung khi quyết định roll/skip</strong>
-                            <p data-i18n="docs.strategyCommon">Mỗi banner xử lý 15 Standard, 10 Limited miễn phí và Dossier sắp hết hạn trước khi kiểm tra ngân sách. Tối ưu mốc 30 chỉ được chi vé sau khi chiến thuật cho phép; “skip” nghĩa là không commit thêm vé ví.</p>
+                            <p data-i18n="docs.strategyCommon">Mỗi banner xử lý 15 Standard, 10 Limited miễn phí và Dossier sắp hết hạn trước khi kiểm tra ngân sách. Pull 30 không còn là mục tiêu chi tiêu riêng, chỉ được kích hoạt khi một mục tiêu khác tự nhiên đi qua; “skip” nghĩa là không commit thêm vé ví.</p>
                         </article>
                     </div>
                     <div class="docs-strategy-list">
                         <article><span>01</span><div><strong data-i18n="strategy.save_commit.name">Save &amp; Commit</strong><p data-i18n="docs.saveCommit">Sau phần miễn phí/Dossier, chỉ commit khi vé ví đủ chi phí an toàn đến 120; quay x10, chuyển x1 gần mốc và dừng sau cụm chứa Featured hoặc tại 120.</p></div></article>
                         <article><span>02</span><div><strong data-i18n="strategy.save_commit_single.name">Save &amp; Commit (Quay lẻ)</strong><p data-i18n="docs.saveSingle">Dùng cùng phép kiểm tra 120 như Save &amp; Commit nhưng toàn bộ phần commit quay x1, nên dừng đúng lượt nhận Featured.</p></div></article>
                         <article><span>03</span><div><strong data-i18n="strategy.yolo.name">Yolo / Dùng hết</strong><p data-i18n="docs.yolo">Sau phần bắt buộc, dùng toàn bộ vé ví đến khi nhận Featured hoặc hết tài nguyên; vũ khí không cần tích đủ 8 Issue trước.</p></div></article>
-                        <article><span>04</span><div><strong data-i18n="strategy.pull_60.name">Mốc 60</strong><p data-i18n="docs.pull60">Dùng phép tính vé động để chọn mốc 60, hạ xuống 30 hoặc skip; kiểm tra lại ở pull 30 và có thể nâng từ 60 lên 120 nếu vẫn bảo vệ được mốc 60 banner sau.</p></div></article>
+                        <article><span>04</span><div><strong data-i18n="strategy.pull_60.name">Mốc 60</strong><p data-i18n="docs.pull60">Đủ ngân sách thì đi thẳng tới 60; không đủ thì skip, không fallback về 30. Chỉ nâng từ 60 lên 120 khi vẫn bảo vệ được mốc 60 banner sau.</p></div></article>
                         <article><span>05</span><div><strong data-i18n="strategy.roll_meta.name">Quay theo Meta</strong><p data-i18n="docs.rollMeta">Chọn ngẫu nhiên đúng số banner Meta đã cấu hình. Banner thường chỉ commit khi đủ bảo hiểm hiện tại và vẫn giữ được quỹ an toàn 95/105 vé cho Meta kế tiếp.</p></div></article>
                     </div>
                 </section>

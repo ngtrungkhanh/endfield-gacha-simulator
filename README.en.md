@@ -6,10 +6,10 @@ A9E Gacha Simulator is an **Arknights: Endfield** gacha simulation app. It suppo
 
 The app runs fully offline, sends no data externally, and can switch instantly between Vietnamese and English.
 
-## What's new in 1.4.1
+## What's new in 1.4.2
 
-- Save & Commit finishes a nearby pull-30/60 milestone after Featured only when next-banner pull 120 remains protected; Yolo still takes it whenever the current wallet can pay.
-- Pull 60 goes directly to 60 when affordable at banner start. Its fallback reaches 30 only when next-banner pull 60 remains protected and never rechecks to upgrade at pull 30.
+- Save & Commit finishes pull 60 after Featured only when next-banner pull 120 remains protected; Yolo also only finishes pull 60 when the current wallet can pay. No strategy spends extra tickets solely to reach pull 30 after Featured.
+- Pull 60 goes directly to 60 when affordable at banner start; otherwise it skips without falling back to pull 30.
 - After missing Featured at pull 60, an upgrade must always protect the route `current 120 → next 60`.
 - Future-protection checks on the final simulated banner use one virtual next banner with normal income, avoiding an end-of-run liquidation exception.
 
@@ -53,7 +53,7 @@ Enter the player count, banner count, starting resources, and per-banner income,
 
 Monte Carlo results describe averages across many randomized runs. They are not guarantees for a real account.
 
-Strategies make budget decisions from the current state. Pull 60 goes straight to 60 when initially affordable; its pull-30 fallback runs only when next-banner pull 60 remains protected and always stops at 30. Roll Meta protects the nearest Meta reserve instead of forecasting exact gacha outcomes across many distant banners.
+Strategies make budget decisions from the current state. Pull 60 goes straight to 60 when initially affordable; otherwise it skips without chasing pull 30. Roll Meta protects the nearest Meta reserve instead of forecasting exact gacha outcomes across many distant banners.
 
 ### Gacha Simulator — single player
 

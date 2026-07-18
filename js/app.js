@@ -1190,10 +1190,6 @@ function singleDecisionText(strategyId, decision) {
   if (decision.guarantee120Consumed) return t("single.featuredStopDecision");
   if (strategyId === "yolo") return t("single.yoloDecision");
   if (strategyId === "pull_60" && decision.upgradedTo120) return t("single.pull120UpgradeDecision");
-  if (strategyId === "pull_60" && decision.fellBackTo30 && decision.selectedTargetPulls === 30) return t("single.pull30FallbackDecision");
-  if (strategyId === "pull_60" && decision.checks?.pull30ProtectsNext60 && !decision.checks.pull30ProtectsNext60.affordable) {
-    return t("single.pull30ProtectionSkipDecision");
-  }
   if (strategyId === "pull_60" && decision.selectedTargetPulls === 0) return t("single.pull60SkipDecision");
   if (strategyId === "pull_60") return t("single.pull60Decision");
   if (strategyId === "roll_meta" && decision.isMetaBanner) return t("single.metaCurrentDecision");
@@ -1211,7 +1207,6 @@ function phaseLabel(phase) {
     commit: t("single.phaseCommit"),
     strategy: t("single.phaseStrategy"),
     dossier: t("single.phaseDossier"),
-    optimize30: t("single.phaseOptimize"),
     finish_milestone: t("single.phaseFinishMilestone")
   }[phase] || t("single.strategyPhase");
 }

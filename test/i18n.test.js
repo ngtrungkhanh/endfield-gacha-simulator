@@ -97,15 +97,15 @@ test('documentation identifies the 15 Standard pulls as a simulator convention',
     assert.match(catalogs.en['docs.freePulls'], /not an official gacha rule/);
     assert.doesNotMatch(catalogs.vi['strategy.helpSave'], /110 vé/);
     assert.doesNotMatch(catalogs.en['strategy.helpSave'], /110 tickets/);
-    assert.match(catalogs.vi['rule.optimize'], /sau khi chiến thuật cho phép chi vé/);
-    assert.match(catalogs.en['rule.optimize'], /after a strategy authorizes spending/);
+    assert.match(catalogs.vi['docs.strategyCommon'], /pull 30 không còn là mục tiêu chi tiêu riêng/i);
+    assert.match(catalogs.en['docs.strategyCommon'], /pull 30 is no longer a standalone spending target/i);
 });
 
-test('strategy copy matches the 1.4.1 future-protection rules', () => {
+test('strategy copy matches the current future-protection rules', () => {
     assert.match(catalogs.vi['docs.saveCommit'], /bảo vệ được mốc 120 banner sau/);
     assert.match(catalogs.en['docs.saveCommit'], /protects next-banner pull 120/);
-    assert.match(catalogs.vi['docs.pull60'], /luôn dừng tại 30/);
-    assert.match(catalogs.en['docs.pull60'], /always stop at 30/);
+    assert.match(catalogs.vi['docs.pull60'], /không fallback về mốc 30/);
+    assert.match(catalogs.en['docs.pull60'], /without falling back to pull 30/);
     assert.match(catalogs.vi['docs.strategyCommon'], /banner kế tiếp ảo/);
     assert.match(catalogs.en['docs.strategyCommon'], /virtual next banner/);
     assert.equal(catalogs.vi['single.pull60RecheckPassDecision'], undefined);
