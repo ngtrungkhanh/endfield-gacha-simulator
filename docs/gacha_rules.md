@@ -99,6 +99,26 @@ Simulator dùng một công thức bảo thủ để tính số vé thường ph
 
 Việc bỏ qua pity 80 làm kết quả thiên an toàn và thường chỉ dư khoảng một vé trên mỗi banner so với mô hình đầy đủ. Đây là quy tắc lập ngân sách của simulator, không phải luật gacha chính thức. Cách áp dụng cho từng chiến thuật được mô tả trong [`strategies.md`](strategies.md).
 
+### Chiêu Mộ Cơ Bản (Basic Headhunting)
+
+- Sử dụng Basic Headhunting Permit hoặc Oroberyl.
+- Áp dụng đầy đủ cơ chế Pity 6★ (soft pity từ lượt 66, hard pity lượt 80) và bảo hiểm 5★ (mỗi 10 lượt). Pity 80 chia sẻ và cộng dồn với các banner Headhunting thông thường.
+- Không có Cán Viên rate-up/featured và không áp dụng bảo hiểm 120 lượt.
+- Không áp dụng các mốc tích lũy lượt quay (không có quà mốc 30, 60, 90, 240).
+
+### Chiêu Mộ Tái Cấu Trúc (RE-Factor Headhunting)
+
+- Banner rerun định kỳ cho các Cán Viên 6★ giới hạn cũ (ví dụ: Tangtang). Được xếp ngay dưới banner cơ bản trong danh sách lựa chọn banner.
+- Sử dụng Headhunting Permit chuyên biệt hoặc Oroberyl.
+- Áp dụng cơ chế Pity 6★ (80 lượt) chia sẻ và cộng dồn giữa các đợt banner Chiêu Mộ Tái Cấu Trúc. Tỷ lệ ra nhân vật 6★ Featured là 50% khi trúng 6★.
+- **Bảo hiểm Đại bảo hiểm 120 lượt**: Chậm nhất ở lượt thứ 120 chắc chắn nhận Cán Viên 6★ Featured. Tiến độ bảo hiểm 120 lượt này **được bảo lưu và kế thừa** cho cùng nhân vật đó trong các đợt rerun banner Tái Cấu Trúc kế tiếp (chỉ tiêu hao/reset khi đã nhận được Cán Viên Featured).
+- **Các mốc tích lũy lượt quay trên cùng banner**:
+  - **Mốc 30**: Nhận 10 lượt Chiêu Mộ Khẩn Cấp (Urgent Recruitment) miễn phí thực hiện ngay.
+  - **Mốc 60**: Nhận thêm 10 lượt Chiêu Mộ Khẩn Cấp (Urgent Recruitment) miễn phí thực hiện ngay (khác với banner Đặc Quyền, mốc 60 tại banner Tái Cấu Trúc **không** cấp vé Headhunting Dossier cho banner sau).
+  - **Mốc 90**: Nhận tiếp 10 lượt Chiêu Mộ Khẩn Cấp (Urgent Recruitment) miễn phí thực hiện ngay.
+  - Mọi lượt Chiêu Mộ Khẩn Cấp không tăng pity 80, không tăng tiến độ bảo hiểm 120 và không reset các bộ đếm này.
+  - **Mốc 240**: Nhận 1 Tín vật Potential của Cán Viên Featured (tiến độ tích lũy bảo lưu theo nhân vật).
+
 ## 2. Arsenal Exchange
 
 ### Mua trực tiếp

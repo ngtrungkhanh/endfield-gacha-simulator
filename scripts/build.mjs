@@ -9,7 +9,7 @@ function commitSha() {
     try {
         return execFileSync('git', ['rev-parse', '--short', 'HEAD'], {
             encoding: 'utf8',
-            stdio: ['ignore', 'pipe', 'ignore']
+            stdio: ['ignore', 'pipe', 'ignore'],
         }).trim();
     } catch {
         return 'unknown';
@@ -27,8 +27,8 @@ await build({
     define: {
         __APP_VERSION__: JSON.stringify(packageJson.version),
         __BUILD_COMMIT__: JSON.stringify(commitSha()),
-        __BUILD_TIME__: JSON.stringify(new Date().toISOString())
-    }
+        __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
+    },
 });
 
 console.log(`Built ${production ? 'production' : 'development'} bundle v${packageJson.version}.`);

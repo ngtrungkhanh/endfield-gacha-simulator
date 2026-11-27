@@ -10,7 +10,7 @@ const referenceConfig = {
     startingCharTickets: 80,
     startingWeaponTickets: 8000,
     incomePerBanner: 44,
-    weaponIncomePerBanner: 500
+    weaponIncomePerBanner: 500,
 };
 
 test('single run is reproducible and restores Math.random', () => {
@@ -38,7 +38,7 @@ test('reference seed produces stable detailed run totals', () => {
     assert.ok(typeof run.summary.timesHit120Guarantee === 'number');
     assert.equal(
         run.summary.offBannerStandard6,
-        run.banners.reduce((total, banner) => total + banner.limitedCounts.standard6, 0)
+        run.banners.reduce((total, banner) => total + banner.limitedCounts.standard6, 0),
     );
 });
 
@@ -51,7 +51,7 @@ test('text seeds are stable 32-bit values and every strategy can run once', () =
             ...referenceConfig,
             strategyId,
             seed: `test-${strategyId}`,
-            numBanners: 2
+            numBanners: 2,
         });
         assert.equal(run.banners.length, 2, strategyId);
         assert.ok(run.summary.charTickets >= 0, strategyId);
@@ -69,16 +69,19 @@ test('pull_60 strategy upgrades target to 120 pulls conditionally if budget allo
             startingCharTickets: 400,
             startingWeaponTickets: 0,
             incomePerBanner: 50,
-            weaponIncomePerBanner: 0
+            weaponIncomePerBanner: 0,
         });
         for (const banner of run.banners) {
             const pulls = banner.result.charPulls || [];
-            if (pulls.some(p => p.actionPhase === 'strategy_upgraded')) {
+            if (pulls.some((p) => p.actionPhase === 'strategy_upgraded')) {
                 triggeredUpgraded = true;
             }
         }
     }
-    assert.ok(triggeredUpgraded, 'Should have triggered strategy_upgraded at least once in 15 runs with abundant budget');
+    assert.ok(
+        triggeredUpgraded,
+        'Should have triggered strategy_upgraded at least once in 15 runs with abundant budget',
+    );
 });
 
 test('meta banners are randomly selected and seed-reproducible', () => {
@@ -90,7 +93,7 @@ test('meta banners are randomly selected and seed-reproducible', () => {
         startingCharTickets: 100,
         startingWeaponTickets: 0,
         incomePerBanner: 50,
-        weaponIncomePerBanner: 0
+        weaponIncomePerBanner: 0,
     };
 
     const run1 = runSingleDetailedSimulation(config1);
@@ -102,13 +105,13 @@ test('meta banners are randomly selected and seed-reproducible', () => {
     // Verify randomness by comparing with another seed
     const config2 = {
         ...config1,
-        seed: 'fixed-seed-meta-456'
+        seed: 'fixed-seed-meta-456',
     };
     const run3 = runSingleDetailedSimulation(config2);
-    
+
     const set1 = Array.from(run1.banners[0].after.metaBannersSet || []);
     const set3 = Array.from(run3.banners[0].after.metaBannersSet || []);
-    
+
     // Check they are not identical arrays
     assert.notDeepEqual(set1.sort(), set3.sort());
 });

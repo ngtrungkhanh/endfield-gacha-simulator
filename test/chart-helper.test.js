@@ -10,7 +10,7 @@ test('weapon distribution keeps localized weapon labels after legend filtering',
     globalThis.document = {
         getElementById: () => canvas,
         querySelectorAll: () => [],
-        documentElement: {}
+        documentElement: {},
     };
     globalThis.window = {
         Chart: class {
@@ -20,23 +20,29 @@ test('weapon distribution keeps localized weapon labels after legend filtering',
                 this.visible = config.data.datasets.map(() => true);
                 chart = this;
             }
-            isDatasetVisible(index) { return this.visible[index]; }
-            hide(index) { this.visible[index] = false; }
-            show(index) { this.visible[index] = true; }
+            isDatasetVisible(index) {
+                return this.visible[index];
+            }
+            hide(index) {
+                this.visible[index] = false;
+            }
+            show(index) {
+                this.visible[index] = true;
+            }
             update() {}
             destroy() {}
-        }
+        },
     };
 
     const results = {
         save_commit: { weaponDistribution: { 1: 40, 2: 60 } },
-        yolo: { weaponDistribution: { 0: 25, 1: 75 } }
+        yolo: { weaponDistribution: { 0: 25, 1: 75 } },
     };
 
     setLocale('en');
     drawWeaponDistributionChart('weapon-chart-test', results, {
         save_commit: {},
-        yolo: {}
+        yolo: {},
     });
     chart.options.plugins.legend.onClick(null, { datasetIndex: 0 }, { chart });
     assert.deepEqual(chart.data.labels, ['0 weapons', '1 weapons']);

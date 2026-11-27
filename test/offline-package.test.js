@@ -11,18 +11,12 @@ const dist = join(root, 'dist');
 const packageJson = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
 const releaseName = `A9EGacha_${packageJson.version}.html`;
 const singleHtmlPath = join(root, 'release', releaseName);
-const allowlist = [
-    'css/style.css',
-    'index.html',
-    'js/bundle.js'
-];
+const allowlist = ['css/style.css', 'index.html', 'js/bundle.js'];
 
 function listFiles(directory) {
-    return readdirSync(directory, { withFileTypes: true }).flatMap(entry => {
+    return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
         const fullPath = join(directory, entry.name);
-        return entry.isDirectory()
-            ? listFiles(fullPath)
-            : relative(dist, fullPath).replaceAll('\\', '/');
+        return entry.isDirectory() ? listFiles(fullPath) : relative(dist, fullPath).replaceAll('\\', '/');
     });
 }
 
@@ -35,13 +29,17 @@ test('offline dist contains only the release allowlist', () => {
 test('runtime files contain no network dependency, fetch, or source map', () => {
     for (const file of ['index.html', 'css/style.css', 'js/bundle.js']) {
         const contents = readFileSync(join(dist, file), 'utf8');
-        assert.doesNotMatch(contents, /https?:\/\/|\/\/cdn|fonts\.googleapis|fonts\.gstatic|jsdelivr|fetch\s*\(|sourceMappingURL/i, file);
+        assert.doesNotMatch(
+            contents,
+            /https?:\/\/|\/\/cdn|fonts\.googleapis|fonts\.gstatic|jsdelivr|fetch\s*\(|sourceMappingURL/i,
+            file,
+        );
     }
 });
 
 test('all local HTML references exist in dist', () => {
     const html = readFileSync(join(dist, 'index.html'), 'utf8');
-    const references = [...html.matchAll(/(?:src|href)="([^"]+)"/g)].map(match => match[1]);
+    const references = [...html.matchAll(/(?:src|href)="([^"]+)"/g)].map((match) => match[1]);
     for (const reference of references) {
         assert.doesNotMatch(reference, /^(?:[a-z]+:)?\/\//i);
         assert.equal(reference.startsWith('/'), false, `absolute path: ${reference}`);
@@ -49,12 +47,22 @@ test('all local HTML references exist in dist', () => {
     }
 });
 
-test('single file release matches inlined source and checksum is valid', { skip: process.env.TEST_RELEASE_PACKAGE !== '1' }, () => {
+test('single file release matches inlined source and checksum is valid', {
+    skip: process.env.TEST_RELEASE_PACKAGE !== '1',
+}, () => {
     assert.equal(existsSync(singleHtmlPath), true, 'singleHtmlPath exists');
     const singleHtml = readFileSync(singleHtmlPath, 'utf8');
 
-    assert.equal(singleHtml.includes('<script src="js/bundle.js"></script>'), false, 'source script tag was fully replaced');
-    assert.equal((singleHtml.match(/<script(?:\s|>)/g) || []).length, 2, 'single file keeps the error handler and one bundled script');
+    assert.equal(
+        singleHtml.includes('<script src="js/bundle.js"></script>'),
+        false,
+        'source script tag was fully replaced',
+    );
+    assert.equal(
+        (singleHtml.match(/<script(?:\s|>)/g) || []).length,
+        2,
+        'single file keeps the error handler and one bundled script',
+    );
 
     // Verify CSS is inlined
     const css = readFileSync(join(dist, 'css/style.css'), 'utf8');
@@ -65,7 +73,7 @@ test('single file release matches inlined source and checksum is valid', { skip:
     assert.equal(singleHtml.includes(`<script>${js}</script>`), true, 'JS is inlined');
 
     // Verify single HTML contains no local file references
-    const references = [...singleHtml.matchAll(/(?:src|href)="([^"]+)"/g)].map(match => match[1]);
+    const references = [...singleHtml.matchAll(/(?:src|href)="([^"]+)"/g)].map((match) => match[1]);
     for (const reference of references) {
         assert.doesNotMatch(reference, /^(?:css\/style\.css|js\/bundle\.js)$/);
     }

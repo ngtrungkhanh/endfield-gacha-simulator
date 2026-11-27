@@ -3,7 +3,7 @@ import { SimulatorPlayer, runSingleBannerForPlayer, strategies, generateMetaBann
 function mulberry32(seed) {
     let value = seed >>> 0;
     return () => {
-        value += 0x6D2B79F5;
+        value += 0x6d2b79f5;
         let result = value;
         result = Math.imul(result ^ (result >>> 15), result | 1);
         result ^= result + Math.imul(result ^ (result >>> 7), result | 61);
@@ -29,7 +29,9 @@ export function createRandomSeed() {
         globalThis.crypto.getRandomValues(values);
         return `${values[0]}${values[1].toString().padStart(10, '0')}`;
     }
-    return `${Date.now()}${Math.floor(Math.random() * 1_000_000).toString().padStart(6, '0')}`;
+    return `${Date.now()}${Math.floor(Math.random() * 1_000_000)
+        .toString()
+        .padStart(6, '0')}`;
 }
 
 function snapshotPlayer(player) {
@@ -60,7 +62,7 @@ function snapshotPlayer(player) {
         standardPity6: player.standardCharPity.pity6,
         standardPity5: player.standardCharPity.pity5,
         metaBannersSet: player.metaBannersSet ? new Set(player.metaBannersSet) : null,
-        timesHit120Guarantee: player.timesHit120Guarantee || 0
+        timesHit120Guarantee: player.timesHit120Guarantee || 0,
     };
 }
 
@@ -70,11 +72,11 @@ function delta(after, before, key) {
 
 function countCharacterResults(items) {
     return {
-        featured6: items.filter(item => item.rarity === 6 && item.isFeatured).length,
-        limited6: items.filter(item => item.rarity === 6 && !item.isFeatured && item.isLechLimited).length,
-        standard6: items.filter(item => item.rarity === 6 && !item.isFeatured && !item.isLechLimited).length,
-        five: items.filter(item => item.rarity === 5).length,
-        four: items.filter(item => item.rarity === 4).length
+        featured6: items.filter((item) => item.rarity === 6 && item.isFeatured).length,
+        limited6: items.filter((item) => item.rarity === 6 && !item.isFeatured && item.isLechLimited).length,
+        standard6: items.filter((item) => item.rarity === 6 && !item.isFeatured && !item.isLechLimited).length,
+        five: items.filter((item) => item.rarity === 5).length,
+        four: items.filter((item) => item.rarity === 4).length,
     };
 }
 
@@ -85,11 +87,14 @@ function normalizeConfig(config) {
         strategyId: config.strategyId || 'save_commit',
         seed: String(config.seed || '').trim() || createRandomSeed(),
         numBanners,
-        numMetaBanners: config.numMetaBanners !== undefined ? Math.max(0, Math.min(numBanners, Math.trunc(Number(config.numMetaBanners)))) : defaultMeta,
+        numMetaBanners:
+            config.numMetaBanners !== undefined
+                ? Math.max(0, Math.min(numBanners, Math.trunc(Number(config.numMetaBanners))))
+                : defaultMeta,
         startingCharTickets: Math.max(0, Math.trunc(Number(config.startingCharTickets) || 0)),
         startingWeaponTickets: Math.max(0, Math.trunc(Number(config.startingWeaponTickets) || 0)),
         incomePerBanner: Math.max(0, Math.trunc(Number(config.incomePerBanner) || 0)),
-        weaponIncomePerBanner: Math.max(0, Math.trunc(Number(config.weaponIncomePerBanner) || 0))
+        weaponIncomePerBanner: Math.max(0, Math.trunc(Number(config.weaponIncomePerBanner) || 0)),
     };
     if (!strategies[normalized.strategyId]) throw new Error(`Unknown strategy: ${normalized.strategyId}`);
     normalized.numericSeed = seedToUint32(normalized.seed);
@@ -110,13 +115,13 @@ export function runSingleDetailedSimulation(config) {
         guarantee120Consumed: false,
         milestone30Triggered: false,
         milestone60Triggered: false,
-        potentialTokensThisBanner: 0
+        potentialTokensThisBanner: 0,
     };
     const weaponState = {
         issuesCount: 0,
         issuesSince6: 0,
         issuesSinceFeatured: 0,
-        featuredGuaranteeConsumed: false
+        featuredGuaranteeConsumed: false,
     };
 
     const banners = [];
@@ -141,12 +146,12 @@ export function runSingleDetailedSimulation(config) {
                 runConfig.numBanners,
                 {
                     ticketIncomeSchedule,
-                    defaultTicketIncome: runConfig.incomePerBanner
-                }
+                    defaultTicketIncome: runConfig.incomePerBanner,
+                },
             );
             const after = snapshotPlayer(player);
-            const regularLimited = result.charPulls.filter(item => !item.isUrgent);
-            const urgent = result.charPulls.filter(item => item.isUrgent);
+            const regularLimited = result.charPulls.filter((item) => !item.isUrgent);
+            const urgent = result.charPulls.filter((item) => item.isUrgent);
             const allCharacters = [...result.standardPulls, ...result.charPulls];
             const quotaEarned = allCharacters.reduce((sum, item) => sum + (item.quotaEarned || 0), 0);
             const quotaTickets = allCharacters.reduce((sum, item) => sum + (item.quotaTicketsExchanged || 0), 0);
@@ -169,7 +174,7 @@ export function runSingleDetailedSimulation(config) {
                 newFeatured: delta(after, before, 'featuredCharacters'),
                 newFeaturedWeapons: delta(after, before, 'featuredWeapons'),
                 newPotentialTokens: delta(after, before, 'potentialTokens'),
-                weaponTicketsSpent: delta(after, before, 'weaponTicketsUsed')
+                weaponTicketsSpent: delta(after, before, 'weaponTicketsUsed'),
             });
         }
     } finally {
@@ -177,14 +182,11 @@ export function runSingleDetailedSimulation(config) {
     }
 
     const summary = snapshotPlayer(player);
-    summary.offBannerStandard6 = banners.reduce(
-        (total, banner) => total + banner.limitedCounts.standard6,
-        0
-    );
+    summary.offBannerStandard6 = banners.reduce((total, banner) => total + banner.limitedCounts.standard6, 0);
 
     return {
         config: runConfig,
         banners,
-        summary
+        summary,
     };
 }

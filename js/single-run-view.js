@@ -13,8 +13,10 @@ function createGroup(kind, phase, entry) {
         kind,
         phase,
         entries: [entry],
-        batchIds: new Set(entry.item.rollBatchId === null || entry.item.rollBatchId === undefined ? [] : [entry.item.rollBatchId]),
-        triggerPull: kind === 'urgent' ? entry.item.bannerPullsCountAfter : null
+        batchIds: new Set(
+            entry.item.rollBatchId === null || entry.item.rollBatchId === undefined ? [] : [entry.item.rollBatchId],
+        ),
+        triggerPull: kind === 'urgent' ? entry.item.bannerPullsCountAfter : null,
     };
 }
 
@@ -50,7 +52,7 @@ export function buildCharacterPullGroups(banner) {
             phase: 'standard',
             entries: standard.map((item, index) => ({ item, pull: index + 1 })),
             batchIds: new Set(),
-            triggerPull: null
+            triggerPull: null,
         });
     }
 
@@ -66,14 +68,10 @@ export function buildCharacterPullGroups(banner) {
         }
 
         wasUrgent = false;
-        const kind = item.actionPhase === 'free'
-            ? 'free'
-            : item.rollMode === 'x1'
-                ? 'single'
-                : 'ten';
+        const kind = item.actionPhase === 'free' ? 'free' : item.rollMode === 'x1' ? 'single' : 'ten';
         addEntry(groups, kind, item.actionPhase || 'strategy', {
             item,
-            pull: item.bannerPullsCountAfter
+            pull: item.bannerPullsCountAfter,
         });
     }
 
@@ -96,7 +94,7 @@ export function featuredCharacterHits(items) {
         hits.push({
             urgent: item.isUrgent === true,
             pull: item.isUrgent ? urgentPull : item.bannerPullsCountAfter,
-            pity: item.isUrgent ? null : item.pity6Before + 1
+            pity: item.isUrgent ? null : item.pity6Before + 1,
         });
     }
     return hits;
@@ -112,7 +110,7 @@ export function featuredWeaponHits(issues) {
                 hits.push({
                     issue: issueIndex + 1,
                     pull: issueIndex * 10 + itemIndex + 1,
-                    milestone: false
+                    milestone: false,
                 });
             }
         }
@@ -120,7 +118,7 @@ export function featuredWeaponHits(issues) {
             hits.push({
                 issue: issueIndex + 1,
                 pull: null,
-                milestone: true
+                milestone: true,
             });
         }
     }

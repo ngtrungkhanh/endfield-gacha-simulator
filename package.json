@@ -1,6 +1,6 @@
 {
   "name": "arknights-endfield-gacha-simulator",
-  "version": "1.4.2",
+  "version": "1.5.0",
   "description": "Giả lập gacha Arknights: Endfield",
   "type": "module",
   "main": "js/app.js",
@@ -10,12 +10,16 @@
     "build:single": "node scripts/build-single-file.mjs",
     "package": "node scripts/package-offline.mjs",
     "watch": "esbuild js/app.js --bundle --outfile=js/bundle.js --format=iife --watch",
-    "test": "node --test"
+    "lint": "biome check",
+    "format": "biome format --write",
+    "test": "node --test",
+    "check": "npm run lint && npm test && npm run build"
   },
   "dependencies": {
     "chart.js": "^4.5.1"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.6.9",
     "esbuild": "^0.28.1"
   }
 }

@@ -13,7 +13,7 @@ afterEach(() => {
 
 function useRandomSequence(values, fallback = 0.99) {
     const queue = [...values];
-    Math.random = () => queue.length > 0 ? queue.shift() : fallback;
+    Math.random = () => (queue.length > 0 ? queue.shift() : fallback);
 }
 
 function characterState(overrides = {}) {
@@ -23,7 +23,7 @@ function characterState(overrides = {}) {
         pullsSinceFeatured: 0,
         bannerPullsCount: 0,
         guarantee120Consumed: false,
-        ...overrides
+        ...overrides,
     };
 }
 
@@ -75,23 +75,29 @@ test('weapon featured guarantee is consumed once and 5★ is not rate-up', () =>
         issuesCount: 0,
         issuesSince6: 0,
         issuesSinceFeatured: 7,
-        featuredGuaranteeConsumed: false
+        featuredGuaranteeConsumed: false,
     };
 
     useRandomSequence([]);
     const guaranteed = rollWeaponIssue(state);
-    assert.equal(guaranteed.items.some(item => item.rarity === 6 && item.isFeatured), true);
+    assert.equal(
+        guaranteed.items.some((item) => item.rarity === 6 && item.isFeatured),
+        true,
+    );
     assert.equal(state.featuredGuaranteeConsumed, true);
 
     state.issuesSinceFeatured = 7;
     useRandomSequence([]);
     const nextIssue = rollWeaponIssue(state);
-    assert.equal(nextIssue.items.some(item => item.isFeatured), false);
+    assert.equal(
+        nextIssue.items.some((item) => item.isFeatured),
+        false,
+    );
 
     const freshState = { issuesCount: 0, issuesSince6: 0, issuesSinceFeatured: 0, featuredGuaranteeConsumed: false };
-    useRandomSequence([0.10]);
+    useRandomSequence([0.1]);
     const fiveStarIssue = rollWeaponIssue(freshState);
-    const fiveStar = fiveStarIssue.items.find(item => item.rarity === 5);
+    const fiveStar = fiveStarIssue.items.find((item) => item.rarity === 5);
     assert.ok(fiveStar);
     assert.equal(fiveStar.isFeatured, false);
 });
@@ -101,7 +107,7 @@ test('weapon milestone rewards alternate between off-rate selectors and Featured
         issuesCount: 0,
         issuesSince6: 0,
         issuesSinceFeatured: 0,
-        featuredGuaranteeConsumed: true
+        featuredGuaranteeConsumed: true,
     };
     const rewards = new Map();
 
@@ -111,13 +117,16 @@ test('weapon milestone rewards alternate between off-rate selectors and Featured
         if (result.milestoneReward) rewards.set(issue, result.milestoneReward);
     }
 
-    assert.deepEqual([...rewards], [
-        [10, 'selector_box'],
-        [18, 'featured_weapon'],
-        [26, 'selector_box'],
-        [34, 'featured_weapon'],
-        [42, 'selector_box']
-    ]);
+    assert.deepEqual(
+        [...rewards],
+        [
+            [10, 'selector_box'],
+            [18, 'featured_weapon'],
+            [26, 'selector_box'],
+            [34, 'featured_weapon'],
+            [42, 'selector_box'],
+        ],
+    );
 });
 
 test('expiring Dossier is consumed even when free pulls already found Featured', () => {
@@ -126,11 +135,7 @@ test('expiring Dossier is consumed even when free pulls already found Featured',
     const charState = characterState();
     const weaponState = { issuesCount: 0, issuesSince6: 0, issuesSinceFeatured: 0, featuredGuaranteeConsumed: false };
 
-    useRandomSequence([
-        ...Array(15).fill(0.99),
-        0.001, 0.1,
-        ...Array(9).fill(0.99)
-    ]);
+    useRandomSequence([...Array(15).fill(0.99), 0.001, 0.1, ...Array(9).fill(0.99)]);
 
     runSingleBannerForPlayer('save_commit', player, charState, weaponState, 0, 0, 0, 1);
     assert.equal(player.currentBannerDossierTickets, 0);
@@ -159,14 +164,14 @@ test('budget checkpoint is captured after Free and Dossier before the normal com
     useRandomSequence([]);
 
     const result = runSingleBannerForPlayer('save_commit', player, charState, weaponState, 0, 0, 0, 1);
-    const firstWalletPull = result.charPulls.find(item => item.actionPhase === 'commit');
+    const firstWalletPull = result.charPulls.find((item) => item.actionPhase === 'commit');
 
     assert.equal(result.decisionState.dossierPullsUsed, 10);
     assert.equal(result.decisionState.dossierTickets, 0);
     assert.equal(result.decisionState.bannerPullsCount, 20);
     assert.equal(player.totalUrgentPulls, 10);
-    assert.ok(result.charPulls.slice(10, 20).every(item => item.actionPhase === 'dossier'));
-    assert.ok(result.charPulls.slice(20, 40).every(item => item.actionPhase === 'commit'));
+    assert.ok(result.charPulls.slice(10, 20).every((item) => item.actionPhase === 'dossier'));
+    assert.ok(result.charPulls.slice(20, 40).every((item) => item.actionPhase === 'commit'));
     assert.equal(firstWalletPull.bannerPullsCountAfter, 21);
 });
 
@@ -176,7 +181,12 @@ test('Save & Commit reaches pull 30 only as part of an approved pull 120 commit'
         player.charTickets = charTickets;
         player.nextBannerDossierTickets = 10;
         const charState = characterState();
-        const weaponState = { issuesCount: 0, issuesSince6: 0, issuesSinceFeatured: 0, featuredGuaranteeConsumed: false };
+        const weaponState = {
+            issuesCount: 0,
+            issuesSince6: 0,
+            issuesSinceFeatured: 0,
+            featuredGuaranteeConsumed: false,
+        };
         useRandomSequence([]);
 
         const result = runSingleBannerForPlayer('save_commit', player, charState, weaponState, 0, 0, 0, 1);
@@ -207,7 +217,10 @@ test('Save & Commit spends no wallet tickets when one ticket short of the safe p
     assert.equal(result.decisionState.worstCaseWalletCost120, 96);
     assert.equal(result.decisionState.charTickets, 95);
     assert.equal(result.decisionState.canAfford120, false);
-    assert.equal(result.charPulls.some(item => item.actionPhase === 'commit'), false);
+    assert.equal(
+        result.charPulls.some((item) => item.actionPhase === 'commit'),
+        false,
+    );
 });
 
 test('Save & Commit and Yolo do not spend extra tickets for pull 30 after Featured at pull 20', () => {
@@ -216,7 +229,12 @@ test('Save & Commit and Yolo do not spend extra tickets for pull 30 after Featur
         player.charTickets = 120;
         player.nextBannerDossierTickets = 10;
         const charState = characterState({ pity6: 79 });
-        const weaponState = { issuesCount: 0, issuesSince6: 0, issuesSinceFeatured: 0, featuredGuaranteeConsumed: false };
+        const weaponState = {
+            issuesCount: 0,
+            issuesSince6: 0,
+            issuesSinceFeatured: 0,
+            featuredGuaranteeConsumed: false,
+        };
         useRandomSequence([], 0.1);
 
         const result = runSingleBannerForPlayer(strategyId, player, charState, weaponState, 0, 0, 0, 1);
@@ -224,7 +242,11 @@ test('Save & Commit and Yolo do not spend extra tickets for pull 30 after Featur
         assert.equal(result.gotFeaturedChar, true, strategyId);
         assert.equal(charState.bannerPullsCount, 20, strategyId);
         assert.equal(player.totalUrgentPulls, 0, strategyId);
-        assert.equal(result.charPulls.some(item => item.actionPhase === 'finish_milestone'), false, strategyId);
+        assert.equal(
+            result.charPulls.some((item) => item.actionPhase === 'finish_milestone'),
+            false,
+            strategyId,
+        );
     }
 });
 
@@ -241,7 +263,10 @@ test('Save & Commit (Singles) still stops exactly after Featured at pull 20', ()
     assert.equal(result.gotFeaturedChar, true);
     assert.equal(charState.bannerPullsCount, 20);
     assert.equal(player.totalUrgentPulls, 0);
-    assert.equal(result.charPulls.some(item => item.actionPhase === 'finish_milestone'), false);
+    assert.equal(
+        result.charPulls.some((item) => item.actionPhase === 'finish_milestone'),
+        false,
+    );
 });
 
 test('Save & Commit protects virtual next-banner pull 120 while Yolo does not', () => {
@@ -249,7 +274,12 @@ test('Save & Commit protects virtual next-banner pull 120 while Yolo does not', 
         const player = new SimulatorPlayer(1);
         player.charTickets = 120;
         const charState = characterState({ pity6: 30 });
-        const weaponState = { issuesCount: 0, issuesSince6: 0, issuesSinceFeatured: 0, featuredGuaranteeConsumed: false };
+        const weaponState = {
+            issuesCount: 0,
+            issuesSince6: 0,
+            issuesSinceFeatured: 0,
+            featuredGuaranteeConsumed: false,
+        };
         let hardPityCalls = 0;
         Math.random = () => {
             if (charState.pity6 === 80) {
@@ -259,20 +289,10 @@ test('Save & Commit protects virtual next-banner pull 120 while Yolo does not', 
             return 0.99;
         };
 
-        const result = runSingleBannerForPlayer(
-            strategyId,
-            player,
-            charState,
-            weaponState,
-            0,
-            0,
-            0,
-            1,
-            {
-                ticketIncomeSchedule: [0],
-                defaultTicketIncome
-            }
-        );
+        const result = runSingleBannerForPlayer(strategyId, player, charState, weaponState, 0, 0, 0, 1, {
+            ticketIncomeSchedule: [0],
+            defaultTicketIncome,
+        });
         return { player, charState, result };
     };
 
@@ -295,13 +315,14 @@ test('Pull 60 waits for 8 saved weapon Issues before pulling weapons', () => {
         const player = new SimulatorPlayer(1);
         player.arsenalTickets = arsenalTickets;
         const charState = characterState();
-        const weaponState = { issuesCount: 0, issuesSince6: 0, issuesSinceFeatured: 0, featuredGuaranteeConsumed: false };
+        const weaponState = {
+            issuesCount: 0,
+            issuesSince6: 0,
+            issuesSinceFeatured: 0,
+            featuredGuaranteeConsumed: false,
+        };
 
-        useRandomSequence([
-            ...Array(16).fill(0.99),
-            0.001, 0.1,
-            ...Array(9).fill(0.99)
-        ]);
+        useRandomSequence([...Array(16).fill(0.99), 0.001, 0.1, ...Array(9).fill(0.99)]);
 
         const result = runSingleBannerForPlayer('pull_60', player, charState, weaponState, 0, 0, 0, 1);
         return { player, result };
@@ -325,20 +346,10 @@ test('Pull 60 budget check targets 60 instead of the 120 guarantee', () => {
     const weaponState = { issuesCount: 0, issuesSince6: 0, issuesSinceFeatured: 0, featuredGuaranteeConsumed: false };
     useRandomSequence([]);
 
-    const result = runSingleBannerForPlayer(
-        'pull_60',
-        player,
-        charState,
-        weaponState,
-        0,
-        0,
-        0,
-        1,
-        {
-            ticketIncomeSchedule: [0],
-            defaultTicketIncome: 46
-        }
-    );
+    const result = runSingleBannerForPlayer('pull_60', player, charState, weaponState, 0, 0, 0, 1, {
+        ticketIncomeSchedule: [0],
+        defaultTicketIncome: 46,
+    });
 
     assert.equal(result.decisionState.budgetTargetPulls, 60);
     assert.equal(result.decisionState.budgetRequiredTickets, 48);
@@ -354,20 +365,10 @@ test('Pull 60 skips instead of falling back when pull 60 is unaffordable', () =>
     const weaponState = { issuesCount: 0, issuesSince6: 0, issuesSinceFeatured: 0, featuredGuaranteeConsumed: false };
     useRandomSequence([]);
 
-    const result = runSingleBannerForPlayer(
-        'pull_60',
-        player,
-        charState,
-        weaponState,
-        0,
-        0,
-        0,
-        1,
-        {
-            ticketIncomeSchedule: [0],
-            defaultTicketIncome: 46
-        }
-    );
+    const result = runSingleBannerForPlayer('pull_60', player, charState, weaponState, 0, 0, 0, 1, {
+        ticketIncomeSchedule: [0],
+        defaultTicketIncome: 46,
+    });
 
     assert.equal(result.decisionState.budgetTargetPulls, 60);
     assert.equal(result.decisionState.budgetRequiredTickets, 48);
@@ -383,7 +384,12 @@ test('no strategy selects pull 30 as a standalone spending target', () => {
         const player = new SimulatorPlayer(1);
         player.charTickets = 20;
         const charState = characterState();
-        const weaponState = { issuesCount: 0, issuesSince6: 0, issuesSinceFeatured: 0, featuredGuaranteeConsumed: false };
+        const weaponState = {
+            issuesCount: 0,
+            issuesSince6: 0,
+            issuesSinceFeatured: 0,
+            featuredGuaranteeConsumed: false,
+        };
         useRandomSequence([]);
 
         const result = runSingleBannerForPlayer(strategyId, player, charState, weaponState, 0, 0, 0, 1);
@@ -399,17 +405,9 @@ test('Pull 60 cannot borrow next-banner income to reach pull 120 now', () => {
     const weaponState = { issuesCount: 0, issuesSince6: 0, issuesSinceFeatured: 0, featuredGuaranteeConsumed: false };
     useRandomSequence([]);
 
-    const result = runSingleBannerForPlayer(
-        'pull_60',
-        player,
-        charState,
-        weaponState,
-        0,
-        0,
-        0,
-        2,
-        { ticketIncomeSchedule: [0, 100] }
-    );
+    const result = runSingleBannerForPlayer('pull_60', player, charState, weaponState, 0, 0, 0, 2, {
+        ticketIncomeSchedule: [0, 100],
+    });
 
     assert.equal(result.decisionState.checks.pull120At60.requiredTickets, 58);
     assert.equal(result.decisionState.checks.pull120At60.availableTickets, 50);
@@ -425,17 +423,9 @@ test('Pull 60 upgrades at pull 60 when current 120 and next 60 are both protecte
     const weaponState = { issuesCount: 0, issuesSince6: 0, issuesSinceFeatured: 0, featuredGuaranteeConsumed: false };
     useRandomSequence([]);
 
-    const result = runSingleBannerForPlayer(
-        'pull_60',
-        player,
-        charState,
-        weaponState,
-        0,
-        0,
-        0,
-        2,
-        { ticketIncomeSchedule: [0, 40] }
-    );
+    const result = runSingleBannerForPlayer('pull_60', player, charState, weaponState, 0, 0, 0, 2, {
+        ticketIncomeSchedule: [0, 40],
+    });
 
     assert.equal(result.decisionState.checks.pull120At60.availableTickets, 58);
     assert.equal(result.decisionState.checks.pull120At60.futureIncome, 40);
@@ -451,20 +441,10 @@ test('Pull 60 protects a virtual next-banner pull 60 on the final simulated bann
     const weaponState = { issuesCount: 0, issuesSince6: 0, issuesSinceFeatured: 0, featuredGuaranteeConsumed: false };
     useRandomSequence([]);
 
-    const result = runSingleBannerForPlayer(
-        'pull_60',
-        player,
-        charState,
-        weaponState,
-        0,
-        0,
-        0,
-        1,
-        {
-            ticketIncomeSchedule: [0],
-            defaultTicketIncome: 40
-        }
-    );
+    const result = runSingleBannerForPlayer('pull_60', player, charState, weaponState, 0, 0, 0, 1, {
+        ticketIncomeSchedule: [0],
+        defaultTicketIncome: 40,
+    });
 
     assert.equal(result.decisionState.checks.pull120At60.futureIncome, 40);
     assert.equal(result.decisionState.checks.pull120At60.protectedRouteRequiredTickets, 95);
@@ -478,20 +458,17 @@ test('Roll Meta uses a rolling 95-ticket reserve for an adjacent Meta banner', (
         player.charTickets = tickets;
         player.metaBannersSet = new Set([1]);
         const charState = characterState();
-        const weaponState = { issuesCount: 0, issuesSince6: 0, issuesSinceFeatured: 0, featuredGuaranteeConsumed: false };
+        const weaponState = {
+            issuesCount: 0,
+            issuesSince6: 0,
+            issuesSinceFeatured: 0,
+            featuredGuaranteeConsumed: false,
+        };
         useRandomSequence([]);
 
-        const result = runSingleBannerForPlayer(
-            'roll_meta',
-            player,
-            charState,
-            weaponState,
-            0,
-            0,
-            0,
-            2,
-            { ticketIncomeSchedule: [0, 0] }
-        );
+        const result = runSingleBannerForPlayer('roll_meta', player, charState, weaponState, 0, 0, 0, 2, {
+            ticketIncomeSchedule: [0, 0],
+        });
         return { charState, result };
     };
 
@@ -513,17 +490,9 @@ test('Roll Meta uses a 105-ticket reserve when an intermediate banner consumes D
     const weaponState = { issuesCount: 0, issuesSince6: 0, issuesSinceFeatured: 0, featuredGuaranteeConsumed: false };
     useRandomSequence([]);
 
-    const result = runSingleBannerForPlayer(
-        'roll_meta',
-        player,
-        charState,
-        weaponState,
-        0,
-        0,
-        0,
-        3,
-        { ticketIncomeSchedule: [0, 50, 50] }
-    );
+    const result = runSingleBannerForPlayer('roll_meta', player, charState, weaponState, 0, 0, 0, 3, {
+        ticketIncomeSchedule: [0, 50, 50],
+    });
 
     assert.equal(result.decisionState.checks.metaReserve.reserveTickets, 105);
     assert.equal(result.decisionState.checks.metaReserve.futureIncome, 100);
@@ -539,17 +508,9 @@ test('current Meta banner spends available tickets even without full pull 120 in
     const weaponState = { issuesCount: 0, issuesSince6: 0, issuesSinceFeatured: 0, featuredGuaranteeConsumed: false };
     useRandomSequence([]);
 
-    const result = runSingleBannerForPlayer(
-        'roll_meta',
-        player,
-        charState,
-        weaponState,
-        0,
-        0,
-        0,
-        2,
-        { ticketIncomeSchedule: [0, 0] }
-    );
+    const result = runSingleBannerForPlayer('roll_meta', player, charState, weaponState, 0, 0, 0, 2, {
+        ticketIncomeSchedule: [0, 0],
+    });
 
     assert.equal(result.decisionState.canAfford120, false);
     assert.equal(result.decisionState.selectedTargetPulls, 120);
@@ -617,7 +578,7 @@ test('120 guarantee statistic increments when the guaranteed Featured is obtaine
 test('dynamic featured guarantee for interactive pulling', () => {
     const state = characterState({
         featuredCountThisBanner: 0,
-        bannerPullsCount: 119
+        bannerPullsCount: 119,
     });
     useRandomSequence([0.99]);
     const res1 = rollCharacter(state);

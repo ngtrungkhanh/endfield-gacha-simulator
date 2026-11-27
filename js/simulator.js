@@ -19,7 +19,7 @@ export class MonteCarloSimulator {
      */
     static run(config) {
         const { mode, numPlayers, startingCharTickets, incomePerBanner, weaponIncomeNonGacha, strategyIds } = config;
-        
+
         let numBanners = config.numBanners;
         let totalPullsAllocated = 0;
 
@@ -30,7 +30,10 @@ export class MonteCarloSimulator {
             numBanners = Math.max(1, Math.ceil(totalPullsAllocated / incomePerBanner));
         }
 
-        const metaBannersSet = generateMetaBannerIndices(numBanners, config.numMetaBanners !== undefined ? config.numMetaBanners : Math.floor(numBanners * 0.3));
+        const metaBannersSet = generateMetaBannerIndices(
+            numBanners,
+            config.numMetaBanners !== undefined ? config.numMetaBanners : Math.floor(numBanners * 0.3),
+        );
         const results = {};
         const ticketIncomeSchedule = Array.from({ length: numBanners }, (_, bannerIdx) => {
             if (mode === 'pulls' && bannerIdx === numBanners - 1) {
@@ -39,15 +42,15 @@ export class MonteCarloSimulator {
             return incomePerBanner;
         });
 
-        strategyIds.forEach(strategyId => {
+        strategyIds.forEach((strategyId) => {
             // Khởi tạo danh sách người chơi cho chiến thuật này
             const players = [];
             for (let i = 0; i < numPlayers; i++) {
                 const player = new SimulatorPlayer(i);
                 player.metaBannersSet = metaBannersSet;
                 // Với chế độ pulls, xuất phát điểm là 0 và nhận vé banner-by-banner để kiểm soát tổng lượng vé
-                player.charTickets = (mode === 'pulls') ? 0 : startingCharTickets;
-                player.arsenalTickets = (mode === 'pulls') ? 0 : (config.startingWeaponTickets || 0);
+                player.charTickets = mode === 'pulls' ? 0 : startingCharTickets;
+                player.arsenalTickets = mode === 'pulls' ? 0 : config.startingWeaponTickets || 0;
                 players.push(player);
             }
 
@@ -60,14 +63,14 @@ export class MonteCarloSimulator {
                 guarantee120Consumed: false,
                 milestone30Triggered: false,
                 milestone60Triggered: false,
-                potentialTokensThisBanner: 0
+                potentialTokensThisBanner: 0,
             }));
 
             const playerWeaponPities = Array.from({ length: numPlayers }, () => ({
                 issuesCount: 0,
                 issuesSince6: 0,
                 issuesSinceFeatured: 0,
-                featuredGuaranteeConsumed: false
+                featuredGuaranteeConsumed: false,
             }));
 
             // Chạy qua từng banner gacha
@@ -91,8 +94,8 @@ export class MonteCarloSimulator {
                         numBanners,
                         {
                             ticketIncomeSchedule,
-                            defaultTicketIncome: incomePerBanner
-                        }
+                            defaultTicketIncome: incomePerBanner,
+                        },
                     );
                 }
             }
@@ -112,7 +115,7 @@ export class MonteCarloSimulator {
      */
     static analyzeResults(players, numBanners) {
         const numPlayers = players.length;
-        
+
         let sumFeaturedChars = 0;
         let sumMetaFeaturedChars = 0;
         let sumFeaturedUnique = 0;
@@ -137,7 +140,7 @@ export class MonteCarloSimulator {
         let sumWeaponPulls = 0;
         let sumWeaponDebt = 0;
         let sumWeaponSelectors = 0;
-        
+
         let sumWeaponTicketsUsed = 0;
 
         // Cực trị (Hên nhất, Đen nhất)
@@ -150,7 +153,7 @@ export class MonteCarloSimulator {
         const distribution = {};
         const weaponDistribution = {};
 
-        players.forEach(player => {
+        players.forEach((player) => {
             sumFeaturedChars += player.ownedFeaturedCharacters;
             sumMetaFeaturedChars += player.ownedMetaFeaturedCharacters || 0;
             sumFeaturedUnique += player.ownedFeaturedUnique || 0;
@@ -175,13 +178,13 @@ export class MonteCarloSimulator {
             sumWeaponPulls += player.totalWeaponPulls;
             sumWeaponDebt += player.arsenalTicketsDebt;
             sumWeaponSelectors += player.weaponMilestoneSelectors;
-            
+
             sumWeaponTicketsUsed += player.totalWeaponTicketsUsed || 0;
 
             // Tính toán giá trị cực trị
             if (player.ownedFeaturedCharacters > maxFeaturedChars) maxFeaturedChars = player.ownedFeaturedCharacters;
             if (player.ownedFeaturedCharacters < minFeaturedChars) minFeaturedChars = player.ownedFeaturedCharacters;
-            
+
             if (player.ownedFeaturedWeapons > maxFeaturedWeapons) maxFeaturedWeapons = player.ownedFeaturedWeapons;
             if (player.ownedFeaturedWeapons < minFeaturedWeapons) minFeaturedWeapons = player.ownedFeaturedWeapons;
 
@@ -194,12 +197,12 @@ export class MonteCarloSimulator {
 
         // Chuyển đổi phân phối sang dạng phần trăm để vẽ biểu đồ
         const distributionPercent = {};
-        Object.keys(distribution).forEach(key => {
+        Object.keys(distribution).forEach((key) => {
             distributionPercent[key] = (distribution[key] / numPlayers) * 100;
         });
 
         const weaponDistributionPercent = {};
-        Object.keys(weaponDistribution).forEach(key => {
+        Object.keys(weaponDistribution).forEach((key) => {
             weaponDistributionPercent[key] = (weaponDistribution[key] / numPlayers) * 100;
         });
 
@@ -208,7 +211,7 @@ export class MonteCarloSimulator {
         // Tỷ lệ người chơi hoàn thành toàn bộ bộ sưu tập Limited unique của chu kỳ.
         // Dupe không giúp hoàn thành thêm banner vì ownedFeaturedUnique chỉ tăng một lần/banner.
         const completedLimitedPlayers = players.filter(
-            player => (player.ownedFeaturedUnique || 0) >= numBanners
+            (player) => (player.ownedFeaturedUnique || 0) >= numBanners,
         ).length;
         const ownershipRate = (completedLimitedPlayers / numPlayers) * 100;
 
@@ -231,16 +234,15 @@ export class MonteCarloSimulator {
             avgCharDebt: sumCharDebt / numPlayers,
             avgTimesHit120Guarantee: sumTimesHit120Guarantee / numPlayers,
             ownershipRate: ownershipRate,
-            
+
             // Cực trị nhân vật
             bestLuckChar: maxFeaturedChars,
             worstLuckChar: minFeaturedChars,
-            
+
             // Hiệu suất banner Limited: tính cả pull có pity và Urgent, loại Standard.
             // Featured ở mẫu số bao gồm cả bản mới và bản trùng (dupe).
-            avgPullsPerFeaturedChar: averageFeaturedChars > 0 
-                ? (sumLimitedPulls + sumUrgentPulls) / sumFeaturedChars
-                : Infinity,
+            avgPullsPerFeaturedChar:
+                averageFeaturedChars > 0 ? (sumLimitedPulls + sumUrgentPulls) / sumFeaturedChars : Infinity,
 
             // Thống kê Vũ khí (Trung bình mỗi người chơi)
             avgFeaturedWeapons: sumFeaturedWeapons / numPlayers,
@@ -255,10 +257,10 @@ export class MonteCarloSimulator {
             // Cực trị vũ khí
             bestLuckWeapon: maxFeaturedWeapons,
             worstLuckWeapon: minFeaturedWeapons,
-            
+
             // Phân phối tần suất
             distribution: distributionPercent,
-            weaponDistribution: weaponDistributionPercent
+            weaponDistribution: weaponDistributionPercent,
         };
     }
 }

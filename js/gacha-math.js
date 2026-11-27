@@ -15,7 +15,7 @@ export function rollCharacter(state, isUrgent = false, force5Star = false) {
             const r = Math.random();
             if (r < 0.008) {
                 const isFeatured = Math.random() < 0.5;
-                const isLechLimited = !isFeatured && (Math.random() < 0.10);
+                const isLechLimited = !isFeatured && Math.random() < 0.1;
                 return { rarity: 6, isFeatured, isUrgent: true, isLechLimited };
             } else {
                 return { rarity: 5, isFeatured: false, isUrgent: true };
@@ -26,7 +26,7 @@ export function rollCharacter(state, isUrgent = false, force5Star = false) {
         const r = Math.random();
         if (r < 0.008) {
             const isFeatured = Math.random() < 0.5;
-            const isLechLimited = !isFeatured && (Math.random() < 0.10);
+            const isLechLimited = !isFeatured && Math.random() < 0.1;
             return { rarity: 6, isFeatured, isUrgent: true, isLechLimited };
         } else if (r < 0.008 + 0.08) {
             return { rarity: 5, isFeatured: false, isUrgent: true };
@@ -70,8 +70,8 @@ export function rollCharacter(state, isUrgent = false, force5Star = false) {
     const r = Math.random();
     if (r < rate6) {
         // Trúng 6-Star!
-        const isFeatured = isGuaranteedFeatured ? true : (Math.random() < 0.5);
-        const isLechLimited = !isFeatured && (Math.random() < 0.10);
+        const isFeatured = isGuaranteedFeatured ? true : Math.random() < 0.5;
+        const isLechLimited = !isFeatured && Math.random() < 0.1;
         state.pity6 = 0;
         state.pity5 = 0;
         if (isFeatured) {
@@ -105,7 +105,7 @@ export function rollWeaponIssue(state) {
     state.issuesCount++;
 
     let guaranteeFeatured = state.featuredGuaranteeConsumed !== true && state.issuesSinceFeatured >= 7; // Issue thứ 8 chắc chắn trúng Featured
-    let guarantee6 = state.issuesSince6 >= 3;              // Issue thứ 4 chắc chắn trúng 6-Star
+    let guarantee6 = state.issuesSince6 >= 3; // Issue thứ 4 chắc chắn trúng 6-Star
 
     const results = [];
     let found6 = false;
@@ -128,12 +128,12 @@ export function rollWeaponIssue(state) {
             isFeatured = Math.random() < 0.25;
             guarantee6 = false;
         } else {
-            let p6 = 0.04;  // Tỉ lệ 6★: 4%
-            let p5 = 0.15;  // Tỉ lệ 5★: 15%
-            let p4 = 0.81;  // Tỉ lệ 4★: 81%
+            let p6 = 0.04; // Tỉ lệ 6★: 4%
+            let p5 = 0.15; // Tỉ lệ 5★: 15%
+            let p4 = 0.81; // Tỉ lệ 4★: 81%
 
             // Bảo hiểm 5★ trở lên trong cùng 1 Issue (x10)
-            const hasHighRarity = results.some(item => item.rarity >= 5);
+            const hasHighRarity = results.some((item) => item.rarity >= 5);
             if (i === 9 && !hasHighRarity) {
                 // Nếu 9 lượt trước toàn 4★, lượt thứ 10 buộc phải là 5★ hoặc 6★ (tỷ lệ 6★ giữ nguyên 4%, còn lại là 5★)
                 p4 = 0;
@@ -190,7 +190,7 @@ export function rollWeaponIssue(state) {
 
     return {
         items: results,
-        milestoneReward
+        milestoneReward,
     };
 }
 
@@ -201,7 +201,7 @@ export function rollWeaponIssue(state) {
  */
 export function calculateArsenalTicketsRebate(hhResults) {
     let tickets = 0;
-    hhResults.forEach(item => {
+    hhResults.forEach((item) => {
         if (item.rarity === 6) {
             tickets += 2000;
         } else if (item.rarity === 5) {
@@ -313,18 +313,13 @@ export function calculateMinimumTicketsRequired({ pity5, pity120, quota, targetR
 
         const highBeforeLast = Math.floor((limitedPity5 + pulls - 1) / 10);
         const reaches120 = bannerPulls + pulls >= 120;
-        const highTotal = reaches120
-            ? highBeforeLast + 1
-            : Math.floor((limitedPity5 + pulls) / 10);
+        const highTotal = reaches120 ? highBeforeLast + 1 : Math.floor((limitedPity5 + pulls) / 10);
 
         if (isPaid) {
             cumulativePaidPulls += pulls;
             const quotaBeforeLastPull = accumulatedQuota + highBeforeLast * 10;
             const quotaTicketsAvailable = Math.floor(quotaBeforeLastPull / 25);
-            requiredTickets = Math.max(
-                requiredTickets,
-                cumulativePaidPulls - quotaTicketsAvailable
-            );
+            requiredTickets = Math.max(requiredTickets, cumulativePaidPulls - quotaTicketsAvailable);
         }
 
         accumulatedQuota += highTotal * 10;
@@ -363,7 +358,7 @@ export function calculateMinimumTicketsRequired({ pity5, pity120, quota, targetR
         if (target < mandatoryLimitedPulls) {
             throw new RangeError(
                 `targetRolls[${index}] cannot be lower than ${mandatoryLimitedPulls} ` +
-                'because the future banner has mandatory Free/Dossier pulls.'
+                    'because the future banner has mandatory Free/Dossier pulls.',
             );
         }
 

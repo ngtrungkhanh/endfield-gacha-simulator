@@ -1,14 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-import {
-    LOCALE_STORAGE_KEY,
-    catalogs,
-    formatNumber,
-    getLocale,
-    setLocale,
-    t
-} from '../js/i18n.js';
+import { LOCALE_STORAGE_KEY, catalogs, formatNumber, getLocale, setLocale, t } from '../js/i18n.js';
 
 test('VI and EN catalogs contain the same non-empty keys', () => {
     assert.deepEqual(Object.keys(catalogs.vi).sort(), Object.keys(catalogs.en).sort());
@@ -28,7 +21,9 @@ test('t interpolates parameters and invalid locales fall back to Vietnamese', ()
     assert.equal(t('pull.free', { count: 7 }), 'Quay Free Banner (x7 Free)');
     const originalWarn = console.warn;
     let warning = '';
-    console.warn = message => { warning = message; };
+    console.warn = (message) => {
+        warning = message;
+    };
     try {
         assert.equal(t('missing.production.key'), '');
         assert.match(warning, /missing\.production\.key/);
@@ -50,12 +45,12 @@ test('locale persistence does not modify schema 1.6 storage keys', () => {
         ['a9e_gacha_interactive_inventory', '[{"rarity":6}]'],
         ['a9e_gacha_simulator_settings', '{"version":"1.6"}'],
         ['a9e_gacha_last_results', '{"version":"1.6"}'],
-        ['a9e_gacha_active_banner_idx', '2']
+        ['a9e_gacha_active_banner_idx', '2'],
     ]);
     globalThis.localStorage = {
-        getItem: key => data.get(key) ?? null,
+        getItem: (key) => data.get(key) ?? null,
         setItem: (key, value) => data.set(key, String(value)),
-        removeItem: key => data.delete(key)
+        removeItem: (key) => data.delete(key),
     };
     const before = new Map(data);
     setLocale('en');
@@ -66,7 +61,9 @@ test('locale persistence does not modify schema 1.6 storage keys', () => {
 
 test('every translation key referenced by index.html exists in both catalogs', () => {
     const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
-    const keys = [...html.matchAll(/data-i18n(?:-title|-aria-label|-placeholder)?="([^"]+)"/g)].map(match => match[1]);
+    const keys = [...html.matchAll(/data-i18n(?:-title|-aria-label|-placeholder)?="([^"]+)"/g)].map(
+        (match) => match[1],
+    );
     assert.ok(keys.length > 50, 'expected broad static translation coverage');
     for (const key of keys) {
         assert.ok(catalogs.vi[key], `missing vi key: ${key}`);
@@ -115,13 +112,12 @@ test('strategy copy matches the current future-protection rules', () => {
 test('strategy simulator is the default tab and tabs follow the requested order', () => {
     const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
     const nav = html.match(/<nav class="tabs-navigation"[\s\S]*?<\/nav>/)?.[0] || '';
-    const tabIds = [...nav.matchAll(/id="(btn-tab-[^"]+)"/g)].map(match => match[1]);
-    assert.deepEqual(tabIds, [
-        'btn-tab-simulator',
-        'btn-tab-single-run',
-        'btn-tab-interactive'
-    ]);
-    assert.match(nav, /id="btn-tab-simulator"[^>]*class="tab-btn active"|class="tab-btn active"[^>]*id="btn-tab-simulator"/);
+    const tabIds = [...nav.matchAll(/id="(btn-tab-[^"]+)"/g)].map((match) => match[1]);
+    assert.deepEqual(tabIds, ['btn-tab-simulator', 'btn-tab-single-run', 'btn-tab-interactive']);
+    assert.match(
+        nav,
+        /id="btn-tab-simulator"[^>]*class="tab-btn active"|class="tab-btn active"[^>]*id="btn-tab-simulator"/,
+    );
     assert.match(html, /<main class="tab-content active" id="simulator-tab"/);
     assert.match(html, /<main class="tab-content" id="interactive-tab"[^>]*hidden/);
 });

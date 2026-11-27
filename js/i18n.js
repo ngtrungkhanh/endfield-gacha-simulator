@@ -10,18 +10,27 @@ export const catalogs = {
         'tabs.simulator': 'Mô phỏng chiến thuật',
         'tabs.singleRun': 'Mô phỏng một lượt',
         'banner.tag': 'Chartered Headhunting',
+        'banner.tagChartered': 'Chartered Headhunting',
+        'banner.tagBasic': 'Chiêu Mộ Cơ Bản',
+        'banner.tagRefactor': 'Chiêu Mộ Tái Cấu Trúc',
         'banner.switch': 'Đổi banner',
         'banner.rules': 'Tỉ lệ 6★: 0,8% | Soft pity tăng từ lượt 66 | Hard pity 80 | Bảo hiểm Featured 120',
+        'banner.rulesBasic': 'Tỉ lệ 6★: 0,8% | Soft pity tăng từ lượt 66 | Hard pity 80 | Không có bảo hiểm Featured',
+        'banner.rulesRefactor':
+            'Tỉ lệ 6★: 0,8% | Hard pity 80 | Bảo hiểm 120 kế thừa cùng nhân vật | Thưởng mốc 30/60/90 Khẩn Cấp',
         'banner.pity6': 'Pity 6★',
         'banner.pity5': 'Pity 5★',
         'banner.guarantee': 'Bảo hiểm 120',
         'banner.guaranteeUsed': 'Đã dùng',
         'banner.guaranteeDynamic': 'Bảo hiểm {threshold}',
+        'banner.guaranteeNotApplicable': 'Không áp dụng',
+        'banner.guaranteeInherited': 'Bảo hiểm 120 (Kế thừa)',
         'banner.pity6Progress': 'Tiến độ pity 6★ trên 80',
         'banner.guaranteeProgress': 'Tiến độ bảo hiểm Featured trên 120',
         'pull.empty': 'Nhấn nút bên dưới để thực hiện quay gacha...',
         'pull.bannerChanged': 'Đã đổi banner. Pity 6★ được giữ lại; bảo hiểm Featured và các mốc banner đã reset.',
-        'pull.promptNextBanner': 'Chúc mừng bạn đã trúng Operator 6★ giới hạn! Bạn có muốn chuyển sang banner tiếp theo không?',
+        'pull.promptNextBanner':
+            'Chúc mừng bạn đã trúng Operator 6★ giới hạn! Bạn có muốn chuyển sang banner tiếp theo không?',
         'pull.dossier': 'Dossier',
         'pull.urgentOptimized': 'Urgent mốc 30',
         'pull.free': 'Quay Free Banner (x{count} Free)',
@@ -104,7 +113,8 @@ export const catalogs = {
         'simulator.reset': 'Reset cài đặt',
         'single.eyebrow': 'ONE PLAYER · FULL TRACE',
         'single.title': 'Mô phỏng một lượt',
-        'single.intro': 'Chạy đúng một người chơi và theo dõi toàn bộ quyết định, pity, tài nguyên và kết quả qua từng banner.',
+        'single.intro':
+            'Chạy đúng một người chơi và theo dõi toàn bộ quyết định, pity, tài nguyên và kết quả qua từng banner.',
         'single.strategy': 'Chiến thuật',
         'single.seed': 'Seed (để trống = ngẫu nhiên)',
         'single.seedPlaceholder': 'Tự tạo khi chạy',
@@ -148,7 +158,8 @@ export const catalogs = {
         'single.weaponObtained': 'Có Featured Weapon',
         'single.weaponMissed': 'Không có Featured Weapon',
         'single.pullsBreakdown': '{standard} Standard · {limited} Limited · {urgent} Urgent',
-        'single.openingWallet': '{tickets} vé (nhận +{income} từ banner) · {dossier} Dossier · {arsenal} Arsenal (nhận +{weaponIncome} từ banner) · {quota} Quota',
+        'single.openingWallet':
+            '{tickets} vé (nhận +{income} từ banner) · {dossier} Dossier · {arsenal} Arsenal (nhận +{weaponIncome} từ banner) · {quota} Quota',
         'single.pityOpening': 'Pity đầu: Limited {limited}/80 · Featured 0/120 · Standard {standard}/80',
         'single.decision': 'Sau lượt miễn phí và Dossier: {tickets} vé; pity {pity}/80; tiến độ Featured {guarantee}.',
         'single.decisionTitle': 'Kiểm tra ngân sách trước khi dùng vé',
@@ -166,11 +177,14 @@ export const catalogs = {
         'single.skipCommit': 'Không commit thêm vé ví; chỉ xử lý các lượt bắt buộc.',
         'single.yoloDecision': 'Dùng tài nguyên khả dụng cho đến khi gặp Featured hoặc hết vé.',
         'single.pull60Decision': 'Nhắm mốc 60 vì ngân sách hiện tại đã đủ.',
-        'single.pull60SkipDecision': 'Không đủ tài nguyên cho mốc 60; giữ vé cho banner sau và không fallback về mốc 30.',
-        'single.pull120UpgradeDecision': 'Đạt mốc 60 chưa có Featured; ngân sách bảo vệ được 120 hiện tại và 60 banner sau nên nâng mục tiêu lên 120.',
+        'single.pull60SkipDecision':
+            'Không đủ tài nguyên cho mốc 60; giữ vé cho banner sau và không fallback về mốc 30.',
+        'single.pull120UpgradeDecision':
+            'Đạt mốc 60 chưa có Featured; ngân sách bảo vệ được 120 hiện tại và 60 banner sau nên nâng mục tiêu lên 120.',
         'single.metaDecision': 'Quyết định chi tiêu theo vị trí banner Meta và ngân sách cho các banner kế tiếp.',
         'single.metaCurrentDecision': 'Đây là banner Meta; sử dụng tài nguyên khả dụng tới Featured hoặc mốc 120.',
-        'single.metaReservePassDecision': 'Banner thường được phép quay; sau kịch bản xấu nhất vẫn giữ được quỹ Meta {reserve} vé.',
+        'single.metaReservePassDecision':
+            'Banner thường được phép quay; sau kịch bản xấu nhất vẫn giữ được quỹ Meta {reserve} vé.',
         'single.metaReserveStopDecision': 'Bỏ banner thường để bảo toàn quỹ Meta {reserve} vé.',
         'single.phaseCommit': 'Commit bằng vé',
         'single.phaseStrategy': 'Thực thi chiến thuật',
@@ -251,23 +265,28 @@ export const catalogs = {
         'table.empty': 'Nhấn nút “Chạy giả lập” để xem kết quả so sánh...',
         'table.scrollHint': 'Bảng tự động điều chỉnh chiều rộng để hiển thị đầy đủ.',
         'table.tooltip.strategy': 'Chiến thuật gacha mô phỏng',
-        'table.tooltip.charPulls': 'Tổng mọi pull nhân vật, gồm pull thường, Urgent và Dossier; Standard nằm trong nhóm pull thường',
+        'table.tooltip.charPulls':
+            'Tổng mọi pull nhân vật, gồm pull thường, Urgent và Dossier; Standard nằm trong nhóm pull thường',
         'table.tooltip.freeDossier': 'Số pull free mốc 30 (Urgent) / Số pull sử dụng vé Dossier',
         'table.tooltip.charRemaining': 'Số vé nhân vật còn dư sau chu kỳ',
         'table.tooltip.charSix': 'Tổng số nhân vật 6★ nhận được (bao gồm cả lệch)',
         'table.tooltip.charResults': 'Tổng 6★ nhân vật, Featured mới/trùng và số lần lệch Limited/Standard',
         'table.tooltip.charLim': 'Số nhân vật giới hạn độc nhất / số bản trùng (dupe) sở hữu',
         'table.tooltip.charLoss': 'Số lần lệch rate ra nhân vật giới hạn cũ / nhân vật thường (Standard)',
-        'table.tooltip.efficiency': 'Số pull Limited trung bình để nhận 1 Featured Operator, số lần chạm mốc 120 và số Featured cao nhất/thấp nhất',
-        'table.tooltip.featuredRange': 'Số Featured Limited cao nhất / thấp nhất mà một người chơi nhận được trong các lượt mô phỏng',
+        'table.tooltip.efficiency':
+            'Số pull Limited trung bình để nhận 1 Featured Operator, số lần chạm mốc 120 và số Featured cao nhất/thấp nhất',
+        'table.tooltip.featuredRange':
+            'Số Featured Limited cao nhất / thấp nhất mà một người chơi nhận được trong các lượt mô phỏng',
         'table.tooltip.pity120Hit': 'Tổng số lần chạm bảo hiểm cứng 120 lượt',
         'table.tooltip.metaObtained': 'Số nhân vật Meta và Vũ khí Meta sở hữu được',
         'table.tooltip.weaponFeatured': 'Số vũ khí 6★ giới hạn nhận được',
-        'table.tooltip.weaponResults': 'Featured/Tổng vũ khí 6★, số Featured Weapon cao nhất/thấp nhất và Arsenal còn dư',
+        'table.tooltip.weaponResults':
+            'Featured/Tổng vũ khí 6★, số Featured Weapon cao nhất/thấp nhất và Arsenal còn dư',
         'table.tooltip.weaponSix': 'Tổng số vũ khí 6★ nhận được (bao gồm cả lệch)',
         'table.tooltip.weaponUsed': 'Số pull vũ khí và số Weapon Issue đã thực hiện',
         'table.tooltip.weaponRemaining': 'Số pull vũ khí còn dư sau chu kỳ',
-        'table.tooltip.ownership': 'Phần trăm người chơi nhận đủ toàn bộ Limited độc nhất của mọi banner trong chu kỳ; bản trùng không được tính',
+        'table.tooltip.ownership':
+            'Phần trăm người chơi nhận đủ toàn bộ Limited độc nhất của mọi banner trong chu kỳ; bản trùng không được tính',
         'table.metric.charBreakdown': '{regular} thường · {urgent} Urgent · {dossier} Dossier',
         'table.metric.regularPulls': '{count} pull thường',
         'table.metric.bonusPulls': '{urgent} Urgent · {dossier} Dossier',
@@ -303,25 +322,35 @@ export const catalogs = {
         'simulator.collapseConfig': 'Thu gọn cấu hình',
         'simulator.expandConfig': 'Mở rộng cấu hình',
         'strategy.helpTitle': 'Giải thích các chiến thuật Gacha',
-        'strategy.helpSave': '1. Tích lũy an toàn (Save & Commit): Sau phần miễn phí/Dossier, chỉ commit khi vé ví đạt chi phí an toàn động đến mốc 120. Sau Featured, chỉ hoàn tất mốc 60 trong 10 lượt nếu lộ trình vẫn bảo vệ được mốc 120 banner sau; không chi thêm để cố mốc 30. Vũ khí yêu cầu 8 Issues.',
-        'strategy.helpSingle': '2. Save & Commit (Quay lẻ): Dùng cùng phép kiểm tra ngân sách động như Save & Commit, nhưng toàn bộ phần commit quay x1 để dừng đúng lượt nhận Featured. Vũ khí yêu cầu 8 Issues.',
-        'strategy.helpYolo': '3. Spend All (Yolo): Sau phần bắt buộc, dùng toàn bộ vé ví đến Featured hoặc hết vé. Sau Featured, nếu còn tối đa 10 lượt tới mốc 60 và đủ vé thì hoàn tất mốc rồi dừng; không chi thêm để cố mốc 30. Khi có nhân vật, dùng từng Weapon Issue khả dụng đến Featured Weapon hoặc hết Arsenal.',
-        'strategy.help60': '4. Mốc 60 mỗi banner: Đủ mốc 60 thì đi thẳng tới 60 kể cả ra Featured sớm; không đủ 60 thì skip và không fallback về mốc 30. Chưa có Featured ở 60 mới cân nhắc lộ trình 120 hiện tại → 60 banner sau. Vũ khí yêu cầu 8 Issues.',
-        'strategy.helpMeta': '5. Quay theo Meta: Chọn ngẫu nhiên đúng số banner Meta đã cấu hình. Banner Meta dùng tài nguyên khả dụng; banner thường chỉ commit khi đủ bảo hiểm hiện tại và vẫn giữ quỹ 95/105 vé cho Meta gần nhất. Ngân sách vũ khí cũng bảo vệ 8 Issues cho Meta kế tiếp.',
+        'strategy.helpSave':
+            '1. Tích lũy an toàn (Save & Commit): Chỉ roll khi tích đủ tối thiểu 120 pull bảo hiểm Operator Featured, skip banner nếu không đủ tài nguyên.',
+        'strategy.helpSingle':
+            '2. Save & Commit (Quay lẻ): Tương tự Save & Commit nhưng dùng roll lẻ (x1) để dừng chính xác ngay khi nhận được Operator Featured.',
+        'strategy.helpYolo':
+            '3. Spend All (Yolo): Tiêu sạch vé vào banner hiện tại đến khi ra Operator Featured, không tích trữ hay giữ quỹ dự phòng.',
+        'strategy.help60':
+            '4. Mốc 60 mỗi banner: Cố gắng roll tới mốc 60 của tất cả banner để lấy 10 vé Dossier, chỉ nâng lên mốc 120 khi dư dả vé.',
+        'strategy.helpMeta':
+            '5. Quay theo Meta: Tập trung tài nguyên roll các banner Meta đã chọn; banner thường chỉ roll khi dư vé bảo đảm quỹ dự phòng cho Meta.',
         'rule.urgentTitle': '[i] Bảo hiểm 5★ Urgent',
-        'rule.urgent': '10 lượt Urgent miễn phí tương đương một lần x10: nếu 9 lượt đầu đều là 4★, lượt thứ 10 chắc chắn là 5★ trở lên.',
+        'rule.urgent':
+            '10 lượt Urgent miễn phí tương đương một lần x10: nếu 9 lượt đầu đều là 4★, lượt thứ 10 chắc chắn là 5★ trở lên.',
         'rule.ownershipTitle': '[i] Tỉ lệ lấy đủ Limited',
-        'rule.ownership': 'Phần trăm người chơi nhận đủ Featured Limited độc nhất của tất cả banner trong chu kỳ. Ví dụ chạy 10 banner thì chỉ người chơi sở hữu đủ cả 10 Limited mới được tính; mọi bản trùng đều không tính thêm.',
+        'rule.ownership':
+            'Phần trăm người chơi nhận đủ Featured Limited độc nhất của tất cả banner trong chu kỳ. Ví dụ chạy 10 banner thì chỉ người chơi sở hữu đủ cả 10 Limited mới được tính; mọi bản trùng đều không tính thêm.',
         'banner.0.title': 'Mùa Hoa Nở Rộ (Featured: Endfield Operator)',
         'banner.1.title': 'Bình Minh Kỷ Nguyên (Featured: Perlica)',
         'banner.2.title': 'Sa Mạc Hoang Vu (Featured: Chen Qianyu)',
         'banner.3.title': 'Bóng Đêm Biên Giới (Featured: Wulfgard)',
+        'banner.basic.title': 'Chiêu Mộ Cơ Bản (Tập Hợp Cán Viên)',
+        'banner.refactor.title': 'Chiêu Mộ Tái Cấu Trúc #1 (Tân Dòng Suối Tiền Nhân - Featured: Tangtang)',
         'inventory.note.weaponSelector10': 'Hộp chọn 6★ ngoài rate-up',
         'inventory.note.weaponMilestone': 'Quà mốc tích luỹ',
         'simulator.run': 'Chạy giả lập',
         'simulator.running': 'Đang mô phỏng...',
         'simulator.tableBanners': 'Bảng so sánh chi tiết các chiến thuật (Giả lập qua {count} mùa banner)',
-        'simulator.tablePulls': 'Bảng so sánh chi tiết các chiến thuật (Giả lập với {pulls} pulls nhân vật ~ {count} banner)',
+        'simulator.tablePulls':
+            'Bảng so sánh chi tiết các chiến thuật (Giả lập với {pulls} pulls nhân vật ~ {count} banner)',
         'strategy.save_commit.name': 'Save & Commit',
         'strategy.save_commit_single.name': 'Save & Commit (Quay lẻ)',
         'strategy.yolo.name': 'Yolo / Dùng hết',
@@ -343,34 +372,56 @@ export const catalogs = {
         'docs.close': 'Đóng tài liệu',
         'docs.eyebrow': 'REFERENCE · OFFLINE',
         'docs.title': 'Tài liệu liên quan',
-        'docs.intro': 'Tóm tắt luật gacha, quy ước mô hình và năm chiến thuật đang được triển khai trực tiếp trong ứng dụng.',
+        'docs.intro':
+            'Tóm tắt luật gacha, quy ước mô hình và năm chiến thuật đang được triển khai trực tiếp trong ứng dụng.',
         'docs.rulesTitle': 'Luật Gacha',
         'docs.characterRatesTitle': 'Tỷ lệ nhân vật',
-        'docs.characterRates': '6★ 0,8% · 5★ 8% · 4★ 91,2%. Mỗi chuỗi 10 lượt bảo đảm ít nhất một 5★ trở lên; pity 5★ được bảo lưu khi đổi banner.',
+        'docs.characterRates':
+            '6★ 0,8% · 5★ 8% · 4★ 91,2%. Mỗi chuỗi 10 lượt bảo đảm ít nhất một 5★ trở lên; pity 5★ được bảo lưu khi đổi banner.',
         'docs.pityTitle': 'Pity 6★',
-        'docs.pity': 'Tỷ lệ tăng từ lượt 66 và bảo đảm 6★ ở lượt 80. Limited và Standard có pity riêng; mỗi pity được giữ khi đổi banner cùng loại.',
+        'docs.pity':
+            'Tỷ lệ tăng từ lượt 66 và bảo đảm 6★ ở lượt 80. Limited và Standard có pity riêng; mỗi pity được giữ khi đổi banner cùng loại.',
         'docs.featuredTitle': 'Featured 120',
-        'docs.featured': 'Mỗi 6★ có 50% là Featured; lệch không bảo đảm 6★ kế tiếp. Pull hợp lệ thứ 120 chắc chắn là Featured, nhưng tiến độ này reset khi đổi banner.',
+        'docs.featured':
+            'Mỗi 6★ có 50% là Featured; lệch không bảo đảm 6★ kế tiếp. Pull hợp lệ thứ 120 chắc chắn là Featured, nhưng tiến độ này reset khi đổi banner.',
         'docs.milestonesTitle': 'Mốc banner',
-        'docs.milestones': 'Pull 30 kích hoạt ngay 10 Urgent không tăng pity/mốc; pull 60 cấp 10 Dossier cho banner kế tiếp và các lượt Dossier vẫn tính pity/mốc. Mỗi 240 pull nhận một Potential token.',
+        'docs.milestones':
+            'Pull 30 kích hoạt ngay 10 Urgent không tăng pity/mốc; pull 60 cấp 10 Dossier cho banner kế tiếp và các lượt Dossier vẫn tính pity/mốc. Mỗi 240 pull nhận một Potential token.',
+        'docs.basicTitle': 'Chiêu Mộ Cơ Bản',
+        'docs.basic':
+            'Banner thường vĩnh viễn gồm các Cán viên 6★/5★/4★ cơ bản. Áp dụng pity 80 ra 6★ nhưng không có Cán viên Featured và không có bảo hiểm 120.',
+        'docs.refactorTitle': 'Chiêu Mộ Tái Cấu Trúc (RE-Factor)',
+        'docs.refactor':
+            'Banner rerun dành cho cán viên 6★ giới hạn cũ (xếp ngay dưới banner cơ bản). Pity 80 chia sẻ giữa mọi banner Tái Cấu Trúc; bảo hiểm 120 kế thừa cho cùng một nhân vật. Thưởng mốc 30, 60, 90 tặng 10 lượt Khẩn Cấp (không cấp Dossier).',
         'docs.modelTitle': 'Quy ước của simulator',
         'docs.freePullsTitle': '15 Standard + 10 Limited miễn phí',
-        'docs.freePulls': 'Mỗi banner mô phỏng tự quay 15 Standard rồi 10 Limited miễn phí trước khi kiểm tra ngân sách. Standard dùng pity riêng, không tăng mốc 30/60/120 của Limited, nhưng kết quả vẫn tạo Bond Quota và Arsenal rebate. Đây là nguồn cố định của mô hình, không phải luật gacha chính thức.',
+        'docs.freePulls':
+            'Mỗi banner mô phỏng tự quay 15 Standard rồi 10 Limited miễn phí trước khi kiểm tra ngân sách. Standard dùng pity riêng, không tăng mốc 30/60/120 của Limited, nhưng kết quả vẫn tạo Bond Quota và Arsenal rebate. Đây là nguồn cố định của mô hình, không phải luật gacha chính thức.',
         'docs.quotaTitle': 'Bond Quota',
-        'docs.quota': 'Mô hình tài khoản lâu năm coi mọi 5★ và Standard 6★ lệch là bản trùng, lần lượt nhận 10/50 Quota; Featured/Limited 6★ chỉ nhận Quota khi trùng. Mỗi 25 Quota tự đổi thành một vé nhân vật.',
+        'docs.quota':
+            'Mô hình tài khoản lâu năm coi mọi 5★ và Standard 6★ lệch là bản trùng, lần lượt nhận 10/50 Quota; Featured/Limited 6★ chỉ nhận Quota khi trùng. Mỗi 25 Quota tự đổi thành một vé nhân vật.',
         'docs.budgetTitle': 'Ước tính vé an toàn',
-        'docs.budget': 'Với banner tương lai, checkpoint 30/60/120 tính cả Quota tối thiểu từ pity 5★, 15 Standard, 10 Limited miễn phí cùng Dossier/Urgent khi được mở khóa; cố ý bỏ qua pity 6★/80 và Featured ra sớm để thiên an toàn.',
+        'docs.budget':
+            'Với banner tương lai, checkpoint 30/60/120 tính cả Quota tối thiểu từ pity 5★, 15 Standard, 10 Limited miễn phí cùng Dossier/Urgent khi được mở khóa; cố ý bỏ qua pity 6★/80 và Featured ra sớm để thiên an toàn.',
         'docs.weaponTitle': 'Arsenal Exchange',
-        'docs.weapon': 'Một Issue tốn 1.980 Arsenal và cho 10 vũ khí. Tỷ lệ 6★/5★/4★ là 4%/15%/81%; Issue thứ 8 bảo đảm Featured một lần. Mốc 10 cho hộp chọn 6★ ngoài rate-up; từ mốc 18, Featured và hộp chọn luân phiên mỗi 8 Issue.',
+        'docs.weapon':
+            'Một Issue tốn 1.980 Arsenal và cho 10 vũ khí. Tỷ lệ 6★/5★/4★ là 4%/15%/81%; Issue thứ 8 bảo đảm Featured một lần. Mốc 10 cho hộp chọn 6★ ngoài rate-up; từ mốc 18, Featured và hộp chọn luân phiên mỗi 8 Issue.',
         'docs.strategiesTitle': 'Năm chiến thuật mô phỏng',
         'docs.strategyCommonTitle': 'Quy tắc chung khi quyết định roll/skip',
-        'docs.strategyCommon': 'Mỗi banner xử lý 15 Standard, 10 Limited miễn phí và Dossier sắp hết hạn trước khi kiểm tra ngân sách. Pull 30 không còn là mục tiêu chi tiêu riêng, chỉ được kích hoạt khi một mục tiêu khác tự nhiên đi qua; “skip” nghĩa là không commit thêm vé ví. Mọi phép bảo vệ tương lai ở banner cuối vẫn dùng một banner kế tiếp ảo với thu nhập chuẩn, nên không có ngoại lệ xả vé cuối kỳ.',
-        'docs.saveCommit': 'ROLL — Sau khi dùng hết lượt Limited miễn phí và Dossier, chỉ commit khi vé trong ví đủ trang trải trường hợp xấu nhất đến mốc 120, có tính số vé Bond Quota tối thiểu có thể hoàn lại. Check ngân sách một lần rồi quay tới Featured/120, không check lại tại 30/60. Sau Featured, chỉ hoàn tất mốc 60 khi còn 1–10 lượt và lộ trình vẫn bảo vệ được mốc 120 banner sau; không chi thêm để cố mốc 30. SKIP — Không đủ ngân sách thì không commit thêm vé ví. VŨ KHÍ — Chỉ quay sau khi đã có Featured Operator và tích đủ 15.840 Arsenal (8 Issues); dừng khi ra Featured Weapon.',
-        'docs.saveSingle': 'ROLL/SKIP — Dùng đúng thứ tự Dossier và phép kiểm tra ngân sách 120 như Save & Commit. Toàn bộ lượt commit dùng x1, nên dừng đúng ngay lượt nhận Featured và không hao các lượt còn lại của một cụm x10. VŨ KHÍ — Chỉ bắt đầu khi đã có Featured Operator và đủ 15.840 Arsenal (8 Issues), sau đó dừng ở Featured Weapon.',
-        'docs.yolo': 'ROLL — Sau phần miễn phí, dùng toàn bộ vé nhân vật đang có tới Featured hoặc hết vé, không giữ quỹ cho banner sau và không yêu cầu đủ bảo hiểm 120. Sau Featured, chỉ hoàn tất mốc 60 khi còn 1–10 lượt và đủ vé; không chi thêm để cố mốc 30. VŨ KHÍ — Nếu đã có Featured Operator, dùng từng Issue khả dụng (1.980 Arsenal/Issue) cho đến khi có Featured Weapon hoặc không đủ một Issue; không cần tích sẵn 8 Issues.',
-        'docs.pull60': 'ROLL — Sau các lượt bắt buộc, nếu đủ mốc 60 thì đi thẳng tới 60 kể cả Featured xuất hiện sớm và không kiểm tra lại ở 30. Không đủ 60 thì skip, không fallback về mốc 30. NÂNG 120 — Khi đã đến 60 mà chưa có Featured, chỉ đi tiếp nếu tự đủ 120 hiện tại và vẫn bảo vệ được mốc 60 banner sau; đoạn này dừng khi ra Featured. VŨ KHÍ — Chỉ quay khi có Featured Operator và đủ 15.840 Arsenal.',
-        'docs.rollMeta': 'CHỌN META — Mỗi lượt mô phỏng chọn ngẫu nhiên đúng số banner Meta đã cấu hình. ROLL — Banner Meta dùng tài nguyên khả dụng tới Featured hoặc mốc 120. Banner thường chỉ commit khi đủ bảo hiểm hiện tại và phần dư cộng thu nhập tới Meta vẫn giữ được quỹ 95 vé nếu Meta ở ngay banner sau, hoặc 105 vé nếu còn banner xen giữa; không còn Meta thì dùng điều kiện Save & Commit. VŨ KHÍ — Banner thường phải đủ 8 Issues hiện tại và vẫn bảo vệ 8 Issues cho Meta kế tiếp.',
-        'docs.footnote': 'Các mục “quy ước của simulator” mô tả đầu vào/giả định của mô hình, không khẳng định đó là luật gacha chính thức. Nội dung được đóng gói trực tiếp trong ứng dụng.',
+        'docs.strategyCommon':
+            'Mỗi banner xử lý 15 Standard, 10 Limited miễn phí và Dossier sắp hết hạn trước khi kiểm tra ngân sách. Pull 30 không còn là mục tiêu chi tiêu riêng, chỉ được kích hoạt khi một mục tiêu khác tự nhiên đi qua; “skip” nghĩa là không commit thêm vé ví. Mọi phép bảo vệ tương lai ở banner cuối vẫn dùng một banner kế tiếp ảo với thu nhập chuẩn, nên không có ngoại lệ xả vé cuối kỳ.',
+        'docs.saveCommit':
+            'ROLL: Sau khi dùng các lượt miễn phí và Dossier, hệ thống sẽ tính toán chi phí thực tế. Chiến thuật này chỉ bắt đầu dùng vé trong ví nếu chắc chắn đủ chạm mốc 120 (đã trừ đi số Bond Quota chắc chắn nhận được). Đã roll là đi thẳng tới Featured hoặc 120. SAU FEATURED: Chỉ cố chạm mốc 60 nếu còn cách tối đa 10 lượt VÀ lộ trình vẫn bảo vệ được mốc 120 banner sau. Tuyệt đối không chi thêm chỉ để lấy mốc 30. SKIP: Nếu ban đầu không đủ vé đến 120, không tiêu tốn thêm bất kỳ tài nguyên nào. VŨ KHÍ: Chỉ quay khi đã sở hữu Featured Operator và tích đủ 15.840 Arsenal (8 Issues).',
+        'docs.saveSingle':
+            'ROLL/SKIP: Áp dụng cùng luật tính toán ngân sách 120 chặt chẽ như Save & Commit. Điểm khác biệt là thay vì quay x10, chiến thuật này luôn quay từng lượt một (x1). Nhờ vậy, nó sẽ dừng lại ở ĐÚNG lượt xuất hiện Featured, giúp tiết kiệm tối đa vé. VŨ KHÍ: Giống Save & Commit, yêu cầu có sẵn Featured Operator và đủ 15.840 Arsenal (8 Issues) trước khi quay.',
+        'docs.yolo':
+            'ROLL: Sau các lượt miễn phí, có bao nhiêu vé nhân vật sẽ dùng bấy nhiêu cho đến khi trúng Featured hoặc cạn sạch vé. Chiến thuật này không quan tâm đến việc tích luỹ cho banner sau hay yêu cầu đủ 120 vé. SAU FEATURED: Nếu còn cách mốc 60 tối đa 10 lượt và ví còn đủ vé, sẽ quay nốt lấy mốc 60. Tuyệt đối không chi thêm chỉ để lấy mốc 30. VŨ KHÍ: Chỉ cần đã có Featured Operator, có đủ 1.980 Arsenal (1 Issue) là quay luôn, không cần tích đủ 8 Issues.',
+        'docs.pull60':
+            'MỤC TIÊU 60: Nếu có đủ vé tới mốc 60, hệ thống sẽ đi thẳng tới mốc này để lấy 10 Dossier, kể cả khi Featured ra sớm. Nếu không đủ vé, sẽ skip hoàn toàn và không fallback về mốc 30. NÂNG LÊN 120: Tại mốc 60, nếu chưa có Featured, hệ thống sẽ tính toán lại. Nó chỉ đi tiếp tới 120 nếu ví vé dư dả để vừa lấy 120 ở banner này, vừa bảo vệ được mốc 60 banner sau. VŨ KHÍ: Giống Save & Commit, yêu cầu có sẵn Featured Operator và đủ 15.840 Arsenal (8 Issues).',
+        'docs.rollMeta':
+            'CHỌN META: Hệ thống sẽ chọn ngẫu nhiên các banner được coi là "Meta" theo số lượng bạn đã cấu hình. BANNER META: Dốc toàn lực tài nguyên đang có để roll cho đến khi ra Featured hoặc chạm 120. BANNER THƯỜNG: Chỉ roll khi đủ bảo hiểm 120 VÀ số vé còn dư đủ tạo thành một "quỹ dự phòng" cho banner Meta kế tiếp (95 vé nếu Meta ngay sát sau, 105 vé nếu còn cách xa). Nếu không còn banner Meta nào phía sau, áp dụng luật Save & Commit. VŨ KHÍ: Tại banner thường, chỉ quay nếu ví hiện tại đủ 8 Issues và vẫn dư 8 Issues dự phòng cho Meta kế tiếp.',
+        'docs.footnote':
+            'Các mục “quy ước của simulator” mô tả đầu vào/giả định của mô hình, không khẳng định đó là luật gacha chính thức. Nội dung được đóng gói trực tiếp trong ứng dụng.',
         'error.freeTickets': 'Bạn không đủ vé Free Banner giới hạn!',
         'error.characterTickets': 'Bạn không đủ vé gacha nhân vật! Hãy tích luỹ thêm hoặc bấm Reset.',
         'error.weaponTickets': 'Không đủ vé Arsenal Tickets! Mỗi Issue (x10 vũ khí) yêu cầu 1.980 vé.',
@@ -379,7 +430,9 @@ export const catalogs = {
         'milestone.weaponFeatured': 'Chúc mừng! Bạn đạt cột mốc quà tặng và nhận trực tiếp Vũ khí 6★ Rate-up!',
         'milestone.pull30': 'Đạt mốc 30 roll! Bạn nhận 10 lượt Urgent Recruitment miễn phí.',
         'milestone.pull60': 'Đạt mốc 60 roll! Bạn nhận 10 vé Dossier cho banner giới hạn tiếp theo.',
-        'milestone.pull240': 'Đạt mốc 240 roll! Bạn nhận 1 token Potential của Operator Featured.'
+        'milestone.pull60Refactor': 'Đạt mốc 60 roll Tái Cấu Trúc! Bạn nhận 10 lượt Chiêu Mộ Khẩn Cấp miễn phí.',
+        'milestone.pull90': 'Đạt mốc 90 roll Tái Cấu Trúc! Bạn nhận 10 lượt Chiêu Mộ Khẩn Cấp miễn phí.',
+        'milestone.pull240': 'Đạt mốc 240 roll! Bạn nhận 1 token Potential của Operator Featured.',
     },
     en: {
         'app.subtitle': 'Arknights: Endfield gacha simulator',
@@ -389,18 +442,28 @@ export const catalogs = {
         'tabs.simulator': 'Strategy Simulator',
         'tabs.singleRun': 'Single Run Simulator',
         'banner.tag': 'Chartered Headhunting',
+        'banner.tagChartered': 'Chartered Headhunting',
+        'banner.tagBasic': 'Basic Headhunting',
+        'banner.tagRefactor': 'RE-Factor Headhunting',
         'banner.switch': 'Switch banner',
         'banner.rules': '6★ rate: 0.8% | Soft pity starts at pull 66 | Hard pity 80 | Featured guarantee 120',
+        'banner.rulesBasic': '6★ rate: 0.8% | Soft pity starts at pull 66 | Hard pity 80 | No Featured guarantee',
+        'banner.rulesRefactor':
+            '6★ rate: 0.8% | Hard pity 80 | 120 guarantee carries over for same operator | 30/60/90 Urgent milestones',
         'banner.pity6': '6★ pity',
         'banner.pity5': '5★ pity',
         'banner.guarantee': '120 guarantee',
         'banner.guaranteeUsed': 'Used',
         'banner.guaranteeDynamic': '{threshold} guarantee',
+        'banner.guaranteeNotApplicable': 'N/A',
+        'banner.guaranteeInherited': '120 Guarantee (Inherited)',
         'banner.pity6Progress': '6★ pity progress out of 80',
         'banner.guaranteeProgress': 'Featured guarantee progress out of 120',
         'pull.empty': 'Use a button below to perform a gacha pull...',
-        'pull.bannerChanged': 'Banner switched. 6★ pity carries over; Featured guarantee and banner milestones have reset.',
-        'pull.promptNextBanner': 'Congratulations on obtaining the featured 6★ Operator! Do you want to switch to the next banner?',
+        'pull.bannerChanged':
+            'Banner switched. 6★ pity carries over; Featured guarantee and banner milestones have reset.',
+        'pull.promptNextBanner':
+            'Congratulations on obtaining the featured 6★ Operator! Do you want to switch to the next banner?',
         'pull.dossier': 'Dossier',
         'pull.urgentOptimized': 'Pull 30 Urgent',
         'pull.free': 'Free Banner Pull (x{count} Free)',
@@ -483,7 +546,8 @@ export const catalogs = {
         'simulator.reset': 'Reset settings',
         'single.eyebrow': 'ONE PLAYER · FULL TRACE',
         'single.title': 'Single Run Simulator',
-        'single.intro': 'Run exactly one player and inspect every decision, pity state, resource change, and result across banners.',
+        'single.intro':
+            'Run exactly one player and inspect every decision, pity state, resource change, and result across banners.',
         'single.strategy': 'Strategy',
         'single.seed': 'Seed (blank = random)',
         'single.seedPlaceholder': 'Generated on run',
@@ -499,7 +563,8 @@ export const catalogs = {
         'single.running': 'Building trace...',
         'single.note': 'This is one RNG outcome, not an average or spending recommendation.',
         'single.emptyTitle': 'No run yet',
-        'single.emptyText': 'Choose a strategy, optionally enter a reproducible seed, then run the simulation for a detailed trace.',
+        'single.emptyText':
+            'Choose a strategy, optionally enter a reproducible seed, then run the simulation for a detailed trace.',
         'single.reportKicker': 'SIMULATION TRACE · 01 PLAYER',
         'single.reportTitle': '{strategy} across {banners} banners',
         'single.seedLabel': 'Seed',
@@ -527,9 +592,11 @@ export const catalogs = {
         'single.weaponObtained': 'Featured Weapon obtained',
         'single.weaponMissed': 'No Featured Weapon',
         'single.pullsBreakdown': '{standard} Standard · {limited} Limited · {urgent} Urgent',
-        'single.openingWallet': '{tickets} tickets (+{income} from banner) · {dossier} Dossier · {arsenal} Arsenal (+{weaponIncome} from banner) · {quota} Quota',
+        'single.openingWallet':
+            '{tickets} tickets (+{income} from banner) · {dossier} Dossier · {arsenal} Arsenal (+{weaponIncome} from banner) · {quota} Quota',
         'single.pityOpening': 'Opening pity: Limited {limited}/80 · Featured 0/120 · Standard {standard}/80',
-        'single.decision': 'After free pulls and Dossier: {tickets} tickets; pity {pity}/80; Featured progress {guarantee}.',
+        'single.decision':
+            'After free pulls and Dossier: {tickets} tickets; pity {pity}/80; Featured progress {guarantee}.',
         'single.decisionTitle': 'Budget check before spending tickets',
         'single.decisionAfterMandatory': 'After all mandatory rolls',
         'single.decisionEnough': '120 guarantee covered',
@@ -545,11 +612,14 @@ export const catalogs = {
         'single.skipCommit': 'No additional wallet commitment; only mandatory pulls are processed.',
         'single.yoloDecision': 'Spend available resources until Featured appears or tickets run out.',
         'single.pull60Decision': 'Target pull 60 because the current budget covers it.',
-        'single.pull60SkipDecision': 'Pull 60 is unaffordable; save tickets for the next banner without falling back to pull 30.',
-        'single.pull120UpgradeDecision': 'Pull 60 missed Featured; the budget protects current pull 120 and next-banner pull 60, so the target is upgraded to 120.',
+        'single.pull60SkipDecision':
+            'Pull 60 is unaffordable; save tickets for the next banner without falling back to pull 30.',
+        'single.pull120UpgradeDecision':
+            'Pull 60 missed Featured; the budget protects current pull 120 and next-banner pull 60, so the target is upgraded to 120.',
         'single.metaDecision': 'Spend according to Meta-banner placement and the budget required by future banners.',
         'single.metaCurrentDecision': 'This is a Meta banner; spend available resources until Featured or pull 120.',
-        'single.metaReservePassDecision': 'This regular banner is allowed; the worst case still preserves the {reserve}-ticket Meta reserve.',
+        'single.metaReservePassDecision':
+            'This regular banner is allowed; the worst case still preserves the {reserve}-ticket Meta reserve.',
         'single.metaReserveStopDecision': 'Skip this regular banner to preserve the {reserve}-ticket Meta reserve.',
         'single.phaseCommit': 'Ticket commit',
         'single.phaseStrategy': 'Strategy execution',
@@ -630,23 +700,29 @@ export const catalogs = {
         'table.empty': 'Run the simulation to view the comparison...',
         'table.scrollHint': 'The table automatically adjusts width to fit the screen.',
         'table.tooltip.strategy': 'Simulated gacha strategy name',
-        'table.tooltip.charPulls': 'All character pulls, including regular, Urgent, and Dossier pulls; Standard is included in regular pulls',
+        'table.tooltip.charPulls':
+            'All character pulls, including regular, Urgent, and Dossier pulls; Standard is included in regular pulls',
         'table.tooltip.freeDossier': 'Free pulls from milestone 30 (Urgent) / Pulls using Dossier tickets',
         'table.tooltip.charRemaining': 'Character tickets remaining in wallet after all banners',
         'table.tooltip.charSix': 'Average total number of 6★ characters obtained',
-        'table.tooltip.charResults': 'Total 6★ characters, new/duplicate Featured characters, and off-rate Limited/Standard results',
+        'table.tooltip.charResults':
+            'Total 6★ characters, new/duplicate Featured characters, and off-rate Limited/Standard results',
         'table.tooltip.charLim': 'Unique featured characters owned / version duplicates (dupes) owned',
         'table.tooltip.charLoss': 'Off-banner limited / standard character draws',
-        'table.tooltip.efficiency': 'Average Limited pulls per Featured Operator, pull-120 guarantees, and highest/lowest Featured results',
-        'table.tooltip.featuredRange': 'Highest / lowest number of Featured Limited characters obtained by one player across simulation runs',
+        'table.tooltip.efficiency':
+            'Average Limited pulls per Featured Operator, pull-120 guarantees, and highest/lowest Featured results',
+        'table.tooltip.featuredRange':
+            'Highest / lowest number of Featured Limited characters obtained by one player across simulation runs',
         'table.tooltip.pity120Hit': 'Average times hitting the hard featured guarantee at pull 120',
         'table.tooltip.metaObtained': 'Average number of Meta characters and Meta weapons obtained',
         'table.tooltip.weaponFeatured': 'Average number of featured 6★ weapons obtained',
-        'table.tooltip.weaponResults': 'Featured/total 6★ weapons, highest/lowest Featured Weapon results, and remaining Arsenal',
+        'table.tooltip.weaponResults':
+            'Featured/total 6★ weapons, highest/lowest Featured Weapon results, and remaining Arsenal',
         'table.tooltip.weaponSix': 'Average total 6★ weapons obtained (featured + standard)',
         'table.tooltip.weaponUsed': 'Weapon pulls and Weapon Issues performed',
         'table.tooltip.weaponRemaining': 'Weapon pulls remaining in wallet after all banners',
-        'table.tooltip.ownership': 'Percentage of players who obtained every unique Limited featured across all banners in the cycle; duplicates do not count',
+        'table.tooltip.ownership':
+            'Percentage of players who obtained every unique Limited featured across all banners in the cycle; duplicates do not count',
         'table.metric.charBreakdown': '{regular} regular · {urgent} Urgent · {dossier} Dossier',
         'table.metric.regularPulls': '{count} regular pulls',
         'table.metric.bonusPulls': '{urgent} Urgent · {dossier} Dossier',
@@ -682,19 +758,28 @@ export const catalogs = {
         'simulator.collapseConfig': 'Collapse config',
         'simulator.expandConfig': 'Expand config',
         'strategy.helpTitle': 'Gacha strategy explanations',
-        'strategy.helpSave': '1. Save & Commit: After free/Dossier pulls, commit only when wallet tickets meet the dynamic safe cost to pull 120. After Featured, finish pull 60 within 10 pulls only when the route still protects next-banner pull 120; never spend extra tickets just to reach pull 30. Weapons require 8 Issues.',
-        'strategy.helpSingle': '2. Save & Commit (Singles): Uses the same dynamic budget check as Save & Commit, but every committed pull is x1 so it stops on the exact Featured hit. Weapons require 8 Issues.',
-        'strategy.helpYolo': '3. Spend All (Yolo): After mandatory pulls, spend every wallet ticket until Featured or empty. After Featured, finish pull 60 when it is at most 10 pulls away and affordable; never spend extra tickets just to reach pull 30. After obtaining the character, spend each affordable Weapon Issue until Featured Weapon or insufficient Arsenal.',
-        'strategy.help60': '4. Pull 60: If pull 60 is affordable, continue to it even after an early Featured. If pull 60 is unaffordable, skip without falling back to pull 30. Only a miss at 60 may consider the current pull 120 → next pull 60 route. Weapons require 8 Issues.',
-        'strategy.helpMeta': '5. Roll Meta: Randomly selects exactly the configured number of Meta banners. Meta banners spend available resources; regular banners commit only when the current guarantee and the nearest Meta’s 95/105-ticket reserve remain covered. Weapon budgeting also protects 8 Issues for the next Meta.',
+        'strategy.helpSave':
+            '1. Save & Commit: Only roll when having enough tickets for the 120 guarantee; skip the banner if resources are insufficient.',
+        'strategy.helpSingle':
+            '2. Save & Commit (Singles): Same as Save & Commit but uses single pulls (x1) to stop exactly when the Featured Operator is obtained.',
+        'strategy.helpYolo':
+            '3. Spend All (Yolo): Spend all available tickets on the current banner until obtaining the Featured Operator, without saving.',
+        'strategy.help60':
+            '4. Pull 60: Target pull 60 on all banners to earn 10 Dossier tickets; only upgrade to pull 120 if there are plenty of spare tickets.',
+        'strategy.helpMeta':
+            '5. Roll Meta: Focus resources on designated Meta banners; only roll on regular banners if a safe reserve is guaranteed for Meta.',
         'rule.urgentTitle': '[i] Urgent 5★ guarantee',
-        'rule.urgent': 'The 10 free Urgent pulls act as one x10: if the first nine are all 4★, the tenth is guaranteed to be at least 5★.',
+        'rule.urgent':
+            'The 10 free Urgent pulls act as one x10: if the first nine are all 4★, the tenth is guaranteed to be at least 5★.',
         'rule.ownershipTitle': '[i] Full Limited completion rate',
-        'rule.ownership': 'Percentage of players who obtained the unique Featured Limited from every banner in the cycle. For 10 banners, only players owning all 10 Limited characters count; duplicates add nothing.',
+        'rule.ownership':
+            'Percentage of players who obtained the unique Featured Limited from every banner in the cycle. For 10 banners, only players owning all 10 Limited characters count; duplicates add nothing.',
         'banner.0.title': 'Blooming Season (Featured: Endfield Operator)',
         'banner.1.title': 'Dawn of an Era (Featured: Perlica)',
         'banner.2.title': 'Barren Desert (Featured: Chen Qianyu)',
         'banner.3.title': 'Frontier Night (Featured: Wulfgard)',
+        'banner.basic.title': 'Basic Headhunting (Endfield Standard Operators)',
+        'banner.refactor.title': 'RE-Factor Headhunting #1 (Torrent of Ancients - Featured: Tangtang)',
         'inventory.note.weaponSelector10': 'Off-rate 6★ selector',
         'inventory.note.weaponMilestone': 'Milestone reward',
         'simulator.run': 'Run simulation',
@@ -722,34 +807,56 @@ export const catalogs = {
         'docs.close': 'Close documentation',
         'docs.eyebrow': 'REFERENCE · OFFLINE',
         'docs.title': 'Related documentation',
-        'docs.intro': 'A concise reference for the gacha rules, model conventions, and five strategies implemented directly in the application.',
+        'docs.intro':
+            'A concise reference for the gacha rules, model conventions, and five strategies implemented directly in the application.',
         'docs.rulesTitle': 'Gacha rules',
         'docs.characterRatesTitle': 'Character rates',
-        'docs.characterRates': '6★ 0.8% · 5★ 8% · 4★ 91.2%. Every sequence of 10 pulls guarantees at least one 5★ or higher; 5★ pity carries between banners.',
+        'docs.characterRates':
+            '6★ 0.8% · 5★ 8% · 4★ 91.2%. Every sequence of 10 pulls guarantees at least one 5★ or higher; 5★ pity carries between banners.',
         'docs.pityTitle': '6★ pity',
-        'docs.pity': 'The rate increases from pull 66 and a 6★ is guaranteed at pull 80. Limited and Standard have separate pity counters; each carries between banners of its own type.',
+        'docs.pity':
+            'The rate increases from pull 66 and a 6★ is guaranteed at pull 80. Limited and Standard have separate pity counters; each carries between banners of its own type.',
         'docs.featuredTitle': 'Featured 120',
-        'docs.featured': 'Each 6★ has a 50% Featured chance; losing it does not guarantee the next 6★. Eligible pull 120 is guaranteed Featured, but this progress resets between banners.',
+        'docs.featured':
+            'Each 6★ has a 50% Featured chance; losing it does not guarantee the next 6★. Eligible pull 120 is guaranteed Featured, but this progress resets between banners.',
         'docs.milestonesTitle': 'Banner milestones',
-        'docs.milestones': 'Pull 30 immediately triggers 10 Urgent pulls that do not advance pity or milestones; pull 60 grants 10 next-banner Dossier pulls that do. Every 240 pulls grants a Potential token.',
+        'docs.milestones':
+            'Pull 30 immediately triggers 10 Urgent pulls that do not advance pity or milestones; pull 60 grants 10 next-banner Dossier pulls that do. Every 240 pulls grants a Potential token.',
+        'docs.basicTitle': 'Basic Headhunting',
+        'docs.basic':
+            'Permanent standard banner containing basic 6★/5★/4★ operators. Follows 80-pull 6★ pity with no Featured rate-up or 120 guarantee.',
+        'docs.refactorTitle': 'RE-Factor Headhunting',
+        'docs.refactor':
+            'Rerun banner for previous limited 6★ operators (placed right below the Basic banner). Pity 80 is shared across all RE-Factor banners; 120 guarantee carries over across future reruns of the same operator. Milestones at 30, 60, 90 grant 10 Urgent pulls (no Dossier).',
         'docs.modelTitle': 'Simulator conventions',
         'docs.freePullsTitle': '15 free Standard + 10 free Limited',
-        'docs.freePulls': 'Every simulated banner automatically performs 15 Standard pulls, then 10 free Limited pulls, before the budget check. Standard uses separate pity and does not advance Limited milestones 30/60/120, but its results still generate Bond Quota and Arsenal rebates. This is a fixed model input, not an official gacha rule.',
+        'docs.freePulls':
+            'Every simulated banner automatically performs 15 Standard pulls, then 10 free Limited pulls, before the budget check. Standard uses separate pity and does not advance Limited milestones 30/60/120, but its results still generate Bond Quota and Arsenal rebates. This is a fixed model input, not an official gacha rule.',
         'docs.quotaTitle': 'Bond Quota',
-        'docs.quota': 'The veteran-account model treats every 5★ and off-banner Standard 6★ as duplicates worth 10/50 Quota; Featured/Limited 6★ only grant Quota when duplicated. Every 25 Quota automatically becomes one character ticket.',
+        'docs.quota':
+            'The veteran-account model treats every 5★ and off-banner Standard 6★ as duplicates worth 10/50 Quota; Featured/Limited 6★ only grant Quota when duplicated. Every 25 Quota automatically becomes one character ticket.',
         'docs.budgetTitle': 'Conservative ticket estimate',
-        'docs.budget': 'For future banners, the 30/60/120 checkpoints include minimum Quota from 5★ pity, 15 Standard, 10 free Limited, plus Dossier/Urgent pulls when unlocked; they intentionally ignore 6★ pity/80 and early Featured hits to stay conservative.',
+        'docs.budget':
+            'For future banners, the 30/60/120 checkpoints include minimum Quota from 5★ pity, 15 Standard, 10 free Limited, plus Dossier/Urgent pulls when unlocked; they intentionally ignore 6★ pity/80 and early Featured hits to stay conservative.',
         'docs.weaponTitle': 'Arsenal Exchange',
-        'docs.weapon': 'One Issue costs 1,980 Arsenal and yields 10 weapons. The 6★/5★/4★ rates are 4%/15%/81%; Issue eight guarantees Featured once. Issue 10 gives an off-rate 6★ selector; from Issue 18 onward, Featured and selector rewards alternate every 8 Issues.',
+        'docs.weapon':
+            'One Issue costs 1,980 Arsenal and yields 10 weapons. The 6★/5★/4★ rates are 4%/15%/81%; Issue eight guarantees Featured once. Issue 10 gives an off-rate 6★ selector; from Issue 18 onward, Featured and selector rewards alternate every 8 Issues.',
         'docs.strategiesTitle': 'Five simulation strategies',
         'docs.strategyCommonTitle': 'Shared roll/skip rules',
-        'docs.strategyCommon': 'Each banner processes 15 Standard, 10 free Limited, and expiring Dossier pulls before checking the wallet budget. Pull 30 is no longer a standalone spending target and triggers only when another selected target naturally passes through it; “skip” means no additional wallet commitment. Future-protection checks on the final simulated banner still use one virtual next banner with normal income, so there is no end-of-run liquidation exception.',
-        'docs.saveCommit': 'ROLL — After all free Limited and Dossier pulls are spent, commit only when wallet tickets cover the calculated worst case through pull 120, including minimum guaranteed Bond Quota rebates. Check once and pull until Featured/120 without rechecking at 30/60. After Featured, finish pull 60 only when it is 1–10 pulls away and the route still protects next-banner pull 120; never spend extra tickets just to reach pull 30. SKIP — If the budget is short, make no additional wallet commitment. WEAPON — Pull only after obtaining the Featured Operator and saving 15,840 Arsenal (8 Issues), stopping on Featured Weapon.',
-        'docs.saveSingle': 'ROLL/SKIP — Uses the same Dossier order and pull-120 budget check as Save & Commit. The full commit uses x1 pulls, so it stops on the exact Featured hit without consuming the rest of an x10 batch. WEAPON — Start only after obtaining the Featured Operator and saving 15,840 Arsenal (8 Issues), then stop on Featured Weapon.',
-        'docs.yolo': 'ROLL — After free pulls, spend every available character ticket until Featured or empty; no pull-120 guarantee or future-banner reserve is required. After Featured, finish pull 60 only when it is 1–10 pulls away and affordable; never spend extra tickets just to reach pull 30. WEAPON — After obtaining the Featured Operator, spend each affordable Issue (1,980 Arsenal) until Featured Weapon appears or fewer than one Issue remains; saving 8 Issues first is not required.',
-        'docs.pull60': 'ROLL — After mandatory pulls, an affordable pull-60 target continues to 60 even after an early Featured and does not recheck at 30. If pull 60 is unaffordable, skip without falling back to pull 30. UPGRADE TO 120 — Only after missing Featured at 60, continue when current pull 120 and next pull 60 remain protected, stopping on Featured. WEAPON — Pull only after obtaining the Featured Operator and saving 15,840 Arsenal.',
-        'docs.rollMeta': 'META SELECTION — Each simulation randomly selects exactly the configured number of Meta banners. ROLL — A Meta banner spends available resources until Featured or pull 120. A regular banner commits only when the current guarantee is covered and the remainder plus income through Meta preserves 95 tickets when Meta is next, or 105 when another banner intervenes; with no later Meta, use Save & Commit. WEAPON — A regular banner requires 8 Issues now and must still protect 8 Issues for the next Meta.',
-        'docs.footnote': '“Simulator conventions” describe model inputs and assumptions, not confirmed official gacha rules. This content is bundled directly into the application.',
+        'docs.strategyCommon':
+            'Each banner processes 15 Standard, 10 free Limited, and expiring Dossier pulls before checking the wallet budget. Pull 30 is no longer a standalone spending target and triggers only when another selected target naturally passes through it; “skip” means no additional wallet commitment. Future-protection checks on the final simulated banner still use one virtual next banner with normal income, so there is no end-of-run liquidation exception.',
+        'docs.saveCommit':
+            'ROLL: After mandatory free/Dossier pulls, the system calculates the actual cost. It only starts spending wallet tickets if you are guaranteed to reach pull 120 (accounting for minimum Bond Quota refunds). Once committed, it pulls until Featured or 120. AFTER FEATURED: Only pushes to pull 60 if it is within 10 pulls AND the remaining tickets still protects next-banner pull 120. Never spends extra just for pull 30. SKIP: If short of the 120 budget, no wallet tickets are spent. WEAPONS: Pulls only after obtaining the Featured Operator and saving 15,840 Arsenal (8 Issues).',
+        'docs.saveSingle':
+            'ROLL/SKIP: Uses the exact same strict 120-pull budget check as Save & Commit. The difference is that it exclusively uses single pulls (x1) for the wallet commitment. This allows it to stop exactly on the pull where Featured drops, maximizing ticket savings. WEAPONS: Same as Save & Commit, requiring the Featured Operator and 15,840 Arsenal (8 Issues) to start.',
+        'docs.yolo':
+            'ROLL: After free pulls, spends every available character ticket until Featured is obtained or the wallet is empty. This strategy ignores future-banner savings and does not require a 120-pull guarantee. AFTER FEATURED: Finishes pull 60 only if it is 1–10 pulls away and affordable. Never spends extra tickets just for pull 30. WEAPONS: After obtaining the Featured Operator, spends each affordable Issue (1,980 Arsenal) immediately. Does not wait to save 8 Issues.',
+        'docs.pull60':
+            "TARGET 60: If affordable, goes straight to pull 60 to secure 10 Dossier tickets, even if Featured appears early. If unaffordable, it skips entirely without falling back to pull 30. UPGRADE TO 120: At pull 60, if Featured hasn't dropped, it recalculates. It only continues to 120 if the wallet can comfortably afford both the current 120 AND next banner's pull 60. WEAPONS: Pulls only after obtaining the Featured Operator and saving 15,840 Arsenal (8 Issues).",
+        'docs.rollMeta':
+            'META SELECTION: The simulator randomly selects the configured number of "Meta" banners. META BANNER: Spends available resources until Featured or pull 120. REGULAR BANNER: Only rolls if the current 120 guarantee is covered AND the leftover tickets create a "safe reserve" for the next Meta (95 tickets if Meta is next, 105 tickets if further away). Without a future Meta, it reverts to Save & Commit rules. WEAPONS: On a regular banner, only rolls if you have 8 Issues now and can still protect 8 Issues for the next Meta.',
+        'docs.footnote':
+            '“Simulator conventions” describe model inputs and assumptions, not confirmed official gacha rules. This content is bundled directly into the application.',
         'error.freeTickets': 'You do not have enough limited Free Banner tickets!',
         'error.characterTickets': 'You do not have enough character tickets. Earn more or reset your progress.',
         'error.weaponTickets': 'Not enough Arsenal Tickets. Each weapon Issue requires 1,980 tickets.',
@@ -758,8 +865,10 @@ export const catalogs = {
         'milestone.weaponFeatured': 'Congratulations! This milestone directly awards the featured 6★ weapon.',
         'milestone.pull30': 'Pull 30 reached! You receive 10 free Urgent Recruitment pulls.',
         'milestone.pull60': 'Pull 60 reached! You receive 10 Dossier tickets for the next limited banner.',
-        'milestone.pull240': 'Pull 240 reached! You receive one Featured Operator Potential token.'
-    }
+        'milestone.pull60Refactor': 'Pull 60 reached! You receive 10 free Urgent Recruitment pulls.',
+        'milestone.pull90': 'Pull 90 reached! You receive 10 free Urgent Recruitment pulls.',
+        'milestone.pull240': 'Pull 240 reached! You receive one Featured Operator Potential token.',
+    },
 };
 
 let currentLocale = 'vi';
@@ -776,7 +885,8 @@ export function getLocale() {
 export function t(key, params = {}) {
     const template = catalogs[currentLocale][key] ?? catalogs.vi[key];
     if (template === undefined) {
-        if (typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production') console.warn(`Missing i18n key: ${key}`);
+        if (typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production')
+            console.warn(`Missing i18n key: ${key}`);
         return '';
     }
     return template.replace(/\{(\w+)\}/g, (_, name) => String(params[name] ?? `{${name}}`));
@@ -791,11 +901,21 @@ export function strategyName(strategyId) {
 }
 
 export function applyTranslations(root = document) {
-    root.querySelectorAll('[data-i18n]').forEach(element => { element.textContent = t(element.dataset.i18n); });
-    root.querySelectorAll('[data-i18n-title]').forEach(element => { element.title = t(element.dataset.i18nTitle); });
-    root.querySelectorAll('[data-i18n-aria-label]').forEach(element => { element.setAttribute('aria-label', t(element.dataset.i18nAriaLabel)); });
-    root.querySelectorAll('[data-i18n-placeholder]').forEach(element => { element.placeholder = t(element.dataset.i18nPlaceholder); });
-    root.querySelectorAll('[data-i18n-tooltip]').forEach(element => { element.setAttribute('data-tooltip', t(element.dataset.i18nTooltip)); });
+    root.querySelectorAll('[data-i18n]').forEach((element) => {
+        element.textContent = t(element.dataset.i18n);
+    });
+    root.querySelectorAll('[data-i18n-title]').forEach((element) => {
+        element.title = t(element.dataset.i18nTitle);
+    });
+    root.querySelectorAll('[data-i18n-aria-label]').forEach((element) => {
+        element.setAttribute('aria-label', t(element.dataset.i18nAriaLabel));
+    });
+    root.querySelectorAll('[data-i18n-placeholder]').forEach((element) => {
+        element.placeholder = t(element.dataset.i18nPlaceholder);
+    });
+    root.querySelectorAll('[data-i18n-tooltip]').forEach((element) => {
+        element.setAttribute('data-tooltip', t(element.dataset.i18nTooltip));
+    });
     document.documentElement.lang = currentLocale;
 }
 
@@ -803,13 +923,17 @@ export function setLocale(locale, { persist = true } = {}) {
     currentLocale = normalizeLocale(locale);
     if (persist && typeof localStorage !== 'undefined') localStorage.setItem(LOCALE_STORAGE_KEY, currentLocale);
     if (typeof document !== 'undefined') applyTranslations();
-    listeners.forEach(listener => listener(currentLocale));
+    listeners.forEach((listener) => {
+        listener(currentLocale);
+    });
     return currentLocale;
 }
 
 export function initI18n() {
     let saved = 'vi';
-    try { saved = localStorage.getItem(LOCALE_STORAGE_KEY) || 'vi'; } catch {}
+    try {
+        saved = localStorage.getItem(LOCALE_STORAGE_KEY) || 'vi';
+    } catch {}
     return setLocale(saved, { persist: false });
 }
 

@@ -60,9 +60,17 @@
                     <div class="banner-container glass-panel">
                         <div class="banner-header" style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%;">
                             <div style="flex-grow: 1;">
-                                <span class="banner-tag" data-i18n="banner.tag">Chartered Headhunting</span>
+                                <span class="banner-tag" id="active-banner-tag" data-i18n="banner.tag">Chartered Headhunting</span>
                                 <h2 class="banner-title" id="active-banner-title" style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
                                     <span data-i18n="banner.0.title">Mùa Hoa Nở Rộ (Featured: Endfield Operator)</span>
+                                    <select id="select-active-banner" style="padding: 4px 8px; font-size: 11px; font-weight: 600; cursor: pointer; border-radius: 4px; border: 1px solid var(--border-color); background: rgba(0,0,0,0.3); color: var(--text-white);">
+                                        <option value="0" data-i18n="banner.0.title">Mùa Hoa Nở Rộ (Featured: Endfield Operator)</option>
+                                        <option value="1" data-i18n="banner.1.title">Bình Minh Kỷ Nguyên (Featured: Perlica)</option>
+                                        <option value="2" data-i18n="banner.2.title">Sa Mạc Hoang Vu (Featured: Chen Qianyu)</option>
+                                        <option value="3" data-i18n="banner.3.title">Bóng Đêm Biên Giới (Featured: Wulfgard)</option>
+                                        <option value="4" data-i18n="banner.basic.title">Chiêu Mộ Cơ Bản (Tập Hợp Cán Viên)</option>
+                                        <option value="5" data-i18n="banner.refactor.title">Chiêu Mộ Tái Cấu Trúc #1 (Tân Dòng Suối Tiền Nhân - Featured: Tangtang)</option>
+                                    </select>
                                     <button class="btn-secondary" id="btn-switch-banner" data-i18n="banner.switch" style="padding: 4px 10px; font-size: 11px; font-weight: 600; cursor: pointer; border-radius: 4px; border: 1px solid var(--orange-primary); color: var(--orange-primary); background: rgba(255,107,0,0.05); text-transform: uppercase;">Đổi banner</button>
                                 </h2>
                                 <p class="banner-subtitle" id="active-banner-subtitle" data-i18n="banner.rules">Tỉ lệ 6★: 0,8% | Soft pity tăng từ lượt 66 | Hard pity 80 | Bảo hiểm Featured 120</p>
@@ -506,6 +514,14 @@
                         <article>
                             <strong data-i18n="docs.milestonesTitle">Mốc banner</strong>
                             <p data-i18n="docs.milestones">Pull 30 kích hoạt ngay 10 Urgent không tăng pity/mốc; pull 60 cấp 10 Dossier cho banner kế tiếp và các lượt Dossier vẫn tính pity/mốc. Mỗi 240 pull nhận một Potential token.</p>
+                        </article>
+                        <article>
+                            <strong data-i18n="docs.basicTitle">Chiêu Mộ Cơ Bản</strong>
+                            <p data-i18n="docs.basic">Banner thường vĩnh viễn gồm các Cán viên 6★/5★/4★ cơ bản. Áp dụng pity 80 ra 6★ nhưng không có Cán viên Featured và không có bảo hiểm 120.</p>
+                        </article>
+                        <article>
+                            <strong data-i18n="docs.refactorTitle">Chiêu Mộ Tái Cấu Trúc (RE-Factor)</strong>
+                            <p data-i18n="docs.refactor">Banner rerun dành cho cán viên 6★ giới hạn cũ (xếp ngay dưới banner cơ bản). Pity 80 chia sẻ giữa mọi banner Tái Cấu Trúc; bảo hiểm 120 kế thừa cho cùng một nhân vật. Thưởng mốc 30, 60, 90 tặng 10 lượt Khẩn Cấp (không cấp Dossier).</p>
                         </article>
                         <article>
                             <strong data-i18n="docs.weaponTitle">Arsenal Exchange</strong>
